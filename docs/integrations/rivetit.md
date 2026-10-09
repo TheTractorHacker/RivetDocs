@@ -27,9 +27,9 @@ The instance URL must be reachable from the RivetDocs API and worker containers.
 
 ## Synced Data Reference
 
-| Resource | Fields |
-|---|---|
-| **Assets** | Name, Type, Make, Model, Serial number, Operating system, Status, Client name |
-| **Contacts** | Name, Title, Email, Phone, Extension, Client name |
+| Resource     | Fields                                                                        |
+| ------------ | ----------------------------------------------------------------------------- |
+| **Assets**   | Name, Type, Make, Model, Serial number, Operating system, Status, Client name |
+| **Contacts** | Name, Title, Email, Phone, Extension, Client name                             |
 
 Records are matched on the edition's numeric ID, so renaming an asset or contact in the edition updates the same RivetDocs record.

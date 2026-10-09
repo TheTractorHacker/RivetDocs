@@ -78,8 +78,15 @@ describe('RivetEditionDriver', () => {
   });
 
   it('scopes asset fetches to the client and advances the page cursor', async () => {
-    const rows = Array.from({ length: 50 }, (_, n) => ({ id: n + 1, name: `A${n}`, serial: `S${n}` }));
-    const fx = install([{ body: { data: rows, total: 60 } }, { body: { data: [{ id: 51, name: 'Z' }], total: 60 } }]);
+    const rows = Array.from({ length: 50 }, (_, n) => ({
+      id: n + 1,
+      name: `A${n}`,
+      serial: `S${n}`,
+    }));
+    const fx = install([
+      { body: { data: rows, total: 60 } },
+      { body: { data: [{ id: 51, name: 'Z' }], total: 60 } },
+    ]);
     try {
       const d = new RivetEditionDriver('rivetmsp');
       const p1 = await d.fetchRecords(fetchCtx('assets'), null);
