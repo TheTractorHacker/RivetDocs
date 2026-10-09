@@ -25,6 +25,10 @@ RivetDocs is the documentation companion to the **RivetIT** and **RivetMSP** edi
 
 The instance URL must be reachable from the RivetDocs API and worker containers. RivetDocs' outbound request guard blocks private and loopback addresses, so a LAN-only edition needs to be reached through its public hostname or a reverse proxy.
 
+## Linking back from the edition
+
+In RivetIT or RivetMSP, Administration > RivetDocs (off by default) takes your RivetDocs address and adds an **Open in RivetDocs** link to each client page. The link opens the RivetDocs company list filtered to that client's name. Nothing is sent from the edition to RivetDocs.
+
 ## Synced Data Reference
 
 | Resource     | Fields                                                                        |
