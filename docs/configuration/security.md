@@ -7,7 +7,7 @@ description: Hardening options, rate limits, authentication tuning, and CORS con
 
 # Security Configuration
 
-Most of Weavestream's security hardening is on by default. This page documents the knobs available for tuning and the reasoning behind the defaults.
+Most of RivetDocs's security hardening is on by default. This page documents the knobs available for tuning and the reasoning behind the defaults.
 
 ## Rate Limiting
 
@@ -38,7 +38,7 @@ The auth rate limits protect against credential stuffing and brute-force attacks
 |---|---|---|
 | `SESSION_MAX_AGE_DAYS` | `30` | How long a session cookie lives. Shorten for higher-security environments. |
 | `ACCESS_TOKEN_TTL_MIN` | `15` | JWT lifetime in minutes. A compromised token is valid for at most this long after session revocation. |
-| `SESSION_COOKIE_NAME` | `ws_session` | Rename if you run multiple Weavestream instances on the same domain. |
+| `SESSION_COOKIE_NAME` | `ws_session` | Rename if you run multiple RivetDocs instances on the same domain. |
 
 ## Client IP Attribution
 
@@ -48,7 +48,7 @@ The auth rate limits protect against credential stuffing and brute-force attacks
 
 The web tier reads `TRUST_PROXY_HOPS` to resolve the real client IP from the inbound `X-Forwarded-For` chain — which is the only chain an attacker can influence — and then forwards a single sanitized entry to the API. The API does not use this knob: it honors `X-Forwarded-For` only when the TCP peer is on the private docker bridge (loopback / link-local / unique-local), which only the `web` container is. An attacker who somehow reaches `api:4000` directly has their `X-Forwarded-For` ignored and falls back to the socket peer.
 
-Only `X-Forwarded-For` is read; `X-Real-IP` is ignored. Next.js fills a missing `X-Forwarded-For` with the address of the connecting proxy before Weavestream sees the request, so a proxy that sets only `X-Real-IP` would be recorded as its own address. Configure the edge proxy to set `X-Forwarded-For`.
+Only `X-Forwarded-For` is read; `X-Real-IP` is ignored. Next.js fills a missing `X-Forwarded-For` with the address of the connecting proxy before RivetDocs sees the request, so a proxy that sets only `X-Real-IP` would be recorded as its own address. Configure the edge proxy to set `X-Forwarded-For`.
 
 Count proxies **in front of `web`** when setting this value:
 
@@ -79,7 +79,7 @@ The API logs a `[Topology]` warning at startup when it detects a likely-unsafe p
 
 ## Content Security Policy
 
-Weavestream configures a strict CSP via Helmet:
+RivetDocs configures a strict CSP via Helmet:
 
 - Scripts are restricted to same-origin and a per-request nonce
 - Inline scripts are disallowed except via the nonce
@@ -99,7 +99,7 @@ Each blocked request is audited as `security.egress.blocked` and appears in **Ad
 
 ## CSRF Protection
 
-Weavestream uses a **double-submit cookie** pattern:
+RivetDocs uses a **double-submit cookie** pattern:
 
 1. A signed CSRF token is set in a cookie (`CSRF_SIGNING_KEY`)
 2. The same value is expected in an `X-CSRF-Token` request header
@@ -140,7 +140,7 @@ The self-block guard catches the obvious mistakes (typo'd CIDR, accidentally del
 ```bash
 # 1. SSH into the host, then exec into the API container
 # (prefix with `sudo` if your user isn't in the `docker` group)
-docker exec -it weavestream-api sh
+docker exec -it rivetdocs-api sh
 
 # 2. Authenticate (this hits IpRuleGuard with peer=127.0.0.1, which is not in your DENY rule)
 TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/auth/login \

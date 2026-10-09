@@ -287,7 +287,7 @@ export const AUDIT_ACTIONS = {
   // Tickets are NEVER persisted, so the audit log is the only record
   // that a given operator looked at a given ticket id. `entityType`
   // is 'Ticket'; `entityId` is the provider ticket id (opaque string,
-  // never a Weavestream uuid). `companyId` is always set. We log the
+  // never a RivetDocs uuid). `companyId` is always set. We log the
   // identifiers only — never the ticket subject/body — so audit
   // entries don't leak customer-supplied content into a second store.
   tickets: {

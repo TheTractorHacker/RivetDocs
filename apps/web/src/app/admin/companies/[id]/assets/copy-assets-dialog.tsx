@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { problemMessage, type BulkAssetResult } from '@weavestream/shared';
+import { problemMessage, type BulkAssetResult } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,

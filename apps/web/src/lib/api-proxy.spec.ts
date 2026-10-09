@@ -1,4 +1,4 @@
-import { INTERNAL_TOKEN_HEADER } from '@weavestream/shared';
+import { INTERNAL_TOKEN_HEADER } from '@rivetdocs/shared';
 import { proxyToApi } from './api-proxy';
 import { INBOUND_XFF_HEADER, WEB_TRUST_PROXY_HOPS_HEADER } from './client-ip';
 

@@ -8,7 +8,7 @@ import {
   type UiAccent,
   type UiTheme,
   type UserUiPreferences,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { Btn, Icon, Toggle, useToast } from '../../components/ui';
 

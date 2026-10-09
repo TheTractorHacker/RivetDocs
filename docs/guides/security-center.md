@@ -64,7 +64,7 @@ When an identity exceeds its request bucket and a block duration is configured, 
 - **Throttler** — which rate limiter triggered the block
 - **Remaining** — time until the block expires
 
-By default, Weavestream uses a soft 60-second rolling window without hard blocks, so this list is typically empty.
+By default, RivetDocs uses a soft 60-second rolling window without hard blocks, so this list is typically empty.
 
 ## Active Sessions
 

@@ -19,7 +19,7 @@
  *   2. Otherwise resolve it against the monorepo root, located by
  *      walking up from `process.cwd()` looking for either
  *      `pnpm-workspace.yaml` or a `package.json` whose `name`
- *      matches the workspace root (`weavestream`).
+ *      matches the workspace root (`rivetdocs`).
  *   3. Fall back to `process.cwd()` if no marker is found — keeps the
  *      function safe to call from one-off scripts that live outside
  *      the monorepo (e.g. unit tests with a synthetic cwd).
@@ -28,7 +28,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 
 const WORKSPACE_MARKER = 'pnpm-workspace.yaml';
-const WORKSPACE_PACKAGE_NAME = 'weavestream';
+const WORKSPACE_PACKAGE_NAME = 'rivetdocs';
 const MAX_WALK_DEPTH = 8;
 
 let cachedWorkspaceRoot: string | null | undefined;

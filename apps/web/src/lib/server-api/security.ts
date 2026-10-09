@@ -7,7 +7,7 @@ import type {
   SecuritySessionRow,
   ThrottleBlockEntry,
   AdminApiKeyPage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { serverApiFetch } from './core';
 
 // ───────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ export async function getSecurityLockouts(): Promise<LockoutsResponse | null> {
 
 // Whether the enabled IP rules deny one address family entirely but leave
 // the other to default-allow — see `GET /security/ip-rule-coverage` and
-// `findCatchAllFamilyGap` in `@weavestream/shared`.
+// `findCatchAllFamilyGap` in `@rivetdocs/shared`.
 export type IpRuleCoverage = { gap: CatchAllFamilyGap | null };
 
 export async function getSecurityIpRuleCoverage(): Promise<IpRuleCoverage | null> {

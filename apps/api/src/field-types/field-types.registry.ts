@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { FieldType } from '@weavestream/shared';
+import type { FieldType } from '@rivetdocs/shared';
 import type { FieldTypeStrategy } from './field-type-strategy.js';
 import { TextStrategy, TextareaStrategy } from './strategies/text.strategy.js';
 import { RichTextStrategy } from './strategies/rich-text.strategy.js';

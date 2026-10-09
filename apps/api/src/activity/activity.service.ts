@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { requireTenantContext } from '@weavestream/shared/server';
-import type { RecentActivityItem } from '@weavestream/shared';
+import { requireTenantContext } from '@rivetdocs/shared/server';
+import type { RecentActivityItem } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 

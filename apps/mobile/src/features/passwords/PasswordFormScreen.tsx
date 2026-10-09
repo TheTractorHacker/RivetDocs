@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { optionalHttpUrlError, type PasswordDetail } from '@weavestream/shared';
+import { optionalHttpUrlError, type PasswordDetail } from '@rivetdocs/shared';
 import { FieldBlock, FieldError, Hint } from '../../components/FieldBlock';
 import { FormScreenChrome } from '../../components/FormScreenChrome';
 import { Icon } from '../../components/Icon';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { LayoutSummary } from '@weavestream/shared';
+import type { LayoutSummary } from '@rivetdocs/shared';
 import { ChoicesEditor } from './choices-editor';
 import {
   InspectorField,

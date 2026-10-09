@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { folderNameSchema, problemMessage } from '@weavestream/shared';
+import { folderNameSchema, problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { Btn, Dialog, Field, Input, Select, useToast } from '../../../../../components/ui';
-import type { FolderNode } from '@weavestream/shared';
+import type { FolderNode } from '@rivetdocs/shared';
 
 type Cascade = 'unassign' | 'archive';
 type Tab = 'rename' | 'move' | 'archive';

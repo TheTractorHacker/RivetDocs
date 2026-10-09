@@ -7,7 +7,7 @@ description: Security architecture, threat model, and responsible disclosure.
 
 # Security
 
-Weavestream is built with a security-first design. This section documents the threat model, authentication system, encryption approach, audit trail, and responsible disclosure policy.
+RivetDocs is built with a security-first design. This section documents the threat model, authentication system, encryption approach, audit trail, and responsible disclosure policy.
 
 ## Security Sections
 
@@ -32,4 +32,4 @@ Weavestream is built with a security-first design. This section documents the th
 
 **Do not open a public GitHub issue for security problems.**
 
-Use GitHub's [private vulnerability reporting](https://github.com/Weavestream/Weavestream/security/advisories/new) feature. See [Responsible Disclosure](/security/disclosure/) for the full policy.
+Use GitHub's [private vulnerability reporting](https://github.com/TheTractorHacker/RivetDocs/security/advisories/new) feature. See [Responsible Disclosure](/security/disclosure/) for the full policy.

@@ -5,7 +5,7 @@ import type {
   PasswordFolderSchema,
   PasswordGeneratorDefaults,
   PasswordSummary,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PasswordsBrowser } from './passwords-browser';
 
 jest.mock('next/navigation', () => ({

@@ -18,7 +18,7 @@ import {
   updateCompanySchema,
   type CreateCompanyInput,
   type UpdateCompanyInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { CompaniesService } from './companies.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import {

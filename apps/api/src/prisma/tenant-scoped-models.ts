@@ -1,4 +1,4 @@
-import type { TenantContext } from '@weavestream/shared';
+import type { TenantContext } from '@rivetdocs/shared';
 
 /**
  * Models whose rows belong to a single Company. Every query against one of

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { passwordFolderNameSchema, problemMessage } from '@weavestream/shared';
+import { passwordFolderNameSchema, problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,
@@ -12,7 +12,7 @@ import {
   Select,
   useToast,
 } from '../../../../../components/ui';
-import type { PasswordFolderSchema } from '@weavestream/shared';
+import type { PasswordFolderSchema } from '@rivetdocs/shared';
 import {
   buildPasswordFolderOptions,
   formatFolderOptionLabel,

@@ -17,8 +17,8 @@ import type {
   ChatTurnIntent,
   DomainCheckDto,
   MonitoredDomainDto,
-} from '@weavestream/shared';
-import { ARTICLE_CREATE_RECOVERY_PENDING_CODE } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { ARTICLE_CREATE_RECOVERY_PENDING_CODE } from '@rivetdocs/shared';
 import {
   applyChatToolCall,
   createChatConversation,
@@ -34,10 +34,10 @@ import { streamChatMessage, type ChatStreamMeta } from '../../lib/chat-stream';
 // `applyArticleTextEdits` runs against byte-for-byte. The client
 // turndown converter (lib/article-format) diverges on bullet lists,
 // italics, and horizontal rules, which broke exact-match patches (F1).
-import { tiptapDocToMarkdown } from '@weavestream/shared';
+import { tiptapDocToMarkdown } from '@rivetdocs/shared';
 import { assetToMarkdown } from '../../lib/asset-format';
 import { domainToMarkdown } from '../../lib/domain-format';
-import { randomClientId } from '@weavestream/shared/browser';
+import { randomClientId } from '@rivetdocs/shared/browser';
 import type { ArticleDetail } from '../../lib/server-api/articles';
 
 type ChatRole = 'user' | 'assistant';
@@ -192,7 +192,7 @@ type ChatDomainPageContext = {
  * just returns the captured markdown.
  *
  * `companyId` is nullable because the global tickets surface may
- * surface a ticket whose upstream client id has no Weavestream
+ * surface a ticket whose upstream client id has no RivetDocs
  * mapping — in that case the chat panel falls back to its existing
  * company picker on save (see `SaveAsArticleDialog`).
  */
@@ -1611,7 +1611,7 @@ function safeGetMarkdown(ctx: ChatPageContextSnapshot): string {
 /**
  * Fetch a referenced article and project it to markdown the LLM can
  * consume. Tiptap docs are converted via the shared DOM-free walker
- * (`@weavestream/shared` `tiptapDocToMarkdown`) — identical to the patch
+ * (`@rivetdocs/shared` `tiptapDocToMarkdown`) — identical to the patch
  * preview and server apply, so a model-authored `old_text` matches the
  * base a patch is applied against. Returns `null` on any failure so
  * callers can skip the mention silently.

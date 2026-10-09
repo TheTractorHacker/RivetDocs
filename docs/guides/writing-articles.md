@@ -2,12 +2,12 @@
 label: Writing Articles
 icon: note
 order: 820
-description: Author and organise documentation articles in Weavestream.
+description: Author and organise documentation articles in RivetDocs.
 ---
 
 # Writing Articles
 
-Weavestream's article editor is powered by Tiptap — a full-featured rich-text editor. This guide covers creating, formatting, and organising documentation.
+RivetDocs's article editor is powered by Tiptap — a full-featured rich-text editor. This guide covers creating, formatting, and organising documentation.
 
 ## Creating an Article
 

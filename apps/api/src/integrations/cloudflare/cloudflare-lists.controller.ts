@@ -22,7 +22,7 @@ import {
   type CloudflareRemoveEntryInput,
   type CloudflareUpdateEntryInput,
   type RegisterCloudflareListInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ZodBody } from '../../common/zod-validation.pipe.js';
 import {
   CurrentUser,

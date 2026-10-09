@@ -3,7 +3,7 @@ import {
   type NextFetchEvent,
   type NextRequest,
 } from 'next/server';
-import { matchIpRule } from '@weavestream/shared';
+import { matchIpRule } from '@rivetdocs/shared';
 import {
   INBOUND_XFF_HEADER,
   RESOLVED_CLIENT_IP_HEADER,

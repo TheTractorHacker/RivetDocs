@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { initialsFromName } from '@weavestream/shared';
+import { initialsFromName } from '@rivetdocs/shared';
 import {
   createContext,
   useCallback,

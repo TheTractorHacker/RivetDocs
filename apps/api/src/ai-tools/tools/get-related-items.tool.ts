@@ -3,7 +3,7 @@ import type {
   AiRelatedItem,
   GetRelatedItemsToolInput,
   GetRelatedItemsToolOutput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { RelationsService } from '../../relations/relations.service.js';
 import type { RelationEndpointKind } from '../../relations/relations.service.js';
 import { PermissionService } from '../../rbac/permission.service.js';

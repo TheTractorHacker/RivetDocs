@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { DriverDescriptor, IntegrationDto } from '@weavestream/shared';
+import type { DriverDescriptor, IntegrationDto } from '@rivetdocs/shared';
 import {
   DataTable,
   MobileCardRow,

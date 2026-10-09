@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import type { Components } from 'react-markdown';
-import { mermaidSourceFromPre } from '@weavestream/shared';
-import { copyToClipboard } from '@weavestream/shared/browser';
+import { mermaidSourceFromPre } from '@rivetdocs/shared';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
 import { Icon } from '../ui';
 import { MermaidBlock } from './mermaid-block';
 
@@ -19,7 +19,7 @@ import { MermaidBlock } from './mermaid-block';
  * nest it inside `<pre>`, which is invalid HTML and produces a hydration
  * warning. Overriding `pre` sidesteps both.
  *
- * The fence-recognition rule itself lives in `@weavestream/shared`
+ * The fence-recognition rule itself lives in `@rivetdocs/shared`
  * (`mermaidSourceFromPre`), shared with `apps/mobile` and with the PDF
  * export's own parser — three surfaces that must agree on what counts as
  * a diagram, and previously did not.

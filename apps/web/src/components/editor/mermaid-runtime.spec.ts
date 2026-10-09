@@ -1,5 +1,5 @@
 /** @jest-environment jsdom */
-import type { DiagramPalette } from '@weavestream/shared/browser';
+import type { DiagramPalette } from '@rivetdocs/shared/browser';
 
 /**
  * Thin wiring, not policy. The sanitizer's own behaviour is pinned once
@@ -25,7 +25,7 @@ jest.mock('mermaid', () => ({
   },
 }));
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   sanitizeDiagramSvg: (...a: unknown[]) => sanitizeDiagramSvg(...(a as [])),
   buildMermaidConfig: (...a: unknown[]) => buildMermaidConfig(...(a as [])),
 }));

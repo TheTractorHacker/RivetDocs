@@ -14,7 +14,7 @@ import {
 import { membershipRoleLabel } from '../../../../lib/roles';
 import { lower } from '../../../../lib/term';
 import { useTerm } from '../../../../lib/term-context';
-import type { MembershipRole } from '@weavestream/shared';
+import type { MembershipRole } from '@rivetdocs/shared';
 
 type Row = {
   id: string;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from '@tanstack/react-router';
-import { initialsFromName } from '@weavestream/shared';
-import type { SearchHit } from '@weavestream/shared';
+import { initialsFromName } from '@rivetdocs/shared';
+import type { SearchHit } from '@rivetdocs/shared';
 import { Icon } from '../../components/Icon';
 import { ListRow, SectionLabel } from '../../components/primitives';
 import {

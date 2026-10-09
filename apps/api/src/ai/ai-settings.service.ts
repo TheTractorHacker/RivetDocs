@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import type { AiSettings, UpdateAiSettingsInput } from '@weavestream/shared';
+import type { AiSettings, UpdateAiSettingsInput } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';

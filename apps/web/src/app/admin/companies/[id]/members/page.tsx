@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 
 export const metadata: Metadata = { title: 'Members' };
 import { requireMe } from '../../../../../lib/server-api/auth';

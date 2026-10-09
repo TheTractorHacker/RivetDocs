@@ -4,7 +4,7 @@ import type {
   DomainCheckDto,
   DomainStatusValue,
   MonitoredDomainDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { serverApiFetch } from './core';
 
 // ---------------------------------------------------------------------

@@ -13,7 +13,7 @@ import {
   type AlertRecordEntityType,
   type AlertRecordAction,
   type SecurityAlertSelector,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   AuditLogService,
@@ -216,7 +216,7 @@ export class AlertEmitterService
     const selector = securitySelectorOf(config);
     const kindLabel = selector ? SECURITY_ALERT_LABELS[selector] : 'Security';
     await this.createTriggerAndEnqueue(config, triggerKey, async () => ({
-      subject: `[Weavestream] Security — ${kindLabel} — ${config.name}`,
+      subject: `[RivetDocs] Security — ${kindLabel} — ${config.name}`,
       text: renderSecurityText(
         config,
         entry,
@@ -556,7 +556,7 @@ function renderRealtimeSubject(
   if (resolved.entityName) parts.push(resolved.entityName);
   if (resolved.companyName) parts.push(`@ ${resolved.companyName}`);
   parts.push(config.name);
-  return `[Weavestream] ${entity} ${verb} — ${parts.join(' — ')}`;
+  return `[RivetDocs] ${entity} ${verb} — ${parts.join(' — ')}`;
 }
 
 function renderRealtimeText(
@@ -579,7 +579,7 @@ function renderRealtimeText(
   lines.push(
     '',
     'You are receiving this email because an alert configuration matches this event.',
-    'Manage your alert configurations in the Weavestream admin under Alerts.',
+    'Manage your alert configurations in the RivetDocs admin under Alerts.',
   );
   return lines.join('\n');
 }
@@ -765,7 +765,7 @@ function renderSecurityText(
     `Audit event id: ${entry.id}`,
     '',
     'You are receiving this email because a security alert configuration matches this event.',
-    'Review the full event in the Weavestream admin under Security, and manage alert configurations under Alerts.',
+    'Review the full event in the RivetDocs admin under Security, and manage alert configurations under Alerts.',
   );
   return lines.join('\n');
 }

@@ -257,7 +257,7 @@ describe('ArticlesService integration system writes', () => {
   });
 
   it('restores the same archived article and preserves manual text outside managed markers', async () => {
-    const oldManaged = '<!-- weavestream:breeze:managed:start -->\n# Old source\n<!-- weavestream:breeze:managed:end -->';
+    const oldManaged = '<!-- rivetdocs:breeze:managed:start -->\n# Old source\n<!-- rivetdocs:breeze:managed:end -->';
     const manual = '\n\n## Operator notes\nKeep this restore credential reference.';
     const { service, tx } = setup({
       bound: article({
@@ -276,7 +276,7 @@ describe('ArticlesService integration system writes', () => {
     await expect(service.writeFromIntegration({
       ...input,
       existingTargetId: ids.article,
-      markdown: '<!-- weavestream:breeze:managed:start -->\n# New source\n<!-- weavestream:breeze:managed:end -->',
+      markdown: '<!-- rivetdocs:breeze:managed:start -->\n# New source\n<!-- rivetdocs:breeze:managed:end -->',
     })).resolves.toMatchObject({ targetId: ids.article, change: 'restored' });
     expect(tx.article.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
@@ -296,7 +296,7 @@ describe('ArticlesService integration system writes', () => {
   });
 
   it('preserves manual text, attachments, and version history across a real stale sweep and native restore', async () => {
-    const oldManaged = '<!-- weavestream:breeze:managed:start -->\n# Old source\n<!-- weavestream:breeze:managed:end -->';
+    const oldManaged = '<!-- rivetdocs:breeze:managed:start -->\n# Old source\n<!-- rivetdocs:breeze:managed:end -->';
     const manual = '\n\n## Operator notes\nKeep [manual attachment](upload://manual-1).';
     const target = article({ markdownSource: oldManaged + manual });
     const persistedBinding = binding({
@@ -353,7 +353,7 @@ describe('ArticlesService integration system writes', () => {
     await expect(service.writeFromIntegration({
       ...input,
       existingTargetId: ids.article,
-      markdown: '<!-- weavestream:breeze:managed:start -->\n# New source\n<!-- weavestream:breeze:managed:end -->',
+      markdown: '<!-- rivetdocs:breeze:managed:start -->\n# New source\n<!-- rivetdocs:breeze:managed:end -->',
     })).resolves.toMatchObject({ targetId: ids.article, change: 'restored' });
 
     expect(target.id).toBe(ids.article);
@@ -370,7 +370,7 @@ describe('ArticlesService integration system writes', () => {
 
   it('re-reads and re-merges when an operator edit lands between read and write', async () => {
     const managed = (body: string) =>
-      `<!-- weavestream:breeze:managed:start -->\n${body}\n<!-- weavestream:breeze:managed:end -->`;
+      `<!-- rivetdocs:breeze:managed:start -->\n${body}\n<!-- rivetdocs:breeze:managed:end -->`;
     const first = article({ markdownSource: `${managed('# Old source')}\n\n## Notes v1`, revision: 4 });
     const reread = article({
       markdownSource: `${managed('# Old source')}\n\n## Notes v2`,
@@ -432,7 +432,7 @@ describe('ArticlesService integration system writes', () => {
     ['wrong kind', binding({ targetKind: 'asset' })], ['wrong id', binding({ articleId: ids.other })],
     ['wrong company', binding({ companyId: 'other-company' })],
     ['blocked', binding({ state: 'blocked', provenance: { integrationId: ids.integration, ownership: 'breeze', state: 'blocked' } })],
-    ['manual', binding({ provenance: { integrationId: ids.integration, ownership: 'weavestream', state: 'active' } })],
+    ['manual', binding({ provenance: { integrationId: ids.integration, ownership: 'rivetdocs', state: 'active' } })],
   ])('rejects a %s article binding despite a forged legacy flag', async (_label, persistedBinding) => {
     const { service, tx } = setup({ bound: article(), binding: persistedBinding });
     await expect(service.writeFromIntegration({ ...input, existingTargetId: ids.article, ownershipVerified: true } as never))
@@ -459,7 +459,7 @@ describe('ArticlesService integration system writes', () => {
   });
 
   it('preserves manual notes and creates exactly one version for changed managed content', async () => {
-    const oldManaged = '<!-- weavestream:breeze:managed:start -->\n# Old\n<!-- weavestream:breeze:managed:end -->';
+    const oldManaged = '<!-- rivetdocs:breeze:managed:start -->\n# Old\n<!-- rivetdocs:breeze:managed:end -->';
     const manual = '\n\n## Operator notes\nKeep this note and [attachment](upload://manual-1).';
     const { service, tx } = setup({
       bound: article({ markdownSource: oldManaged + manual }),
@@ -468,7 +468,7 @@ describe('ArticlesService integration system writes', () => {
     await expect(service.writeFromIntegration({
       ...input,
       existingTargetId: ids.article,
-      markdown: '<!-- weavestream:breeze:managed:start -->\n# New\n<!-- weavestream:breeze:managed:end -->',
+      markdown: '<!-- rivetdocs:breeze:managed:start -->\n# New\n<!-- rivetdocs:breeze:managed:end -->',
       sourceFingerprintUnchanged: false,
     })).resolves.toMatchObject({ change: 'updated' });
     expect(tx.article.updateMany).toHaveBeenCalledWith(expect.objectContaining({
@@ -480,7 +480,7 @@ describe('ArticlesService integration system writes', () => {
   });
 
   it('does not version an unchanged fingerprint merely because the exported date advanced', async () => {
-    const current = '<!-- weavestream:breeze:managed:start -->\n# Runbook\nExported source date: 2026-07-13T00:00:00.000Z\n<!-- weavestream:breeze:managed:end -->\n\nManual note';
+    const current = '<!-- rivetdocs:breeze:managed:start -->\n# Runbook\nExported source date: 2026-07-13T00:00:00.000Z\n<!-- rivetdocs:breeze:managed:end -->\n\nManual note';
     const { service, tx } = setup({
       bound: article({ markdownSource: current }),
       binding: binding(),
@@ -592,20 +592,20 @@ describe('ArticlesService integration system writes', () => {
     })).resolves.toMatchObject({ change: 'blocked', gap: { details: { reasonCode: 'managed_region_invalid' } } });
     expect(tx.folder.create).toHaveBeenCalledTimes(1);
     const executed = tx.$executeRaw.mock.calls.map(([strings]) => (Array.isArray(strings) ? strings.join('') : String(strings)));
-    expect(executed).toContain('ROLLBACK TO SAVEPOINT weavestream_managed_folder');
+    expect(executed).toContain('ROLLBACK TO SAVEPOINT rivetdocs_managed_folder');
     expect(pendingFolder()).toBeNull();
   });
 
   it.each([
     ['missing markers', '# Manual-only bound body'],
-    ['end before start', '<!-- weavestream:breeze:managed:end -->\nmanual\n<!-- weavestream:breeze:managed:start -->'],
-    ['duplicate markers', '<!-- weavestream:breeze:managed:start -->\nA\n<!-- weavestream:breeze:managed:start -->\n<!-- weavestream:breeze:managed:end -->'],
+    ['end before start', '<!-- rivetdocs:breeze:managed:end -->\nmanual\n<!-- rivetdocs:breeze:managed:start -->'],
+    ['duplicate markers', '<!-- rivetdocs:breeze:managed:start -->\nA\n<!-- rivetdocs:breeze:managed:start -->\n<!-- rivetdocs:breeze:managed:end -->'],
   ])('fails closed without mutation for %s in a bound source article', async (_label, malformed) => {
     const { service, tx } = setup({ bound: article({ markdownSource: malformed }), binding: binding() });
     await expect(service.writeFromIntegration({
       ...input,
       existingTargetId: ids.article,
-      markdown: '<!-- weavestream:breeze:managed:start -->\n# New\n<!-- weavestream:breeze:managed:end -->',
+      markdown: '<!-- rivetdocs:breeze:managed:start -->\n# New\n<!-- rivetdocs:breeze:managed:end -->',
     })).resolves.toMatchObject({ change: 'blocked', gap: { details: { reasonCode: 'managed_region_invalid' } } });
     expect(tx.article.updateMany).not.toHaveBeenCalled();
     expect(tx.articleVersion.create).not.toHaveBeenCalled();

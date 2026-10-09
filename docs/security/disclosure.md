@@ -2,7 +2,7 @@
 label: Responsible Disclosure
 icon: report
 order: 500
-description: How to report security vulnerabilities in Weavestream.
+description: How to report security vulnerabilities in RivetDocs.
 ---
 
 # Responsible Disclosure
@@ -11,7 +11,7 @@ description: How to report security vulnerabilities in Weavestream.
 
 **Please do not open a public GitHub issue for suspected security problems.**
 
-Use GitHub's [private vulnerability reporting](https://github.com/Weavestream/Weavestream/security/advisories/new) feature to report the issue confidentially.
+Use GitHub's [private vulnerability reporting](https://github.com/TheTractorHacker/RivetDocs/security/advisories/new) feature to report the issue confidentially.
 
 You can expect:
 
@@ -25,7 +25,7 @@ To help us reproduce and assess the issue quickly, please provide:
 
 - A **clear description** of the vulnerability and its potential impact
 - **Minimal reproduction steps** or a proof-of-concept
-- The **Weavestream version** (`WEAVESTREAM_VERSION` from your `.env`) and deployment shape (Docker Compose, Kubernetes, etc.)
+- The **RivetDocs version** (`RIVETDOCS_VERSION` from your `.env`) and deployment shape (Docker Compose, Kubernetes, etc.)
 - Any **suggested mitigations** if you have them
 
 ## Scope
@@ -33,7 +33,7 @@ To help us reproduce and assess the issue quickly, please provide:
 ### In scope
 
 - Code in this repository (`apps/`, `packages/`, `docker/`, `scripts/`)
-- Published container images at `ghcr.io/weavestream/weavestream-*`
+- Published container images at `ghcr.io/thetractorhacker/rivetdocs-*`
 - The default `compose.yml` deployment topology
 
 ### Out of scope
@@ -52,7 +52,7 @@ Security fixes ship on the latest minor release line:
 | 1.x | ✅ Yes |
 | < 1.0 | ❌ No |
 
-We recommend pinning `WEAVESTREAM_VERSION` to a specific patch release and following the [changelog](/overview/changelog/) for upgrade notes.
+We recommend pinning `RIVETDOCS_VERSION` to a specific patch release and following the [changelog](/overview/changelog/) for upgrade notes.
 
 ## Thank You
 

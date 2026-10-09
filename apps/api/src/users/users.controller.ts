@@ -20,7 +20,7 @@ import {
   type CreateUserInput,
   type UpdateUserInput,
   type UserRole,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { UsersService } from './users.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';

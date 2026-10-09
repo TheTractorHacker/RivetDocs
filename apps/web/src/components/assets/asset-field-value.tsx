@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { formatCalendarDate, type AssetSummary } from '@weavestream/shared';
+import { formatCalendarDate, type AssetSummary } from '@rivetdocs/shared';
 import { Tag } from '../ui';
 import { RichTextView } from '../editor/rich-text-view';
 import { vaultLinkLabel, vaultLinkUrl } from '../../lib/vault-link';

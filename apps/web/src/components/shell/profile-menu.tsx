@@ -9,7 +9,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import type { UiTheme } from '@weavestream/shared';
+import type { UiTheme } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import {
   applyDomTheme,

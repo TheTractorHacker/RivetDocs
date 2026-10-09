@@ -1,4 +1,4 @@
-import { stripTrailingSlashes } from '@weavestream/shared';
+import { stripTrailingSlashes } from '@rivetdocs/shared';
 import { z } from 'zod';
 import { fetchWithRetry } from '../driver-utils.js';
 import {
@@ -64,7 +64,7 @@ export class BreezePartnerApiClient {
       }
       snapshotAt ??= page.snapshotAt;
       for (const raw of page.data) {
-        // An organization Weavestream cannot read is left out of the picker
+        // An organization RivetDocs cannot read is left out of the picker
         // rather than failing the whole listing.
         const organization = readBreezeRecordSafely(breezeOrganizationSchema, raw);
         if (organization.success) organizations.set(organization.data.id, organization.data);
@@ -155,7 +155,7 @@ export class BreezePartnerApiClient {
       throw new Error('Breeze partner API returned invalid response data.');
     }
     // Only the envelope is validated here. Records are read one at a time by
-    // the transform, so one record Weavestream cannot read never fails the
+    // the transform, so one record RivetDocs cannot read never fails the
     // page that carries it.
     try {
       return breezeEnvelopeSchema.parse(raw) as BreezePartnerEnvelope<unknown>;

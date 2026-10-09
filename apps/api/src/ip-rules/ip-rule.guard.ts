@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { matchIpRule, type IpRuleLike } from '@weavestream/shared';
+import { matchIpRule, type IpRuleLike } from '@rivetdocs/shared';
 import { IpRulesService } from './ip-rules.service.js';
 import {
   IpRuleCacheService,
@@ -29,7 +29,7 @@ import { normalizeIp, userAgentOf } from '../common/request-meta.js';
  * Catch-alls are per address family: `0.0.0.0/0` never matches an IPv6
  * client, so denying everyone takes both `0.0.0.0/0` and `::/0`. The IP
  * rules page and the Security Center warn when one is missing (see
- * `findCatchAllFamilyGap` in `@weavestream/shared`).
+ * `findCatchAllFamilyGap` in `@rivetdocs/shared`).
  *
  * Fail-safe: any error loading rules (table missing, DB down, etc.)
  * defaults to allow. Blocking every request because the rules table
@@ -42,7 +42,7 @@ import { normalizeIp, userAgentOf } from '../common/request-meta.js';
  * invalidated by `IpRulesService` writes for instant propagation within
  * a single API instance.
  *
- * The CIDR matcher itself lives in `@weavestream/shared` so the Next.js
+ * The CIDR matcher itself lives in `@rivetdocs/shared` so the Next.js
  * `proxy.ts` can apply the same rules to page renders.
  */
 @Injectable()

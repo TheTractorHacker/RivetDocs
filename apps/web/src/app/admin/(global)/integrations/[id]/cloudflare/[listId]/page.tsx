@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type {
   CloudflareIpListDto,
   IntegrationDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { requireMe } from '../../../../../../../lib/server-api/auth';
 import {
   serverApiFetch,
@@ -50,7 +50,7 @@ export default async function CloudflareListDetailPage({
           { label: list.name },
         ]}
         title={list.name}
-        description={`Cloudflare IP list managed by Weavestream. ${list.entries.length} ${list.entries.length === 1 ? 'entry' : 'entries'}.`}
+        description={`Cloudflare IP list managed by RivetDocs. ${list.entries.length} ${list.entries.length === 1 ? 'entry' : 'entries'}.`}
       />
       <PageBody>
         <Panel noPad>

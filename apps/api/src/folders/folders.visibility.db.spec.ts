@@ -11,14 +11,14 @@ import type { SerializedFolderNode } from './folders.service.js';
  * cycle termination can only be proven against Postgres — mocks would
  * pass vacuously.
  *
- * Opt-in via `WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1` (set in CI's test
+ * Opt-in via `RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1` (set in CI's test
  * job, which provisions Postgres + `prisma migrate deploy`). Gating on
  * `DATABASE_URL` alone is NOT sufficient: importing `@prisma/client`
  * loads the workspace `.env`, so the variable is set even in a bare
  * local `pnpm test` and the spec would mutate the configured
  * *development* database. An explicit flag keeps mutation opt-in.
  * Run locally with:
- *   WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @weavestream/api test
+ *   RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @rivetdocs/api test
  *
  * The deliberate `parentId` cycle is asserted through `get()`, not
  * `tree()`: the tree assembler gives a cycle no root, so cyclic nodes
@@ -26,7 +26,7 @@ import type { SerializedFolderNode } from './folders.service.js';
  * `get()` consults allowlist membership directly.
  */
 const describeIfDb =
-  process.env.WEAVESTREAM_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
+  process.env.RIVETDOCS_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
 
 const A = '2bf00000-0000-4000-8000-00000000c001';
 const B = '2bf00000-0000-4000-8000-00000000c002';

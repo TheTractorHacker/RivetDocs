@@ -15,7 +15,7 @@
 import { config } from 'dotenv';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { loadEnv } from '@weavestream/shared/server';
+import { loadEnv } from '@rivetdocs/shared/server';
 
 function findEnvFile(start: string): string | null {
   let dir = start;

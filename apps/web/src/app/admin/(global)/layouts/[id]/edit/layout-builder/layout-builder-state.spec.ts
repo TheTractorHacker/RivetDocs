@@ -1,4 +1,4 @@
-import type { LayoutFieldSummary } from '@weavestream/shared';
+import type { LayoutFieldSummary } from '@rivetdocs/shared';
 import {
   CANVAS_DROPZONE_ID,
   PALETTE_DRAG_PREFIX,

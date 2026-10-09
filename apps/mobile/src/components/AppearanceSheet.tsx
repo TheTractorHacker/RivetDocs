@@ -7,7 +7,7 @@ import {
   type UiAccent,
   type UiPreferences,
   type UiTheme,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../lib/api';
 import { applyUiPrefs, persistLocalUiPrefs } from '../lib/ui-prefs';
 import type { Me } from '../screens/TabShell';

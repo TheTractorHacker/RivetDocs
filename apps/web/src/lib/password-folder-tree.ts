@@ -1,4 +1,4 @@
-import type { PasswordFolderSchema } from '@weavestream/shared';
+import type { PasswordFolderSchema } from '@rivetdocs/shared';
 
 export type PasswordFolderOption = {
   id: string;

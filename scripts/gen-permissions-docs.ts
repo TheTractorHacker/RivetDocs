@@ -3,7 +3,7 @@
  * Regenerates `docs/permissions.md` from the single source of truth
  * (`apps/api/src/rbac/permissions.ts`). Run with:
  *
- *   pnpm --filter @weavestream/api exec ts-node ../../scripts/gen-permissions-docs.ts
+ *   pnpm --filter @rivetdocs/api exec ts-node ../../scripts/gen-permissions-docs.ts
  *
  * The output is committed; this script exists so the doc cannot drift
  * from the matrix.

@@ -27,7 +27,7 @@ import {
   type RevealPasswordInput,
   type UpdatePasswordFolderInput,
   type UpdatePasswordInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { ZodBody } from '../common/zod-validation.pipe.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';

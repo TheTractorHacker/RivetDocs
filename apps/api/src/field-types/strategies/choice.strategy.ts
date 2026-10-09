@@ -4,7 +4,7 @@ import {
   dropdownOptionsSchema,
   multiselectOptionsSchema,
   type FieldOptionChoice,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { FieldTypeStrategy } from '../field-type-strategy.js';
 
 function choices(options: Record<string, unknown>): FieldOptionChoice[] {

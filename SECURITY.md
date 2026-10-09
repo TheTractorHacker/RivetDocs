@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Weavestream is currently in active development. Security fixes ship on the
+RivetDocs is currently in active development. Security fixes ship on the
 latest minor release line.
 
 | Version | Supported           |
@@ -10,7 +10,7 @@ latest minor release line.
 | 1.x     | :white_check_mark:  |
 | < 1.0   | :x:                 |
 
-We recommend pinning `WEAVESTREAM_VERSION` to a specific patch release in
+We recommend pinning `RIVETDOCS_VERSION` to a specific patch release in
 production and following the [CHANGELOG](CHANGELOG.md) for upgrade notes.
 
 ## Dependency patch SLA
@@ -38,7 +38,7 @@ cycle with a note recorded in
 
 **Please do not open a public issue for suspected security problems.**
 
-Instead, use GitHub's [private vulnerability reporting](https://github.com/Weavestream/Weavestream/security/advisories/new)
+Instead, use GitHub's [private vulnerability reporting](https://github.com/TheTractorHacker/RivetDocs/security/advisories/new)
 feature. You can expect:
 
 - An acknowledgement within **72 hours**.
@@ -50,7 +50,7 @@ When reporting, please include:
 
 - A clear description of the vulnerability and its impact.
 - Minimal reproduction steps or proof-of-concept.
-- The Weavestream version (`WEAVESTREAM_VERSION` from your `.env`) and
+- The RivetDocs version (`RIVETDOCS_VERSION` from your `.env`) and
   deployment shape (Docker Compose, Kubernetes, etc.).
 - Any suggested mitigations if you have them.
 
@@ -59,7 +59,7 @@ When reporting, please include:
 In scope:
 
 - The code in this repository (`apps/`, `packages/`, `docker/`, `scripts/`).
-- The published container images at `ghcr.io/weavestream/weavestream-*`.
+- The published container images at `ghcr.io/thetractorhacker/rivetdocs-*`.
 - The default `compose.yml` deployment topology.
 
 Out of scope:
@@ -70,4 +70,4 @@ Out of scope:
   exhaustion against your own instance.
 - Issues that require prior compromise of the host or database.
 
-Thank you for helping keep Weavestream and its users safe.
+Thank you for helping keep RivetDocs and its users safe.

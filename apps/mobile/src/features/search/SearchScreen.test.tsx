@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import type { SearchHit } from '@weavestream/shared';
+import type { SearchHit } from '@rivetdocs/shared';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { Org } from '../../lib/org-scope';
 

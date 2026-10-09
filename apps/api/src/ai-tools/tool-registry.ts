@@ -1,4 +1,4 @@
-import type { ChatTurnContext, TenantContext } from '@weavestream/shared';
+import type { ChatTurnContext, TenantContext } from '@rivetdocs/shared';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 import type { AiToolSpec } from './tool-specs.js';
 import { AI_TOOL_SPECS } from './tool-specs.js';

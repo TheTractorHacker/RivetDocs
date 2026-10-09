@@ -23,7 +23,7 @@ import {
   type CreateArticleInput,
   type MoveArticleInput,
   type UpdateArticleInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ArticlesService } from './articles.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';

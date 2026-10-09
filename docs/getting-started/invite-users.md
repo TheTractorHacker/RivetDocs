@@ -2,12 +2,12 @@
 label: Invite Users
 icon: person-add
 order: 700
-description: Add operators, contractors, and client users to your Weavestream instance.
+description: Add operators, contractors, and client users to your RivetDocs instance.
 ---
 
 # Invite Users
 
-Weavestream uses an invite-only registration model. There is no self-registration page. A `SUPER_ADMIN` creates user accounts and distributes one-time setup links.
+RivetDocs uses an invite-only registration model. There is no self-registration page. A `SUPER_ADMIN` creates user accounts and distributes one-time setup links.
 
 ## Step 1 — Create a user account
 

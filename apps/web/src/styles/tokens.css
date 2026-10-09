@@ -1,6 +1,6 @@
-/* Weavestream — app-local design tokens for `apps/web`.
+/* RivetDocs — app-local design tokens for `apps/web`.
  *
- * Color lives in `@weavestream/shared/styles/color-tokens.css`, imported
+ * Color lives in `@rivetdocs/shared/styles/color-tokens.css`, imported
  * below, so `apps/web` and `apps/mobile` cannot drift apart on the
  * palette. What stays here is everything that is genuinely desktop-only:
  * the 3/5/8px radius scale (mobile's is 9–30px), the `next/font` wiring,
@@ -9,7 +9,7 @@
  * `@import` must precede all other rules, and `globals.css` imports this
  * file first, so the shared color layer still lands before Tailwind's
  * base layer — cascade order is unchanged from when it was inlined. */
-@import '@weavestream/shared/styles/color-tokens.css';
+@import '@rivetdocs/shared/styles/color-tokens.css';
 
 :root {
   --radius-1: 3px;

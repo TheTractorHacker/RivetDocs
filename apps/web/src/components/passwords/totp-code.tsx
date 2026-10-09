@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/api';
-import { copyToClipboard } from '@weavestream/shared/browser';
-import { problemMessage } from '@weavestream/shared';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
+import { problemMessage } from '@rivetdocs/shared';
 import { Btn, Icon } from '../ui';
 
 export interface TotpCodeProps {

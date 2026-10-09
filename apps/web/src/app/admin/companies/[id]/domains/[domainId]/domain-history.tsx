@@ -6,7 +6,7 @@ import {
   MobileCardRow,
   Tag,
 } from '../../../../../../components/ui';
-import type { DomainCheckDto } from '@weavestream/shared';
+import type { DomainCheckDto } from '@rivetdocs/shared';
 import {
   percentToTier,
   tierToLabel,

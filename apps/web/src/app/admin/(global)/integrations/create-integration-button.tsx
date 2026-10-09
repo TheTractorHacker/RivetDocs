@@ -6,7 +6,7 @@ import type {
   DriverDescriptor,
   DriverFieldDescriptor,
   IntegrationDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import {
   Btn,

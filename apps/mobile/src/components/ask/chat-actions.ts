@@ -1,4 +1,4 @@
-import type { ChatConversationDetail, ChatToolCallDto } from '@weavestream/shared';
+import type { ChatConversationDetail, ChatToolCallDto } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 
 /**

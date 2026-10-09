@@ -1,4 +1,4 @@
-import type { PasswordAccessUser } from '@weavestream/shared';
+import type { PasswordAccessUser } from '@rivetdocs/shared';
 import {
   accessSourceLabel,
   accessUserIds,

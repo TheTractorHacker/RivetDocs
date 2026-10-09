@@ -7,7 +7,7 @@ description: Per-tenant encrypted credential storage with TOTP, breach detection
 
 # Password Vault
 
-Weavestream includes a full-featured password vault per tenant. Credentials are encrypted at rest, version-controlled, and protected by role-based access — without any dependency on an external secrets manager.
+RivetDocs includes a full-featured password vault per tenant. Credentials are encrypted at rest, version-controlled, and protected by role-based access — without any dependency on an external secrets manager.
 
 ![Passwords](./assets/passwords.png)
 
@@ -126,7 +126,7 @@ Archiving a folder does not delete any data. Credentials retain their version hi
 
 ## Linked Items & Attachments
 
-Passwords can be linked to articles and assets using the same relations system used elsewhere in Weavestream.
+Passwords can be linked to articles and assets using the same relations system used elsewhere in RivetDocs.
 
 - Open a password's detail panel and switch to the **Linked items** tab
 - Search for and link any article or asset in the same company

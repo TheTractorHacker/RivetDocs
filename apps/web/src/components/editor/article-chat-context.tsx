@@ -6,7 +6,7 @@ import { useCallback } from 'react';
 // shared-walker base the preview and server apply run against (F1). The
 // two converters diverge on bullet lists, italics, and horizontal rules,
 // which broke exact-match patches from the read-only article view.
-import { tiptapDocToMarkdown, type ArticleEditorMode } from '@weavestream/shared';
+import { tiptapDocToMarkdown, type ArticleEditorMode } from '@rivetdocs/shared';
 import { useChatPageContext } from '../chat-panel/use-chat-page-context';
 
 /**

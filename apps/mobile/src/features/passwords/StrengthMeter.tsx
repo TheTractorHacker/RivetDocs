@@ -2,7 +2,7 @@ import {
   PASSWORD_STRENGTH_LABELS,
   PASSWORD_STRENGTH_TONES,
   type PasswordStrengthTone,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Five-segment strength meter — desktop's semantics (5 bars, shared

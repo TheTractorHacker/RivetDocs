@@ -5,7 +5,7 @@ import {
   updateAiSettingsSchema,
   type TestAiSettingsInput,
   type UpdateAiSettingsInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AiSettingsService } from './ai-settings.service.js';
 import { AiService } from './ai.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';

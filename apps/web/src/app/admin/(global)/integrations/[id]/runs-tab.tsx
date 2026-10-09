@@ -8,7 +8,7 @@ import type {
   IntegrationSyncRunDto,
   SyncRunConflict,
   SyncRunTotals,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { Btn, Dialog, Icon, Tag } from '../../../../../components/ui';
 import { FormattedDateTime } from '../../../../../lib/timezone-context';

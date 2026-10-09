@@ -7,7 +7,7 @@ description: Assign roles and manage user access across global and per-tenant sc
 
 # Permissions & RBAC
 
-Weavestream uses three orthogonal RBAC axes: a **global role**, a per-user **default tenant access** (`globalAccess`), and **per-tenant memberships**. Platform-admin actions are gated by **capabilities**. All authorization is evaluated from a single resolver.
+RivetDocs uses three orthogonal RBAC axes: a **global role**, a per-user **default tenant access** (`globalAccess`), and **per-tenant memberships**. Platform-admin actions are gated by **capabilities**. All authorization is evaluated from a single resolver.
 
 ## RBAC Model
 

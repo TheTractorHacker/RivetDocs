@@ -70,7 +70,7 @@ export function containsSensitiveMaterial(value: unknown): boolean {
   return scanSensitiveMaterial(value) !== 'safe';
 }
 
-// A canonical UUID is an identifier, not a credential. Weavestream builds
+// A canonical UUID is an identifier, not a credential. RivetDocs builds
 // slugs and external ids from source UUIDs (`automations-<uuid>`), and with
 // the hyphens joined to a prefix such a run can clear the entropy bar by
 // chance. The Breeze desired-configuration inspection exempts UUIDs the same

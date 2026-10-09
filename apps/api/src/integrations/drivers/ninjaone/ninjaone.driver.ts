@@ -12,7 +12,7 @@ import type {
   TicketListResponse,
   TicketPriority,
   TicketStatusBucket,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   DriverAuthError,
   type LegacyDriverFetchPage,
@@ -94,7 +94,7 @@ const NINJAONE_OAUTH_FALLBACK_SCOPE = 'monitoring';
  *   Hyper-V / Xen guest VMs and host management nodes, and anything
  *   else NinjaOne tracks without a local agent. Optional — operators
  *   pick a layout + match keys + field mappings for this resource
- *   only when they actually want non-agent devices in Weavestream.
+ *   only when they actually want non-agent devices in RivetDocs.
  */
 const NINJAONE_AGENT_RESOURCE_KEY = 'records';
 const NINJAONE_NMS_RESOURCE_KEY = 'nms';
@@ -211,7 +211,7 @@ interface NinjaOneDevice {
 }
 
 /**
- * Process-wide OAuth token cache. Keyed by either the Weavestream
+ * Process-wide OAuth token cache. Keyed by either the RivetDocs
  * `integrationId` (preferred — stable across config edits when only
  * unrelated fields change) OR a `${baseUrl}::${apiKey}` fingerprint
  * for callers that don't plumb the integration id through
@@ -221,7 +221,7 @@ interface NinjaOneDevice {
  * TTL so a request right at the edge still has runway to complete.
  * A 401 from any downstream NinjaOne call invalidates the cached
  * token and the next request mints a fresh one — handles the case
- * where the secret was rotated server-side without a Weavestream
+ * where the secret was rotated server-side without a RivetDocs
  * config push.
  */
 interface CachedToken {
@@ -274,7 +274,7 @@ export class NinjaOneDriver implements IntegrationDriver {
     key: 'ninjaone',
     label: 'NinjaOne RMM',
     description:
-      'Sync managed devices from NinjaOne organisations into Weavestream asset layouts.',
+      'Sync managed devices from NinjaOne organisations into RivetDocs asset layouts.',
     iconKey: 'ninjaone',
     configFields: [
       {
@@ -325,7 +325,7 @@ export class NinjaOneDriver implements IntegrationDriver {
       // VMware / Hyper-V / Xen guest VMs and hypervisor management
       // nodes. Operators configure this resource (layout + match key
       // + field mappings) only when they actively want these devices
-      // synced into Weavestream — otherwise it stays disabled and the
+      // synced into RivetDocs — otherwise it stays disabled and the
       // orchestrator skips it.
       {
         key: NINJAONE_NMS_RESOURCE_KEY,
@@ -565,7 +565,7 @@ export class NinjaOneDriver implements IntegrationDriver {
     // `/v2/devices` endpoint but is silently ignored on
     // `/v2/devices-detailed` — using it caused every visible device,
     // across every org the API client could see, to land in the
-    // single mapped Weavestream company on first sync.
+    // single mapped RivetDocs company on first sync.
     url.searchParams.set('df', `org=${ctx.externalOrgId}`);
     url.searchParams.set('pageSize', String(pageSize));
     if (after > 0) url.searchParams.set('after', String(after));
@@ -1232,7 +1232,7 @@ export class NinjaOneDriver implements IntegrationDriver {
     // by direct URL regardless of the configured org mapping. We
     // reject any ticket whose `clientId` doesn't match the mapping's
     // upstream org so a hand-crafted URL can't leak cross-tenant
-    // tickets into the wrong Weavestream company.
+    // tickets into the wrong RivetDocs company.
     if (expectedOrgId !== null) {
       const rowClientId = pickNumber(ticketRaw, [
         'clientId',
@@ -1946,7 +1946,7 @@ function mapNinjaTicketListRow(
     ),
     // The service layer resolves these from the upstream clientId
     // when stitching the response. Drivers only know upstream tenants,
-    // not Weavestream companies.
+    // not RivetDocs companies.
     companyId: null,
     companyName: null,
     externalClientId: clientId !== null ? String(clientId) : null,

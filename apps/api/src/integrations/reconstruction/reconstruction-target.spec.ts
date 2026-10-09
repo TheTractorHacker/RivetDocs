@@ -107,7 +107,7 @@ describe('reconstruction safety outcomes', () => {
   it('does not replace manual provenance when a bound retry is malformed', () => {
     const manual = {
       ...buildProvenance(context(), input),
-      ownership: 'weavestream' as const,
+      ownership: 'rivetdocs' as const,
       externalOrgId: 'manual-org',
       resourceKey: 'manual-assets',
       externalId: 'manual-org:manual-assets:asset-1',
@@ -117,7 +117,7 @@ describe('reconstruction safety outcomes', () => {
       'asset',
     );
     expect(out.provenance).toMatchObject({
-      ownership: 'weavestream',
+      ownership: 'rivetdocs',
       externalOrgId: 'manual-org',
       externalId: manual.externalId,
     });

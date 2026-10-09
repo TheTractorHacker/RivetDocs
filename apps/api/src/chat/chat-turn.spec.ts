@@ -1,4 +1,4 @@
-import type { ChatRequestContext } from '@weavestream/shared';
+import type { ChatRequestContext } from '@rivetdocs/shared';
 import {
   buildTurnContext,
   estimateTokens,

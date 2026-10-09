@@ -1,4 +1,4 @@
-import { formatCalendarDate, formatDate } from '@weavestream/shared';
+import { formatCalendarDate, formatDate } from '@rivetdocs/shared';
 import type { AssetRecord, LayoutRecord } from './api';
 
 /**

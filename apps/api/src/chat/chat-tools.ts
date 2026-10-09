@@ -33,7 +33,7 @@ import {
   AI_TOOL_MODES,
   aiToolNames,
   type AiToolName,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AI_TOOL_SPECS } from '../ai-tools/tool-specs.js';
 import { toOpenAiToolDef, type OpenAiFunctionTool } from '../ai-tools/zod-openai.js';
 

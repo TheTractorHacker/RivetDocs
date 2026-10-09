@@ -1,4 +1,4 @@
-import type { PasswordSummary } from '@weavestream/shared';
+import type { PasswordSummary } from '@rivetdocs/shared';
 
 /**
  * Client-side "needs attention" predicate for the list chip, mirroring

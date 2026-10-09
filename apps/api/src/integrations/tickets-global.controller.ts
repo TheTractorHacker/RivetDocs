@@ -3,7 +3,7 @@ import type { Request } from 'express';
 import {
   ticketListFilterSchema,
   type TicketListFilter,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';
 import { requestMetaOf as meta } from '../common/request-meta.js';
@@ -14,13 +14,13 @@ import { TicketsService } from './tickets.service.js';
  *
  * Aggregates every ticket the system's ticketing integration can see
  * (currently single-provider; multi-provider UX deferred), with each
- * row stitched server-side to a resolved Weavestream company. There
+ * row stitched server-side to a resolved RivetDocs company. There
  * is no `companyId` in the URL, so IDOR-by-URL-tampering is
  * impossible — the controller is gated by the `tickets.read.global`
  * permission (capability `TICKETS_READ`, granted to SUPER_ADMIN
  * implicitly and to elevated OPERATORs via the manager preset).
  *
- * Tickets are NEVER persisted in Weavestream. Every request hits the
+ * Tickets are NEVER persisted in RivetDocs. Every request hits the
  * upstream system via the driver; `TicketsService` records a per-call
  * audit row (`tickets.list` / `tickets.view`) with `companyId: null`
  * — bodies / subjects are never audit-logged.

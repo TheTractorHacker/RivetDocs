@@ -1,4 +1,4 @@
-/* Weavestream Mobile — design tokens.
+/* RivetDocs Mobile — design tokens.
  *
  * Split by axis, deliberately: **inherit color, own the geometry.**
  *
@@ -15,7 +15,7 @@
  * vars cannot serve both. Same for type scale and touch sizing.
  *
  * Values below come from the design handoff's spec tables
- * (Build_Plan/Mobile/design_handoff_weavestream_mobile/README.md).
+ * (Build_Plan/Mobile/design_handoff_rivetdocs_mobile/README.md).
  * Where the handoff's hexes differ from the shared tokens, the tokens
  * win — the handoff was drawn independently and lands a hair off the
  * real palette (its `#fbfbf9` frame vs `--bg: #fafaf9`, its `#e6e5e0`
@@ -28,7 +28,7 @@
  * accent (the raised Ask button's glow, the copy-button fill) must
  * derive from the var, or it desaturates against a non-teal accent.
  */
-@import '@weavestream/shared/styles/color-tokens.css';
+@import '@rivetdocs/shared/styles/color-tokens.css';
 
 :root {
   /* ---- Radii (handoff §Radius) ---- */

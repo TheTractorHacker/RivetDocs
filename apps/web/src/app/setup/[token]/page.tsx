@@ -51,7 +51,7 @@ export default async function SetupPage({
 
   return (
     <AuthShell
-      title="Welcome to Weavestream"
+      title="Welcome to RivetDocs"
       subtitle={
         <>
           Set a password for <strong style={{ color: 'var(--text)' }}>{result.email}</strong>.

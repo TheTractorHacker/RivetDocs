@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { chatToolCallSchema, type ChatToolCallDto } from '@weavestream/shared';
+import { chatToolCallSchema, type ChatToolCallDto } from '@rivetdocs/shared';
 import { parseToolCalls, toMessageDto } from './chat.service.js';
 
 const ART = '4e8c7a52-88a1-4f5e-9b1e-1a2b3c4d5e6f';

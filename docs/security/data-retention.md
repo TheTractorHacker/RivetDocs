@@ -7,7 +7,7 @@ description: Where derived plaintext copies of records live (search, audit, vers
 
 # Data Retention
 
-Weavestream keeps several **secondary stores** that hold data derived from your
+RivetDocs keeps several **secondary stores** that hold data derived from your
 primary records — the search index, the audit log, article version history, and
 backup dumps. These stores exist for good reasons (fast search, tamper-evident
 history, point-in-time recovery), but they mean that **hiding or deleting a

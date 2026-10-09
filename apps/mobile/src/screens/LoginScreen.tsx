@@ -54,7 +54,7 @@ export function LoginScreen({
     <AuthScreen>
       <div className="flex flex-col gap-1">
         <Title>Sign in</Title>
-        <Subtitle>Weavestream for field technicians</Subtitle>
+        <Subtitle>RivetDocs for field technicians</Subtitle>
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-5">

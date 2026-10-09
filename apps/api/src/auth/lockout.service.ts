@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ipLimitKey } from '@weavestream/shared';
+import { ipLimitKey } from '@rivetdocs/shared';
 import { EnvService } from '../config/env.service.js';
 import { RedisService } from '../redis/redis.service.js';
 

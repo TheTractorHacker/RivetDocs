@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ChatToolCallDto, CreateArticleInput } from '@weavestream/shared';
+import type { ChatToolCallDto, CreateArticleInput } from '@rivetdocs/shared';
 import { ChatToolCallService } from './chat-tool-call.service.js';
 import { ChatService } from './chat.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -25,14 +25,14 @@ import type { AuthedUser } from '../common/current-user.decorator.js';
  * deliberately out of scope — its wiring is covered by its own suite
  * and by `chat-tool-call.service.spec.ts`.
  *
- * Opt-in via `WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1` (same gating
+ * Opt-in via `RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1` (same gating
  * rationale as `assets.pagination.db.spec.ts`: importing @prisma/client
  * loads the workspace .env, so DATABASE_URL alone would mutate the
  * development database on a bare `pnpm test`). Run locally with:
- *   WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @weavestream/api test
+ *   RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @rivetdocs/api test
  */
 const describeIfDb =
-  process.env.WEAVESTREAM_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
+  process.env.RIVETDOCS_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
 
 const USER = '5bc00000-0000-4000-8000-00000000a001';
 const CO_A = '5bc00000-0000-4000-8000-00000000c001';

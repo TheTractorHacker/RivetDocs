@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { UserRole } from '@weavestream/shared';
+import type { UserRole } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { hasEligibleNativeBinding } from '../integrations/reconstruction/native-binding-ownership.js';
@@ -375,7 +375,7 @@ export class RelationsService implements RelationPort {
         entityId: row.id,
         companyId: input.companyId,
         ip: '0.0.0.0',
-        userAgent: 'weavestream-worker/integration-reconstruction',
+        userAgent: 'rivetdocs-worker/integration-reconstruction',
         after: { integrationId: input.integrationId, change: bound ? 'updated' : 'created' },
       });
       return { status: 'written' as const, targetId: row.id };

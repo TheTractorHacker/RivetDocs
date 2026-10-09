@@ -8,7 +8,7 @@ import {
   getLayoutTemplate,
   type LayoutTemplate,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import {
   Btn,

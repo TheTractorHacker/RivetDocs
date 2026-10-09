@@ -1,5 +1,5 @@
 import { CompanyPdfExportWorker } from './company-pdf-export.processor.js';
-import type { CompanyExportData } from '@weavestream/api/exports';
+import type { CompanyExportData } from '@rivetdocs/api/exports';
 import { companyPdfTestFixture } from './company-pdf-export.test-fixture.js';
 
 /**

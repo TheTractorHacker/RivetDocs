@@ -1,4 +1,4 @@
-import { FILE_MULTI_CAP, FieldTypeValues } from '@weavestream/shared';
+import { FILE_MULTI_CAP, FieldTypeValues } from '@rivetdocs/shared';
 import { FieldTypesRegistry } from './field-types.registry.js';
 
 describe('FieldTypesRegistry (exhaustive)', () => {

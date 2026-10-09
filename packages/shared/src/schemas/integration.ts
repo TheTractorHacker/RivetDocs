@@ -279,7 +279,7 @@ export const driverDescriptorSchema = z
   /**
    * Resources this driver knows how to fetch. Asset-import (`pull`) drivers
    * declare at least one resource; security drivers (e.g. Cloudflare)
-   * carry an empty array — they don't sync records into Weavestream
+   * carry an empty array — they don't sync records into RivetDocs
    * Assets, so per-resource layouts and field mappings don't apply.
    */
   resources: z.array(driverResourceDescriptorSchema).default([]),
@@ -289,7 +289,7 @@ export const driverDescriptorSchema = z
      * Distinguishes asset-import drivers from outbound/security drivers.
      * `pull` (default): driver pages records from the upstream system
      * and the framework projects them onto Asset rows. `security`:
-     * driver manages an external resource where Weavestream is the
+     * driver manages an external resource where RivetDocs is the
      * source of truth (e.g. Cloudflare IP lists).
      */
     kind: z.enum(['pull', 'security']).default('pull'),
@@ -508,7 +508,7 @@ export type SourceOrgDto = z.infer<typeof sourceOrgSchema>;
 export const sourceFieldSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
-  /** Most-likely Weavestream field type — drives the suggested target. */
+  /** Most-likely RivetDocs field type — drives the suggested target. */
   hintType: z
     .enum([
       'TEXT',
@@ -786,7 +786,7 @@ const baseSyncRunTotalsShape = {
   skippedAmbiguous: z.number().int().nonnegative().default(0),
   skippedManual: z.number().int().nonnegative().default(0),
   /**
-   * Records that resolved to an existing Weavestream asset which has
+   * Records that resolved to an existing RivetDocs asset which has
    * been archived by an operator. The runner refuses to refresh
    * archived rows so the operator's archive intent is preserved —
    * the next run either picks up a Restore (and resumes updates) or
@@ -843,7 +843,7 @@ export const integrationProvenanceSchema = z
     firstSeenAt: z.string().datetime(),
     lastSeenAt: z.string().datetime(),
     lastSyncedAt: z.string().datetime().nullable(),
-    ownership: z.enum(['breeze', 'weavestream']),
+    ownership: z.enum(['breeze', 'rivetdocs']),
     state: integrationSyncStateSchema,
   })
   .strict();
@@ -1069,7 +1069,7 @@ export const integrationTargetProvenanceSchema = z
     resourceId: z.string().uuid(),
     sourceLabel: z.string().min(1).max(256),
     sourceResource: driverResourceKeySchema,
-    ownership: z.enum(['breeze', 'weavestream']),
+    ownership: z.enum(['breeze', 'rivetdocs']),
     state: integrationSyncStateSchema,
     firstSeenAt: z.string().datetime(),
     lastSeenAt: z.string().datetime(),

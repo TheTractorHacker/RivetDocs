@@ -8,7 +8,7 @@ import {
   type CompanyListItem,
   type CompanyPage,
 } from '../../../lib/server-api/companies';
-import type { RecentActivityItem, StarredItem } from '@weavestream/shared';
+import type { RecentActivityItem, StarredItem } from '@rivetdocs/shared';
 import {
   getAdminStats,
   listRecentActivity,
@@ -42,7 +42,7 @@ export default async function AdminDashboard() {
       <PageHeader
         crumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Dashboard' }]}
         title={`Hello, ${me.name.split(' ')[0] ?? me.name}`}
-        description="Welcome back to Weavestream. Select a tool from the sidebar to manage your workspace."
+        description="Welcome back to RivetDocs. Select a tool from the sidebar to manage your workspace."
       />
       <PageBody>
         {stats && (

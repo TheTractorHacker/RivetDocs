@@ -5,8 +5,8 @@ import {
   articleSummaryJobId,
   articleSummaryJobSchema,
   type ArticleSummaryGenerateJob,
-} from '@weavestream/shared';
-import { RedisService, PrismaService, QueuesService } from '@weavestream/api/runtime';
+} from '@rivetdocs/shared';
+import { RedisService, PrismaService, QueuesService } from '@rivetdocs/api/runtime';
 import {
   AiCompletionHttpError,
   AiCompletionService,
@@ -16,7 +16,7 @@ import {
   AiNotConfiguredError,
   AiSettingsService,
   type AiResolvedConfig,
-} from '@weavestream/api/ai';
+} from '@rivetdocs/api/ai';
 import {
   createManagedWorker,
   type ManagedWorker,

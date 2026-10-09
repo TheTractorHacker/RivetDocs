@@ -2,14 +2,14 @@
 label: Backup & Restore
 icon: database
 order: 600
-description: Protect Weavestream data with scheduled exports, off-host file backups, and tested restore procedures.
+description: Protect RivetDocs data with scheduled exports, off-host file backups, and tested restore procedures.
 ---
 
 # Backup & Restore
 
-This guide explains how to protect a Weavestream deployment and restore it after a host failure.
+This guide explains how to protect a RivetDocs deployment and restore it after a host failure.
 
-Weavestream stores persistent data under `$DATA_DIR` (default: `./data` next to `compose.yml`). A complete backup needs both database data and filesystem data.
+RivetDocs stores persistent data under `$DATA_DIR` (default: `./data` next to `compose.yml`). A complete backup needs both database data and filesystem data.
 
 ## What To Back Up
 
@@ -24,7 +24,7 @@ Weavestream stores persistent data under `$DATA_DIR` (default: `./data` next to 
 Redis data is usually replayable: queued jobs can retry, sessions can expire, and users can log in again. Postgres, uploaded files, backup dumps, and `.env` secrets are the irreplaceable pieces.
 
 !!!warning
-The scheduled backup dump is not encrypted by Weavestream. Store `$DATA_DIR/backup` on encrypted storage or replicate it with an encrypted tool such as restic, borg, or rclone crypt. Back up `.env` separately in a secrets vault.
+The scheduled backup dump is not encrypted by RivetDocs. Store `$DATA_DIR/backup` on encrypted storage or replicate it with an encrypted tool such as restic, borg, or rclone crypt. Back up `.env` separately in a secrets vault.
 !!!
 
 ## Confirm Your Data Directory
@@ -32,14 +32,14 @@ The scheduled backup dump is not encrypted by Weavestream. Store `$DATA_DIR/back
 By default, `compose.yml` stores data in `./data` next to the compose file. If you set `DATA_DIR` in `.env`, use that path instead.
 
 ```bash
-cd /opt/weavestream
+cd /opt/rivetdocs
 grep '^DATA_DIR=' .env || echo "DATA_DIR=./data"
 ```
 
 For the examples below:
 
 ```bash
-COMPOSE_DIR=/opt/weavestream
+COMPOSE_DIR=/opt/rivetdocs
 DATA_DIR=$COMPOSE_DIR/data
 ```
 
@@ -47,7 +47,7 @@ If your `.env` uses a custom `DATA_DIR`, replace the value above.
 
 ## PostgreSQL Client Prerequisites
 
-Weavestream's published Docker images run PostgreSQL 16. Use PostgreSQL 16
+RivetDocs's published Docker images run PostgreSQL 16. Use PostgreSQL 16
 client utilities for backup and restore work so the client matches the server
 major version.
 
@@ -105,11 +105,11 @@ docker compose exec postgres psql --version
 Operators with the `BACKUP_MANAGE` capability, or any `SUPER_ADMIN`, can configure scheduled Postgres exports under **Admin -> Backups**. Each schedule produces:
 
 ```text
-$DATA_DIR/backup/weavestream-postgres-<timestamp>.dump
-$DATA_DIR/backup/weavestream-postgres-<timestamp>.manifest.json
+$DATA_DIR/backup/rivetdocs-postgres-<timestamp>.dump
+$DATA_DIR/backup/rivetdocs-postgres-<timestamp>.manifest.json
 ```
 
-The dump is a portable `pg_dump --format=custom` export. The manifest includes the dump filename, SHA-256 checksum, Weavestream version, Prisma migration hash, database hostname, generated timestamp, and active password-encryption key id.
+The dump is a portable `pg_dump --format=custom` export. The manifest includes the dump filename, SHA-256 checksum, RivetDocs version, Prisma migration hash, database hostname, generated timestamp, and active password-encryption key id.
 
 ### Configure A Schedule
 
@@ -140,7 +140,7 @@ Every run takes a Postgres advisory lock around the whole job. If a second run s
 
 ### What's In The Dump
 
-The exported dump contains every Weavestream table. It does **not** contain:
+The exported dump contains every RivetDocs table. It does **not** contain:
 
 - `$DATA_DIR/files`. Uploaded attachments live on the filesystem, not in Postgres.
 - `.env` secrets. The `PASSWORD_ENCRYPTION_KEY`, `MFA_ENCRYPTION_KEY`, `JWT_SIGNING_KEY`, and related keys are required to decrypt and authenticate restored data.
@@ -163,9 +163,9 @@ Recommended nightly sync:
 #!/bin/bash
 set -euo pipefail
 
-COMPOSE_DIR=/opt/weavestream
+COMPOSE_DIR=/opt/rivetdocs
 DATA_DIR="$COMPOSE_DIR/data"
-DEST=/mnt/backups/weavestream
+DEST=/mnt/backups/rivetdocs
 DATE=$(date +%F)
 
 mkdir -p "$DEST/postgres-dumps" "$DEST/files-$DATE" "$DEST/secrets"
@@ -180,7 +180,7 @@ rsync -a "$DATA_DIR/files/" "$DEST/files-$DATE/"
 cp "$COMPOSE_DIR/.env" "$DEST/secrets/.env"
 
 # Example file snapshot rotation. The database dumps are pruned by
-# Weavestream retention, so this only rotates file snapshots.
+# RivetDocs retention, so this only rotates file snapshots.
 find "$DEST" -maxdepth 1 -type d -name 'files-*' -mtime +30 -exec rm -rf {} +
 ```
 
@@ -189,7 +189,7 @@ For production, run this from cron or a systemd timer and replicate `DEST` to a 
 Example with restic:
 
 ```bash
-restic -r s3:https://s3.amazonaws.com/example-weavestream-backups backup \
+restic -r s3:https://s3.amazonaws.com/example-rivetdocs-backups backup \
   "$DATA_DIR/backup" \
   "$DATA_DIR/files" \
   "$COMPOSE_DIR/.env"
@@ -202,10 +202,10 @@ The in-app dumps are bit-for-bit identical to a manual `pg_dump --format=custom`
 Even with the in-app schedule enabled, you may want a one-off logical dump before upgrades or maintenance.
 
 ```bash
-cd /opt/weavestream
+cd /opt/rivetdocs
 docker compose exec -T postgres \
   pg_dump -U "$POSTGRES_USER" --format=custom --no-owner --no-acl "$POSTGRES_DB" \
-  > "weavestream-postgres-manual-$(date -u +%Y-%m-%dT%H-%M-%SZ).dump"
+  > "rivetdocs-postgres-manual-$(date -u +%Y-%m-%dT%H-%M-%SZ).dump"
 ```
 
 This does not replace `$DATA_DIR/files` or `.env`.
@@ -222,21 +222,21 @@ docker compose start postgres
 
 Use this when the original Docker host is gone and you have:
 
-- A Weavestream `.dump` file from `$DATA_DIR/backup`.
+- A RivetDocs `.dump` file from `$DATA_DIR/backup`.
 - A matching `$DATA_DIR/files` backup.
 - The original `.env`.
 
 ### Prepare The New Host
 
 ```bash
-mkdir -p /opt/weavestream
-cd /opt/weavestream
+mkdir -p /opt/rivetdocs
+cd /opt/rivetdocs
 
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/main/compose.yml
-cp /backup/weavestream/secrets/.env .env
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/compose.yml
+cp /backup/rivetdocs/secrets/.env .env
 
 mkdir -p data
-rsync -a /backup/weavestream/files-2026-05-01/ data/files/
+rsync -a /backup/rivetdocs/files-2026-05-01/ data/files/
 ```
 
 If your original `.env` set `DATA_DIR`, recreate that directory and restore files there instead.
@@ -258,7 +258,7 @@ Replace the dump path with the file you want to restore:
 docker compose exec -T postgres sh -lc \
   'pg_restore --clean --if-exists --no-owner --no-acl \
      -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
-  < /backup/weavestream/postgres-dumps/weavestream-postgres-2026-05-01T03-00-00Z.dump
+  < /backup/rivetdocs/postgres-dumps/rivetdocs-postgres-2026-05-01T03-00-00Z.dump
 ```
 
 If the database already contains partial data and the restore fails, recreate it and retry:
@@ -285,9 +285,9 @@ The `api` container runs `prisma migrate deploy` on boot. If the restored dump a
 If you restored the database first and need to restore files afterward:
 
 ```bash
-cd /opt/weavestream
+cd /opt/rivetdocs
 docker compose stop api worker
-rsync -a /backup/weavestream/files-2026-05-01/ data/files/
+rsync -a /backup/rivetdocs/files-2026-05-01/ data/files/
 docker compose start api worker
 ```
 
@@ -301,11 +301,11 @@ docker compose stop api web worker
 
 # Drop and recreate the database.
 docker compose exec -T postgres \
-  psql -U postgres -c "DROP DATABASE weavestream; CREATE DATABASE weavestream OWNER weavestream;"
+  psql -U postgres -c "DROP DATABASE rivetdocs; CREATE DATABASE rivetdocs OWNER rivetdocs;"
 
 # Restore.
 gunzip -c backup-2026-05-01.sql.gz | \
-  docker compose exec -T postgres psql -U weavestream weavestream
+  docker compose exec -T postgres psql -U rivetdocs rivetdocs
 
 # Start everything again.
 docker compose up -d
@@ -325,7 +325,7 @@ After the stack starts:
 
 ### `pg_restore: error: input file appears to be a text format dump`
 
-The restore command above expects Weavestream's in-app custom-format dump. If you have a `.sql` or `.sql.gz` dump, restore it with `psql` instead:
+The restore command above expects RivetDocs's in-app custom-format dump. If you have a `.sql` or `.sql.gz` dump, restore it with `psql` instead:
 
 ```bash
 gunzip -c backup.sql.gz | docker compose exec -T postgres \
@@ -363,5 +363,5 @@ Increase **Keep last** in the backup schedule. Daily, weekly, and monthly retent
 - [ ] `$DATA_DIR/files` is copied off-host.
 - [ ] `.env` is stored securely outside the Docker host.
 - [ ] Off-host backups are encrypted.
-- [ ] Retention is configured in Weavestream and in the off-host backup system.
+- [ ] Retention is configured in RivetDocs and in the off-host backup system.
 - [ ] A restore has been tested on a clean host.

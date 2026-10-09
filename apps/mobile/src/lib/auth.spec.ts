@@ -1,6 +1,6 @@
 import { ApiError, shouldRetry } from './api';
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   ensureCsrf: async () => 'csrf-token',
 }));
 

@@ -3,7 +3,7 @@ import { AppLogo } from './AppLogo';
 
 /**
  * Shared frame for the three unauthenticated screens (login, MFA
- * challenge, MFA setup hand-off): the Weavestream lockup, then the
+ * challenge, MFA setup hand-off): the RivetDocs lockup, then the
  * screen's own content.
  *
  * Its own component rather than a prop on `Screen` because these screens

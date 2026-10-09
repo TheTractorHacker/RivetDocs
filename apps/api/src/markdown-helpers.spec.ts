@@ -1,4 +1,4 @@
-import { markdownExcerpt, markdownToPlaintext } from '@weavestream/shared';
+import { markdownExcerpt, markdownToPlaintext } from '@rivetdocs/shared';
 
 describe('markdownToPlaintext (shared, search indexing)', () => {
   it('strips heading markers and emphasis', () => {

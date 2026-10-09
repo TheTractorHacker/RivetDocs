@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { parseConfig, WeavestreamClient } from './client.js';
+import { parseConfig, RivetDocsClient } from './client.js';
 import { registerTools } from './tools.js';
 
 const KEY = 'ws_0123456789abcdef01_c2VjcmV0LXNlY3JldC1zZWNyZXQtc2VjcmV0';
@@ -22,7 +22,7 @@ async function connect(opts: { respond?: (c: Call) => Response } = {}) {
   const server = new McpServer({ name: 'test', version: '0' });
   registerTools(
     server,
-    new WeavestreamClient({ baseUrl: 'https://ws.example.com', apiKey: KEY, fetchImpl }),
+    new RivetDocsClient({ baseUrl: 'https://ws.example.com', apiKey: KEY, fetchImpl }),
   );
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test-client', version: '0' });
@@ -33,10 +33,10 @@ async function connect(opts: { respond?: (c: Call) => Response } = {}) {
 const text = (r: unknown) => ((r as { content: { text: string }[] }).content[0]?.text ?? '');
 
 test('config: https only (http just for localhost), and the key must look like a key', () => {
-  assert.throws(() => parseConfig({ WEAVESTREAM_URL: 'http://ws.example.com', WEAVESTREAM_API_KEY: KEY }), /https/);
-  assert.throws(() => parseConfig({ WEAVESTREAM_URL: 'https://ws.example.com', WEAVESTREAM_API_KEY: 'nope' }), /ws_/);
-  assert.equal(parseConfig({ WEAVESTREAM_URL: 'http://localhost:3000/x', WEAVESTREAM_API_KEY: KEY }).baseUrl, 'http://localhost:3000');
-  assert.equal(parseConfig({ WEAVESTREAM_URL: 'https://ws.example.com/', WEAVESTREAM_API_KEY: KEY }).baseUrl, 'https://ws.example.com');
+  assert.throws(() => parseConfig({ RIVETDOCS_URL: 'http://ws.example.com', RIVETDOCS_API_KEY: KEY }), /https/);
+  assert.throws(() => parseConfig({ RIVETDOCS_URL: 'https://ws.example.com', RIVETDOCS_API_KEY: 'nope' }), /ws_/);
+  assert.equal(parseConfig({ RIVETDOCS_URL: 'http://localhost:3000/x', RIVETDOCS_API_KEY: KEY }).baseUrl, 'http://localhost:3000');
+  assert.equal(parseConfig({ RIVETDOCS_URL: 'https://ws.example.com/', RIVETDOCS_API_KEY: KEY }).baseUrl, 'https://ws.example.com');
 });
 
 test('no reveal, destructive or access-changing tools at all', async () => {

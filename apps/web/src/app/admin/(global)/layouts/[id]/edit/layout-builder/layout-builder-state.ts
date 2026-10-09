@@ -1,5 +1,5 @@
 import { arrayMove } from '@dnd-kit/sortable';
-import { randomClientId } from '@weavestream/shared/browser';
+import { randomClientId } from '@rivetdocs/shared/browser';
 import {
   type FieldType,
   type LayoutFieldSummary,
@@ -8,7 +8,7 @@ import {
   canShowInTable,
   fieldOptionsSchemaFor,
   saveAssetFieldsSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { BuilderAction, BuilderField, BuilderState } from './types';
 
 /**

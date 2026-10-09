@@ -1,4 +1,4 @@
-import type { BackupJob } from '@weavestream/shared';
+import type { BackupJob } from '@rivetdocs/shared';
 import { BackupWorker } from './backup.processor.js';
 
 type RunPayload = Extract<BackupJob, { kind: 'run' }>;
@@ -53,7 +53,7 @@ describe('BackupWorker handleRun disabled-schedule guard', () => {
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
     const email = { send: jest.fn().mockResolvedValue(undefined) };
     const env = {
-      values: { BACKUP_STORAGE_DIR: '/var/lib/weavestream/backup' },
+      values: { BACKUP_STORAGE_DIR: '/var/lib/rivetdocs/backup' },
     };
     const worker = new BackupWorker(
       // RedisService — only touched by start(), which these specs never call.

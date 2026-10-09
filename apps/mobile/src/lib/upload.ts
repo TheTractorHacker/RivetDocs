@@ -6,15 +6,15 @@ import {
   type ConfirmUploadResponse,
   type InitUploadResponse,
   type UploadProgress,
-} from '@weavestream/shared/browser';
-import type { UploadAttachmentType } from '@weavestream/shared';
+} from '@rivetdocs/shared/browser';
+import type { UploadAttachmentType } from '@rivetdocs/shared';
 import { ApiError, apiFetch } from './api';
 
 /**
  * Mobile orchestration of the 3-step upload protocol
  * (init → PUT → confirm), on this app's throwing `apiFetch` contract.
  * The framework-free pieces (mime inference, the progress PUT, error
- * prose) live in `@weavestream/shared/browser`; `apps/web` keeps its
+ * prose) live in `@rivetdocs/shared/browser`; `apps/web` keeps its
  * own thin orchestration on its `{ok, data, problem}` contract.
  *
  * `ApiError`s from init/confirm are rethrown as `UploadError` carrying

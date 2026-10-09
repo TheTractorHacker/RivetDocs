@@ -2,7 +2,7 @@ import {
   cloudflareAddEntrySchema,
   cloudflareIpEntryValueSchema,
   parseIpEntry,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Cloudflare Rules Lists — schema and validator regression tests.

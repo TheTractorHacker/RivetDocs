@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import { Toggle, useToast } from '../../../../components/ui';
 import { SectionHeader } from './settings-form';

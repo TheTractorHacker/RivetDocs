@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ArticleSummary, FolderNode } from '@weavestream/shared';
+import type { ArticleSummary, FolderNode } from '@rivetdocs/shared';
 import { requireMe } from '../../../../lib/server-api/auth';
 import {
   listArticles,

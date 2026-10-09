@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { PasswordSummary } from '@weavestream/shared';
+import type { PasswordSummary } from '@rivetdocs/shared';
 import { requireMe } from '../../../../lib/server-api/auth';
 import { listPasswords } from '../../../../lib/server-api/passwords';
 import { resolvePortalCompany } from '../../../../lib/portal-company';

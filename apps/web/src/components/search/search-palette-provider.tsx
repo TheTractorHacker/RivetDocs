@@ -20,7 +20,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { UserSearchDefaults } from '@weavestream/shared';
+import type { UserSearchDefaults } from '@rivetdocs/shared';
 import { SearchPalette } from './search-palette';
 
 type Ctx = {

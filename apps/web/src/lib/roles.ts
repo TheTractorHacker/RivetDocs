@@ -4,8 +4,8 @@ import type {
   PlatformCapability,
   UserRole,
   ViewerLike,
-} from '@weavestream/shared';
-import { activeMemberships } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { activeMemberships } from '@rivetdocs/shared';
 import type { Me, Membership } from './server-api/auth';
 
 const OPERATOR_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPERATOR'];
@@ -16,15 +16,15 @@ const OPERATOR_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPERATOR'];
 // imports through `lib/roles` are re-exported here — `activeMembershipFor`,
 // `effectiveCompanyAccess`, `canReadCompany`, `hasAnyCapability`,
 // `CompanyAccess` and `MembershipLike` had no importer on this path and
-// are reached from `@weavestream/shared` directly, which is how mobile
+// are reached from `@rivetdocs/shared` directly, which is how mobile
 // already consumes them. `ViewerLike` is structural over there — `Me`
 // still satisfies it, so callers are unaffected.
 export {
   activeMemberships,
   canWriteCompany,
   hasCapability,
-} from '@weavestream/shared';
-export type { ViewerLike } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+export type { ViewerLike } from '@rivetdocs/shared';
 
 // ───────────────────────────────────────────────────────────────────
 // Role predicates
@@ -90,7 +90,7 @@ export function canAccessAdminShell(
 // Re-exported here (not reimplemented) so the ~15 existing call sites
 // keep their `lib/roles` import path and there is still one
 // implementation.
-export { initialsFromName, roleLabel } from '@weavestream/shared';
+export { initialsFromName, roleLabel } from '@rivetdocs/shared';
 
 const MEMBERSHIP_ROLE_LABEL: Record<MembershipRole, string> = {
   FULL: 'Full access',

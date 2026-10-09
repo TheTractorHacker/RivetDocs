@@ -6,7 +6,7 @@ import {
   splitMarkdownTitleAndBody,
   type PatchPreview,
   type PatchSource,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { UUID_RE } from '../../lib/uuid';
 import { apiFetch } from '../../lib/api';
 import { useOrgScope } from '../../lib/org-scope';

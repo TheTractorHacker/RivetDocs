@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { computeLineDiff } from '@weavestream/shared';
+import { computeLineDiff } from '@rivetdocs/shared';
 
 /**
  * Mobile line-diff rendering over the shared bounded `computeLineDiff`.

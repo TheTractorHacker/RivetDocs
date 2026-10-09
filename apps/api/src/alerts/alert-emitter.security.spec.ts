@@ -1,4 +1,4 @@
-import { alertsSendJobSchema } from '@weavestream/shared';
+import { alertsSendJobSchema } from '@rivetdocs/shared';
 import { AlertEmitterService } from './alert-emitter.service.js';
 import type { PersistedAuditEntry } from '../audit/audit.service.js';
 
@@ -140,7 +140,7 @@ describe('AlertEmitterService — security matching', () => {
     expect(queueAdd).toHaveBeenCalledTimes(1);
     const payload = queueAdd.mock.calls[0]?.[1] as { subject: string; text: string };
     expect(payload.subject).toBe(
-      '[Weavestream] Security — Repeated failed sign-ins — Signin watch',
+      '[RivetDocs] Security — Repeated failed sign-ins — Signin watch',
     );
     expect(payload.text).toContain('victim@example.com');
     expect(payload.text).toContain('203.0.113.9');

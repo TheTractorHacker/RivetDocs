@@ -5,8 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { stripNullArgs } from '@weavestream/shared';
-import type { AiToolName } from '@weavestream/shared';
+import { stripNullArgs } from '@rivetdocs/shared';
+import type { AiToolName } from '@rivetdocs/shared';
 import { PermissionService } from '../rbac/permission.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';

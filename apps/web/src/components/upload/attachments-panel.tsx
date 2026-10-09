@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Btn, Icon, Panel, useToast } from '../ui';
 import { apiFetch } from '../../lib/api';
-import { humanSize, problemMessage } from '@weavestream/shared';
+import { humanSize, problemMessage } from '@rivetdocs/shared';
 import {
   describeUploadError,
   preflightFile,

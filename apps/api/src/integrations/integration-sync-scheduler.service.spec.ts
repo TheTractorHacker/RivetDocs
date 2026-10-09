@@ -1,5 +1,5 @@
-import { IntegrationSyncOrchestratorJobNames, QueueNames } from '@weavestream/shared';
-import { envSchema } from '@weavestream/shared/server';
+import { IntegrationSyncOrchestratorJobNames, QueueNames } from '@rivetdocs/shared';
+import { envSchema } from '@rivetdocs/shared/server';
 import { IntegrationSyncSchedulerService } from './integration-sync-scheduler.service.js';
 
 describe('IntegrationSyncSchedulerService', () => {

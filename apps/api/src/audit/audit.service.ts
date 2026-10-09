@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { getTenantContext } from '@weavestream/shared/server';
+import { getTenantContext } from '@rivetdocs/shared/server';
 
 export interface AuditEntry {
   actorId: string | null;

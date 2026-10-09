@@ -1,5 +1,5 @@
-import { isStepUpProblem, problemMessage } from '@weavestream/shared';
-import { ensureCsrf } from '@weavestream/shared/browser';
+import { isStepUpProblem, problemMessage } from '@rivetdocs/shared';
+import { ensureCsrf } from '@rivetdocs/shared/browser';
 import { hasStepUpOpener, requestStepUp } from './step-up';
 
 /**
@@ -169,7 +169,7 @@ export function isRestrictedError(err: unknown): boolean {
 /**
  * Human-readable message off a thrown error, for toast and inline copy.
  *
- * The extraction itself is `@weavestream/shared`'s `problemMessage` — the
+ * The extraction itself is `@rivetdocs/shared`'s `problemMessage` — the
  * same one desktop uses. This wrapper is the mobile-only part: unwrap
  * `ApiError` to reach the problem body, and word the fallback.
  *

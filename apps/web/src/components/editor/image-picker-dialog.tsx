@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { Btn, Dialog, Icon, useToast } from '../ui';
 import { apiFetch } from '../../lib/api';
-import { copyToClipboard } from '@weavestream/shared/browser';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
 import {
   describeUploadError,
   preflightFile,

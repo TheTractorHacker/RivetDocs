@@ -7,7 +7,7 @@ import { Icon, type IconName } from './Icon';
 
 /**
  * Mobile's own primitives, built against the design handoff's spec
- * tables (`Build_Plan/Mobile/design_handoff_weavestream_mobile/README.md`).
+ * tables (`Build_Plan/Mobile/design_handoff_rivetdocs_mobile/README.md`).
  *
  * Two standing rules, both from CLAUDE.md:
  *

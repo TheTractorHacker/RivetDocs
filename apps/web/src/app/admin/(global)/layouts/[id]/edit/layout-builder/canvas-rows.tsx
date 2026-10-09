@@ -3,7 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FIELD_TYPE_CATALOG, canShowInTable } from '@weavestream/shared';
+import { FIELD_TYPE_CATALOG, canShowInTable } from '@rivetdocs/shared';
 import { Btn, Icon, Tag } from '../../../../../../../components/ui';
 import { CANVAS_DROPZONE_ID } from './layout-builder-state';
 import type { BuilderField } from './types';

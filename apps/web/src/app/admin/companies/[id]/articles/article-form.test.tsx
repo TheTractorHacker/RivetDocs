@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { FolderNode } from '@weavestream/shared';
+import type { FolderNode } from '@rivetdocs/shared';
 import type { ArticleDetail } from '../../../../../lib/server-api/articles';
 import { ArticleForm } from './article-form';
 

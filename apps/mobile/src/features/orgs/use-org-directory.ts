@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import type { StarredItem } from '@weavestream/shared';
+import type { StarredItem } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { toOrg, useOrgScope, type Org } from '../../lib/org-scope';
 

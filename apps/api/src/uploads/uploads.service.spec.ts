@@ -150,7 +150,7 @@ describe('UploadsService.init / relayPut', () => {
             `${cid}/uploads/${uid}/${name}`,
         ),
       thumbnailKey: jest.fn(),
-      ensureBucket: jest.fn().mockResolvedValue('/var/lib/weavestream/files/c1'),
+      ensureBucket: jest.fn().mockResolvedValue('/var/lib/rivetdocs/files/c1'),
     };
     redis = {
       client: {

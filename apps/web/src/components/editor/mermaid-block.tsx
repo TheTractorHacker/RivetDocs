@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useDiagramPalette } from './use-diagram-palette';
-import { diagramPaletteSignature } from '@weavestream/shared/browser';
+import { diagramPaletteSignature } from '@rivetdocs/shared/browser';
 
 /**
  * One ```mermaid fence, rendered.

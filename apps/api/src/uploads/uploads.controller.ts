@@ -25,7 +25,7 @@ import {
   type ConfirmUploadInput,
   type InitUploadInput,
   type UploadAttachmentType,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { UploadsService } from './uploads.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';

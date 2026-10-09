@@ -29,7 +29,7 @@ describe('SetupTokenService', () => {
           update: jest.fn(),
         },
       };
-      const env = { values: { APP_URL: 'https://weavestream.example' } };
+      const env = { values: { APP_URL: 'https://rivetdocs.example' } };
       const svc = new SetupTokenService(prisma as never, env as never);
 
       const { token, url, expiresAt } = await svc.issue('user-1', 'actor-1');
@@ -47,7 +47,7 @@ describe('SetupTokenService', () => {
           }),
         }),
       );
-      expect(url).toBe(`https://weavestream.example/setup/${token}`);
+      expect(url).toBe(`https://rivetdocs.example/setup/${token}`);
       expect(expiresAt.getTime()).toBeGreaterThan(Date.now() + 20 * 3600_000);
 
       // Simulate DB returning the stored row for a lookup.

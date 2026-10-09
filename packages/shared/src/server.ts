@@ -1,5 +1,5 @@
 /**
- * Server-only barrel for `@weavestream/shared`.
+ * Server-only barrel for `@rivetdocs/shared`.
  *
  * Import this from Node contexts (NestJS API, server components, scripts)
  * when you need runtime access to environment loading or the tenant-context

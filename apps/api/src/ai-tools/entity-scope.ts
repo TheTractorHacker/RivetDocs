@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { TenantContext } from '@weavestream/shared';
+import type { TenantContext } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 /**

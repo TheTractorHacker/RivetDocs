@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import type { SearchResponse } from '@weavestream/shared';
+import type { SearchResponse } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 
 /** Design-handoff debounce for the search field (desktop uses 180ms). */

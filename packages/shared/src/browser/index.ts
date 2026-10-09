@@ -1,5 +1,5 @@
 /**
- * Browser-only barrel for `@weavestream/shared/browser`.
+ * Browser-only barrel for `@rivetdocs/shared/browser`.
  *
  * Everything here touches a DOM API — `document`, `navigator`,
  * `ClipboardItem`, `fetch` — and is compiled by `tsconfig.browser.json`,

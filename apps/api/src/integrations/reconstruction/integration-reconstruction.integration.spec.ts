@@ -327,7 +327,7 @@ describe('Breeze reconstruction deterministic failure injection', () => {
   });
 });
 
-const reconstructionDatabaseUrl = process.env['WEAVESTREAM_RECONSTRUCTION_TEST_DATABASE_URL'];
+const reconstructionDatabaseUrl = process.env['RIVETDOCS_RECONSTRUCTION_TEST_DATABASE_URL'];
 const describeIfDb = reconstructionDatabaseUrl ? describe : describe.skip;
 
 describeIfDb('Breeze reconstruction disposable PostgreSQL dossier', () => {

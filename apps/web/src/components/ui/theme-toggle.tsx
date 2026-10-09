@@ -1,6 +1,6 @@
 'use client';
 
-import type { UiTheme } from '@weavestream/shared';
+import type { UiTheme } from '@rivetdocs/shared';
 import { Icon } from './icon';
 import { apiFetch } from '../../lib/api';
 import {

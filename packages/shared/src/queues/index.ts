@@ -386,7 +386,7 @@ export type AlertsJobName =
 // Two job shapes routed by `kind`:
 //   - `run`    - produce a `pg_dump --format=custom` file and a
 //                `*.manifest.json` sidecar under
-//                `/var/lib/weavestream/backup` (a host-bound directory
+//                `/var/lib/rivetdocs/backup` (a host-bound directory
 //                from compose.yml). `backupRunId` references a
 //                pre-created `BackupRun` row so the API can poll
 //                status without talking to BullMQ directly.

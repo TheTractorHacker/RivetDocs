@@ -2,12 +2,12 @@
 label: Encryption
 icon: lock
 order: 700
-description: Credential encryption, TOTP secrets, and key management in Weavestream.
+description: Credential encryption, TOTP secrets, and key management in RivetDocs.
 ---
 
 # Encryption
 
-Weavestream encrypts credential data at rest using AES-256-GCM with envelope encryption and key IDs for zero-downtime rotation.
+RivetDocs encrypts credential data at rest using AES-256-GCM with envelope encryption and key IDs for zero-downtime rotation.
 
 ## What Is Encrypted
 
@@ -85,14 +85,14 @@ The plaintext secret is **never written to** Postgres (except as ciphertext), Re
 Encryption keys live in the `.env` file on the Docker host. They are:
 
 - Not stored in the database
-- Not accessible through the Weavestream web UI or API
+- Not accessible through the RivetDocs web UI or API
 - Not transmitted to any external service
 
 **Protect the `.env` file** with filesystem permissions (e.g. `chmod 600 .env`) and ensure it is included in your off-site backup (it cannot be recovered from the database).
 
 ## No Client-Side Encryption
 
-Weavestream does not use end-to-end encryption (E2EE). Encryption is server-side: the API decrypts secrets in memory and transmits them to the browser over TLS. This means:
+RivetDocs does not use end-to-end encryption (E2EE). Encryption is server-side: the API decrypts secrets in memory and transmits them to the browser over TLS. This means:
 
 - The server (and anyone with access to the `.env` file) can decrypt all secrets
 - The threat model assumes the server is trusted

@@ -1,9 +1,9 @@
 /** @jest-environment jsdom */
 import { copySecret } from './copy';
-import { copyToClipboard, copyWithPromise } from '@weavestream/shared/browser';
+import { copyToClipboard, copyWithPromise } from '@rivetdocs/shared/browser';
 import { scheduleClipboardClear } from './clipboard-guard';
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   copyToClipboard: jest.fn(),
   copyWithPromise: jest.fn(),
 }));

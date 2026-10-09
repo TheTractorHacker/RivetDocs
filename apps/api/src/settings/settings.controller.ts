@@ -5,7 +5,7 @@ import {
   updateSettingsSchema,
   type UpdateApiKeysSettingInput,
   type UpdateSettingsInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { SettingsService } from './settings.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import {

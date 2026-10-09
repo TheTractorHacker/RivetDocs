@@ -1,4 +1,4 @@
-import { formatShortDateTime } from '@weavestream/shared';
+import { formatShortDateTime } from '@rivetdocs/shared';
 import { DetailHeader } from '../../components/DetailHeader';
 import { DeepLinkNotFound } from '../../components/DeepLinkNotFound';
 import { Icon } from '../../components/Icon';

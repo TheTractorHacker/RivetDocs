@@ -14,7 +14,7 @@ import type {
   ChatTurnContext,
   CreateArticleInput,
   UpdateArticleInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   applyArticleTextEdits,
   ARTICLE_CREATE_RECOVERY_PENDING_CODE,
@@ -27,7 +27,7 @@ import {
   stripNullArgs,
   tiptapDocToMarkdown,
   updateArticleToolInputSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ArticlesService, StaleArticleError } from '../articles/articles.service.js';
 import { PermissionService } from '../rbac/permission.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -784,7 +784,7 @@ export class ChatToolCallService {
 
 // ----------------------------------------------------------------------
 // Apply-time re-validation uses the SAME shared Zod schemas the LLM
-// tool definitions are generated from (`@weavestream/shared` ai-tools) —
+// tool definitions are generated from (`@rivetdocs/shared` ai-tools) —
 // one source of truth instead of the previous hand-maintained pair.
 // `stripNullArgs` (also shared) normalises the strict-schema `null`
 // placeholders to `undefined` first.

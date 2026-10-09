@@ -2,27 +2,27 @@
 label: Home
 icon: home
 meta:
-    description: Weavestream documentation for installing, configuring, operating, and securing the self-hosted IT documentation platform.
+    description: RivetDocs documentation for installing, configuring, operating, and securing the self-hosted IT documentation platform.
 ---
 
-# Weavestream Documentation
+# RivetDocs Documentation
 
-Use these docs to install Weavestream, configure your workspace, operate it in production, and understand the platform's core concepts.
+Use these docs to install RivetDocs, configure your workspace, operate it in production, and understand the platform's core concepts.
 
-Looking for the product overview? Visit [weavestream.io](https://weavestream.io).
+Looking for the product overview? Visit [github.com/TheTractorHacker/RivetDocs](https://github.com/TheTractorHacker/RivetDocs).
 
 [!button text="Get Started" icon="rocket" size="xl"](/getting-started/)
-[!button text="View on GitHub" icon="mark-github" size="xl" variant="ghost"](https://github.com/Weavestream/Weavestream)
+[!button text="View on GitHub" icon="mark-github" size="xl" variant="ghost"](https://github.com/TheTractorHacker/RivetDocs)
 
-![Weavestream Tenant Dashboard](./weavestream-company-dashboard.png)
+![RivetDocs Tenant Dashboard](./rivetdocs-company-dashboard.png)
 
 ---
 
 ## Start Here
 
-[!card title="Quickstart" text="Deploy Weavestream with Docker Compose, generate secrets, start the stack, and create the first admin user." icon="zap" layout="compact"](/getting-started/quickstart/)
+[!card title="Quickstart" text="Deploy RivetDocs with Docker Compose, generate secrets, start the stack, and create the first admin user." icon="zap" layout="compact"](/getting-started/quickstart/)
 [!card title="First Login" text="Complete MFA enrollment, configure your workspace name, choose tenant terminology, and create your first tenant." icon="key" layout="compact"](/getting-started/first-login/)
-[!card title="Invite Users" text="Add operators, contractors, and client users using Weavestream's invite-only account setup flow." icon="person-add" layout="compact"](/getting-started/invite-users/)
+[!card title="Invite Users" text="Add operators, contractors, and client users using RivetDocs's invite-only account setup flow." icon="person-add" layout="compact"](/getting-started/invite-users/)
 
 ## Deploy And Operate
 
@@ -43,14 +43,14 @@ Looking for the product overview? Visit [weavestream.io](https://weavestream.io)
 
 [!card title="Security" text="Read about authentication, MFA, encryption, audit logging, threat model, and responsible disclosure." icon="shield" layout="compact"](/security/)
 [!card title="Security Center" text="Monitor login activity, active sessions, lockouts, rate-limit blocks, and security events across the platform." icon="shield-check" layout="compact"](/guides/security-center/)
-[!card title="Changelog" text="Track new features, fixes, upgrade notes, and security changes across Weavestream releases." icon="versions" layout="compact"](/overview/changelog/)
-[!card title="Screenshots" text="Browse a visual walkthrough of the Weavestream interface, including dashboards, assets, passwords, domains, IPAM, and administration." icon="device-desktop" layout="compact"](/screenshots/)
+[!card title="Changelog" text="Track new features, fixes, upgrade notes, and security changes across RivetDocs releases." icon="versions" layout="compact"](/overview/changelog/)
+[!card title="Screenshots" text="Browse a visual walkthrough of the RivetDocs interface, including dashboards, assets, passwords, domains, IPAM, and administration." icon="device-desktop" layout="compact"](/screenshots/)
 
 ---
 
 ## Open Source
 
-Weavestream is distributed under the **GNU AGPL-3.0-or-later** license. Source code is available on GitHub, container images are published to GHCR, and releases are documented in the changelog.
+RivetDocs is distributed under the **GNU AGPL-3.0-or-later** license. Source code is available on GitHub, container images are published to GHCR, and releases are documented in the changelog.
 
 [!badge variant="info" text="AGPL-3.0-or-later"]
 [!badge variant="success" text="Self-hosted"]
@@ -59,10 +59,10 @@ Weavestream is distributed under the **GNU AGPL-3.0-or-later** license. Source c
 
 <a href="https://tools.launchllama.co?utm_source=badge&utm_medium=referral" target="_blank" rel="noopener noreferrer"><img src="https://speaktechenglish.com/wp-content/uploads/2026/04/Screenshot_2026-04-09_at_17.40.44-removebg-preview.png" alt="Featured on Launch Llama" width="200" height="50" /></a>
 
-[View on GitHub ->](https://github.com/Weavestream/Weavestream)
+[View on GitHub ->](https://github.com/TheTractorHacker/RivetDocs)
 
 ## Support The Project
 
-Weavestream is free and open-source. If it has saved you time or money, you can support ongoing development and issue triage here:
+RivetDocs is free and open-source. If it has saved you time or money, you can support ongoing development and issue triage here:
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/weavestream)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/rivetdocs)

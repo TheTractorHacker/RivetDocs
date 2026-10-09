@@ -1,5 +1,5 @@
-import { initialsFromName, roleLabel } from '@weavestream/shared';
-import type { UserRole } from '@weavestream/shared';
+import { initialsFromName, roleLabel } from '@rivetdocs/shared';
+import type { UserRole } from '@rivetdocs/shared';
 import { Icon } from './Icon';
 import { Avatar } from './primitives';
 

@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We as contributors and maintainers of Weavestream pledge to make participation in our project and community a welcoming, respectful, and harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
+We as contributors and maintainers of RivetDocs pledge to make participation in our project and community a welcoming, respectful, and harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
 ## Our Standards
 
@@ -30,7 +30,7 @@ Project maintainers have the right and responsibility to remove, edit, or reject
 
 ## Scope
 
-This Code of Conduct applies within all project spaces, including the GitHub repository, issue tracker, and any other official Weavestream communication channels. It also applies when an individual is representing the project or its community in public spaces.
+This Code of Conduct applies within all project spaces, including the GitHub repository, issue tracker, and any other official RivetDocs communication channels. It also applies when an individual is representing the project or its community in public spaces.
 
 ## Enforcement
 
@@ -41,9 +41,9 @@ Project maintainers who do not follow or enforce this Code of Conduct in good fa
 ## Incident
 
 To report an incident, please contact the maintainers via
-[GitHub's private vulnerability reporting](https://github.com/Weavestream/Weavestream/security/advisories/new)
+[GitHub's private vulnerability reporting](https://github.com/TheTractorHacker/RivetDocs/security/advisories/new)
 (which doubles as a private contact channel for now) or open a
-[GitHub Discussion](https://github.com/Weavestream/Weavestream/discussions).
+[GitHub Discussion](https://github.com/TheTractorHacker/RivetDocs/discussions).
 
 ## Attribution
 

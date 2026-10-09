@@ -22,7 +22,7 @@ import {
   type UpdateSubnetInput,
   type CreateIpReservationInput,
   type UpdateIpReservationInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { IpamService } from './ipam.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';

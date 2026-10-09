@@ -6,7 +6,7 @@
  * ## The shape it guards
  *
  * The worker compiles only its own `src/` into `dist/`. It reaches API code
- * solely through the API's package exports — `require('@weavestream/api/<entry>')`
+ * solely through the API's package exports — `require('@rivetdocs/api/<entry>')`
  * — which Node resolves through the `exports` map in `apps/api/package.json`
  * to a file in `apps/api/dist`. From there, every API file resolves its own
  * imports against `apps/api/node_modules`, and every worker file against
@@ -28,7 +28,7 @@
  *
  * ## What else the package boundary adds
  *
- *   - **Unexported subpaths.** The worker's tsconfig maps `@weavestream/api/*`
+ *   - **Unexported subpaths.** The worker's tsconfig maps `@rivetdocs/api/*`
  *     to the API's `.d.ts` files with `paths`, which knows nothing about the
  *     `exports` map. A new entry file with no `exports` entry typechecks and
  *     dies at boot with ERR_PACKAGE_PATH_NOT_EXPORTED. The walk resolves
@@ -56,8 +56,8 @@
  * **Descending into `node_modules`.** A third-party package's transitive
  * dependencies are declared by its own `package.json` and installed by pnpm
  * from the lockfile. Only first-party edges are followed: relative ones, and
- * `@weavestream/api/<entry>` into the API's `dist`. `@weavestream/db` and
- * `@weavestream/shared` are libraries with their own declared dependencies,
+ * `@rivetdocs/api/<entry>` into the API's `dist`. `@rivetdocs/db` and
+ * `@rivetdocs/shared` are libraries with their own declared dependencies,
  * and are not walked.
  *
  * ## Invariants
@@ -70,7 +70,7 @@
  *   2. Every relative `require()` on the reachable graph resolves to a real
  *      file inside the requiring app's own `dist/`. An edge leading nowhere
  *      means the walk is blind to part of the graph.
- *   3. Every `@weavestream/api/<entry>` resolves through the `exports` map to
+ *   3. Every `@rivetdocs/api/<entry>` resolves through the `exports` map to
  *      a real file inside `apps/api/dist`.
  *   4. Every bare `require()` names a package in the owning app's
  *      `dependencies`, and no workspace package the runner image leaves
@@ -131,11 +131,11 @@ const WORKER = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const API = resolve(WORKER, '..', 'api');
 const DOCKERFILE = resolve(WORKER, '..', '..', 'docker', 'worker.Dockerfile');
 
-const API_PACKAGE = '@weavestream/api';
+const API_PACKAGE = '@rivetdocs/api';
 
 /**
  * Workspace packages the runner image ships, and the repo directory of each.
- * Any other `@weavestream/*` package resolves fine here (pnpm symlinks it) and
+ * Any other `@rivetdocs/*` package resolves fine here (pnpm symlinks it) and
  * is missing in the container.
  *
  * SOURCE OF TRUTH: the `COPY --from=build` block in the runner stage of
@@ -144,12 +144,12 @@ const API_PACKAGE = '@weavestream/api';
  */
 const SHIPPED_WORKSPACE_PACKAGES = new Map([
   [API_PACKAGE, 'apps/api'],
-  ['@weavestream/db', 'packages/db'],
-  ['@weavestream/shared', 'packages/shared'],
+  ['@rivetdocs/db', 'packages/db'],
+  ['@rivetdocs/shared', 'packages/shared'],
 ]);
 
 const BUILD_HINT =
-  'Run `pnpm --filter @weavestream/api build` and then `pnpm --filter @weavestream/worker build` — ' +
+  'Run `pnpm --filter @rivetdocs/api build` and then `pnpm --filter @rivetdocs/worker build` — ' +
   'this guard reads both dist/ trees, not src/.';
 const DECLARE_HINT =
   'Add each package to "dependencies" in the package.json of the app named above, and run ' +
@@ -422,7 +422,7 @@ export function analyse({ apps, entryFile, shipped = SHIPPED_WORKSPACE_PACKAGES 
     const { deps, devDeps = {}, optionalDeps = {} } = apps[owner];
     for (const name of [...importers.get(owner).keys()].sort()) {
       const files = [...importers.get(owner).get(name)].sort();
-      if (name.startsWith('@weavestream/') && !shipped.has(name)) {
+      if (name.startsWith('@rivetdocs/') && !shipped.has(name)) {
         unshipped.push({
           owner,
           name,
@@ -724,14 +724,14 @@ function selfTest() {
     // 3. A clean worker → API graph reports nothing.
     const entry3 = write(
       'c/worker/dist/main.js',
-      'require("./dep.js"); require("bullmq"); require("@weavestream/api/runtime");',
+      'require("./dep.js"); require("bullmq"); require("@rivetdocs/api/runtime");',
     );
     write('c/worker/dist/dep.js', 'require("node:path");');
     write('c/api/dist/public/runtime.js', 'require("../redis.js"); require("bullmq");');
     write('c/api/dist/redis.js', 'require("ioredis");');
     const r3 = analyse({
       apps: fixture('c', {
-        worker: { deps: { bullmq: '^5', '@weavestream/api': 'workspace:*' } },
+        worker: { deps: { bullmq: '^5', '@rivetdocs/api': 'workspace:*' } },
         api: {
           deps: { bullmq: '^5', ioredis: '^5' },
           exports: {
@@ -756,11 +756,11 @@ function selfTest() {
     check('lists the packages both apps require', r3.shared.join() === 'bullmq');
 
     // 4. An API file is judged against the API's dependencies, not the worker's.
-    const entry4 = write('d/worker/dist/main.js', 'require("@weavestream/api/runtime");');
+    const entry4 = write('d/worker/dist/main.js', 'require("@rivetdocs/api/runtime");');
     write('d/api/dist/public/runtime.js', 'require("argon2");');
     const r4 = analyse({
       apps: fixture('d', {
-        worker: { deps: { argon2: '^0', '@weavestream/api': 'workspace:*' } },
+        worker: { deps: { argon2: '^0', '@rivetdocs/api': 'workspace:*' } },
         api: { exports: { './runtime': './dist/public/runtime.js' } },
       }),
       entryFile: entry4,
@@ -775,11 +775,11 @@ function selfTest() {
     // 5. A subpath "exports" does not list, and the bare package, are rejected.
     const entry5 = write(
       'e/worker/dist/main.js',
-      'require("@weavestream/api/internal"); require("@weavestream/api");',
+      'require("@rivetdocs/api/internal"); require("@rivetdocs/api");',
     );
     const r5 = analyse({
       apps: fixture('e', {
-        worker: { deps: { '@weavestream/api': 'workspace:*' } },
+        worker: { deps: { '@rivetdocs/api': 'workspace:*' } },
         api: { exports: { './runtime': './dist/public/runtime.js' } },
       }),
       entryFile: entry5,
@@ -787,10 +787,10 @@ function selfTest() {
     check('rejects an API subpath that "exports" does not list', r5.unexported.length === 2);
 
     // 6. An exported target that is not built is an edge leading nowhere.
-    const entry6 = write('f/worker/dist/main.js', 'require("@weavestream/api/runtime");');
+    const entry6 = write('f/worker/dist/main.js', 'require("@rivetdocs/api/runtime");');
     const r6 = analyse({
       apps: fixture('f', {
-        worker: { deps: { '@weavestream/api': 'workspace:*' } },
+        worker: { deps: { '@rivetdocs/api': 'workspace:*' } },
         api: { exports: { './runtime': './dist/public/runtime.js' } },
       }),
       entryFile: entry6,
@@ -798,12 +798,12 @@ function selfTest() {
     check('reports an exported API entry that was never built', r6.problems.length === 1);
 
     // 7. A relative edge from the API that escapes the API's dist/.
-    const entry7 = write('g/worker/dist/main.js', 'require("@weavestream/api/runtime");');
+    const entry7 = write('g/worker/dist/main.js', 'require("@rivetdocs/api/runtime");');
     write('g/api/dist/public/runtime.js', 'require("../../src/raw.js");');
     write('g/api/src/raw.js', '');
     const r7 = analyse({
       apps: fixture('g', {
-        worker: { deps: { '@weavestream/api': 'workspace:*' } },
+        worker: { deps: { '@rivetdocs/api': 'workspace:*' } },
         api: { exports: { './runtime': './dist/public/runtime.js' } },
       }),
       entryFile: entry7,
@@ -814,15 +814,15 @@ function selfTest() {
     );
 
     // 8. An unshipped workspace package fails even though it IS declared.
-    const entry8 = write('h/worker/dist/main.js', 'require("@weavestream/config/x.js");');
+    const entry8 = write('h/worker/dist/main.js', 'require("@rivetdocs/config/x.js");');
     const r8 = analyse({
-      apps: fixture('h', { worker: { deps: { '@weavestream/config': 'workspace:*' } } }),
+      apps: fixture('h', { worker: { deps: { '@rivetdocs/config': 'workspace:*' } } }),
       entryFile: entry8,
     });
     check(
       'rejects an unshipped workspace package despite it being declared',
       r8.unshipped.length === 1 &&
-        r8.unshipped[0].name === '@weavestream/config' &&
+        r8.unshipped[0].name === '@rivetdocs/config' &&
         r8.undeclared.length === 0,
     );
 
@@ -908,7 +908,7 @@ function selfTest() {
   );
 
   // 13. The runner stage ships every workspace package the worker loads.
-  const shipped = new Map([['@weavestream/api', 'apps/api']]);
+  const shipped = new Map([['@rivetdocs/api', 'apps/api']]);
   const copies = (parts) =>
     parts.map((p) => `COPY --from=build /repo/apps/api/${p} ./apps/api/${p}`).join('\n') + '\n';
   check(

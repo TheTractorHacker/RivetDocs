@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
-import type { GlobalAccess, PlatformCapability, UserRole } from '@weavestream/shared';
+import type { GlobalAccess, PlatformCapability, UserRole } from '@rivetdocs/shared';
 
 export interface AuthedUser {
   id: string;

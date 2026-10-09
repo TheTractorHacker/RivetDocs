@@ -8,13 +8,13 @@ import type { ReactNode } from 'react';
 import { GeneratorSheet } from './GeneratorSheet';
 
 jest.mock('../../lib/api', () => ({ apiFetch: jest.fn() }));
-jest.mock('@weavestream/shared/browser', () => {
-  const actual = jest.requireActual('@weavestream/shared/browser');
+jest.mock('@rivetdocs/shared/browser', () => {
+  const actual = jest.requireActual('@rivetdocs/shared/browser');
   return { ...actual, generatePassword: jest.fn() };
 });
 
 const { apiFetch } = jest.requireMock('../../lib/api') as { apiFetch: jest.Mock };
-const { generatePassword } = jest.requireMock('@weavestream/shared/browser') as {
+const { generatePassword } = jest.requireMock('@rivetdocs/shared/browser') as {
   generatePassword: jest.Mock;
 };
 

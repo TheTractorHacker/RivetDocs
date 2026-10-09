@@ -1,4 +1,4 @@
-import type { ArticleDetail, ArticleSummary, FolderNode } from '@weavestream/shared';
+import type { ArticleDetail, ArticleSummary, FolderNode } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 
 /**

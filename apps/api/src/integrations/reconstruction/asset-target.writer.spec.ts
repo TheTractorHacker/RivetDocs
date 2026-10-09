@@ -220,14 +220,14 @@ describe('AssetTargetWriter', () => {
       firstSeenAt: '2026-07-01T00:00:00.000Z',
       lastSeenAt: '2026-07-01T00:00:00.000Z',
       lastSyncedAt: '2026-07-01T00:00:00.000Z',
-      ownership: 'weavestream' as const,
+      ownership: 'rivetdocs' as const,
       state: 'active' as const,
     };
     const first = await writer.write(context({ previousProvenance: manual }), input);
     expect(first).toMatchObject({
       change: 'blocked',
       provenance: {
-        ownership: 'weavestream',
+        ownership: 'rivetdocs',
         externalOrgId: manual.externalOrgId,
         resourceKey: manual.resourceKey,
         externalId: manual.externalId,
@@ -239,7 +239,7 @@ describe('AssetTargetWriter', () => {
     );
     expect(second).toMatchObject({
       change: 'blocked',
-      provenance: { ownership: 'weavestream', externalId: manual.externalId },
+      provenance: { ownership: 'rivetdocs', externalId: manual.externalId },
     });
     expect(writeFromIntegration).not.toHaveBeenCalled();
   });

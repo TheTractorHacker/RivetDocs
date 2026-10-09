@@ -6,7 +6,7 @@ import {
   alertsJobSchema,
   type AlertsJob,
   type AlertsSendJob,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   EnvService,
   RedisService,
@@ -14,8 +14,8 @@ import {
   AuditLogService,
   AUDIT_ACTIONS,
   EmailService,
-} from '@weavestream/api/runtime';
-import { AlertsRunnerService } from '@weavestream/api/alerts';
+} from '@rivetdocs/api/runtime';
+import { AlertsRunnerService } from '@rivetdocs/api/alerts';
 import {
   createManagedWorker,
   type ManagedWorker,
@@ -23,7 +23,7 @@ import {
 
 const SYSTEM_META = {
   ip: '127.0.0.1',
-  userAgent: 'weavestream-worker/alerts',
+  userAgent: 'rivetdocs-worker/alerts',
 };
 
 /**

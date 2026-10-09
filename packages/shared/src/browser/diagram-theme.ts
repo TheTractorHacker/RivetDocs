@@ -1,7 +1,7 @@
 import { isDarkColor, readCssVar, toSrgbHex } from './css-color.js';
 
 /**
- * Mermaid theming, derived from Weavestream's own colour tokens.
+ * Mermaid theming, derived from RivetDocs's own colour tokens.
  *
  * ## Design intent
  *

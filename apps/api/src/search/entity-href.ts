@@ -1,4 +1,4 @@
-import type { SearchEntityKind } from '@weavestream/shared';
+import type { SearchEntityKind } from '@rivetdocs/shared';
 
 /**
  * Role-aware deep link for an entity — the single admin-vs-portal URL

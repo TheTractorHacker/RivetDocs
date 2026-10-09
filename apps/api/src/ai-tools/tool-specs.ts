@@ -16,7 +16,7 @@ import {
   searchToolInputSchema,
   searchToolOutputSchema,
   updateArticleToolInputSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type {
   AiToolMode,
   AiToolName,
@@ -26,7 +26,7 @@ import type {
   GetRelatedItemsToolOutput,
   FindRelatedItemsToolOutput,
   SearchToolOutput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { Action } from '../rbac/permissions.js';
 
 /**
@@ -258,7 +258,7 @@ export const AI_TOOL_SPECS: Record<AiToolName, AiToolSpec> = {
     name: 'get_app_help',
     description: [
       'Retrieve official, version-matched instructions for using the',
-      'Weavestream application. Use this for questions about navigating',
+      'RivetDocs application. Use this for questions about navigating',
       'the UI, creating or managing records, asset layouts, integrations,',
       'organization mappings, field mappings, and syncs. It contains',
       'application usage guidance only: it does not inspect live tenant',

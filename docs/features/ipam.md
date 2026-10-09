@@ -7,7 +7,7 @@ description: Tenant-scoped IPv4 subnet tracking with occupancy detection, reserv
 
 # IP Address Management (IPAM)
 
-Weavestream includes built-in, tenant-scoped IPv4 IPAM so teams can track subnet usage without leaving their documentation system.
+RivetDocs includes built-in, tenant-scoped IPv4 IPAM so teams can track subnet usage without leaving their documentation system.
 
 ![IPAM](./assets/ipam.png)
 

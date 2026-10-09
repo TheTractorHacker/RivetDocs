@@ -19,7 +19,7 @@
  *
  * Pure `Intl` — no DOM, no Node APIs — so this module is safe to import from
  * both server and client components (it lives in the client-safe
- * `@weavestream/shared` barrel).
+ * `@rivetdocs/shared` barrel).
  */
 
 export type DateInput = string | Date | null | undefined;

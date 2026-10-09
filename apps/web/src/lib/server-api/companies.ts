@@ -3,7 +3,7 @@ import type {
   CompanyLogo,
   CompanyType,
   MembershipRole,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { serverApiFetch, type ServerApiResponse } from './core';
 
 // ───────────────────────────────────────────────────────────────────

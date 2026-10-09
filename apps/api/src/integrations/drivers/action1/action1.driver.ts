@@ -4,7 +4,7 @@ import type {
   DriverDescriptor,
   SourceFieldDto,
   SourceOrgDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   DriverAuthError,
   type LegacyDriverFetchPage,
@@ -116,7 +116,7 @@ export class Action1Driver implements IntegrationDriver {
     key: 'action1',
     label: 'Action1 RMM',
     description:
-      'Sync managed endpoints from Action1 organisations into Weavestream asset layouts.',
+      'Sync managed endpoints from Action1 organisations into RivetDocs asset layouts.',
     iconKey: 'action1',
     configFields: [
       {

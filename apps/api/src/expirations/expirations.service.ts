@@ -4,7 +4,7 @@ import type {
   DomainExpiration,
   ExpirationRow,
   PasswordExpiration,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 import { canReadPassword } from '../passwords/password-access-policy.js';

@@ -1,7 +1,7 @@
 {
   "id": "/m/",
-  "name": "Weavestream Mobile",
-  "short_name": "Weavestream",
+  "name": "RivetDocs Mobile",
+  "short_name": "RivetDocs",
   "description": "Passwords, articles, and assets for field technicians",
   "start_url": "/m/app",
   "scope": "/m/",

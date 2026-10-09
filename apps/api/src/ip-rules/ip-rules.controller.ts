@@ -21,7 +21,7 @@ import {
   ipRuleBlockedReportSchema,
   ipRuleInputSchema,
   ipRulePatchSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { IpRulesService } from './ip-rules.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { ZodBody } from '../common/zod-validation.pipe.js';

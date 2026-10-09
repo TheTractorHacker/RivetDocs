@@ -14,7 +14,7 @@ import { useDiagramPalette } from './use-diagram-palette';
  * while the rest of the screen moves.
  */
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   readDiagramPalette: () => {
     return {
       bg: document.documentElement.dataset['theme'] === 'light' ? '#fff' : '#000',

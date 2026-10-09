@@ -1,4 +1,4 @@
-import type { PasswordFolderSchema, PasswordSummary } from '@weavestream/shared';
+import type { PasswordFolderSchema, PasswordSummary } from '@rivetdocs/shared';
 import { Chip } from '../../components/primitives';
 import { needsAttention } from './attention';
 

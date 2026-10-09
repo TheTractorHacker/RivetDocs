@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import nodemailer from 'nodemailer';
-import { MAX_ALERT_RECIPIENTS, type TestEmailSettingsInput } from '@weavestream/shared';
+import { MAX_ALERT_RECIPIENTS, type TestEmailSettingsInput } from '@rivetdocs/shared';
 import { EmailNotConfiguredError, EmailSettingsService } from './email-settings.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
@@ -59,7 +59,7 @@ export class EmailService {
 
     await transport.sendMail({
       from: {
-        name: config.fromName ?? 'Weavestream',
+        name: config.fromName ?? 'RivetDocs',
         address: config.fromEmail,
       },
       replyTo: config.replyTo ?? undefined,
@@ -75,7 +75,7 @@ export class EmailService {
     input: TestEmailSettingsInput,
     meta: RequestMeta,
   ): Promise<{ ok: true }> {
-    const subject = input.subject ?? 'Weavestream test email';
+    const subject = input.subject ?? 'RivetDocs test email';
     let success = false;
     let error: string | null = null;
 
@@ -84,9 +84,9 @@ export class EmailService {
         to: input.recipient,
         subject,
         text:
-          'This is a test email from Weavestream. If you received it, SMTP is configured correctly.',
+          'This is a test email from RivetDocs. If you received it, SMTP is configured correctly.',
         html:
-          '<p>This is a test email from Weavestream.</p><p>If you received it, SMTP is configured correctly.</p>',
+          '<p>This is a test email from RivetDocs.</p><p>If you received it, SMTP is configured correctly.</p>',
       });
       success = true;
       return { ok: true };

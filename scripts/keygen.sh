@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────
-# Weavestream — key generator (macOS / Linux / WSL)
+# RivetDocs — key generator (macOS / Linux / WSL)
 #
 # Writes fresh random secrets to stdout in KEY=value form, ready to
 # append to your .env file. Uses `openssl`, which ships with macOS and

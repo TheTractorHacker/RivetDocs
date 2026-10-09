@@ -2,12 +2,12 @@
 label: Guides
 icon: book
 order: 600
-description: Task-oriented how-to guides for common Weavestream workflows.
+description: Task-oriented how-to guides for common RivetDocs workflows.
 ---
 
 # Guides
 
-Step-by-step guides for the most common Weavestream workflows.
+Step-by-step guides for the most common RivetDocs workflows.
 
 ## Documentation Workflows
 
@@ -25,8 +25,8 @@ Step-by-step guides for the most common Weavestream workflows.
 ## Operations
 
 - [Alert System Setup](/guides/alert-system-setup/) — Configure email alerts for expirations, uptime, and record lifecycle events
-- [Backup & Restore](/deployment/backup/) — Configure scheduled backups and restore Weavestream on a fresh Docker host
+- [Backup & Restore](/deployment/backup/) — Configure scheduled backups and restore RivetDocs on a fresh Docker host
 
 ## Integrations
 
-- [Cloudflare Zero Trust IP Lists](/guides/cloudflare-zero-trust-ip-lists/) — Manage Cloudflare Zero Trust IP lists from Weavestream
+- [Cloudflare Zero Trust IP Lists](/guides/cloudflare-zero-trust-ip-lists/) — Manage Cloudflare Zero Trust IP lists from RivetDocs

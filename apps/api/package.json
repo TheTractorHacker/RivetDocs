@@ -1,5 +1,5 @@
 {
-  "name": "@weavestream/api",
+  "name": "@rivetdocs/api",
   "version": "0.0.1",
   "private": true,
   "main": "dist/main.js",
@@ -52,8 +52,8 @@
     "@nestjs/platform-express": "^11.2.7",
     "@nestjs/throttler": "^6.7.1",
     "@prisma/client": "^5.22.0",
-    "@weavestream/db": "workspace:*",
-    "@weavestream/shared": "workspace:*",
+    "@rivetdocs/db": "workspace:*",
+    "@rivetdocs/shared": "workspace:*",
     "@zxcvbn-ts/core": "^3.0.4",
     "@zxcvbn-ts/language-common": "^3.0.4",
     "@zxcvbn-ts/language-en": "^3.0.2",

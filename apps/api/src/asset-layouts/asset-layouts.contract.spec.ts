@@ -1,4 +1,4 @@
-import type { LayoutStats as SharedLayoutStats, LayoutSummary } from '@weavestream/shared';
+import type { LayoutStats as SharedLayoutStats, LayoutSummary } from '@rivetdocs/shared';
 import type { SameShape, WireJson } from '../common/wire-contract.js';
 import type { LayoutStats, SerializedLayout } from './asset-layouts.service.js';
 

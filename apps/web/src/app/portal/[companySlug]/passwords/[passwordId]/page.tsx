@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { safeExternalHref } from '@weavestream/shared';
+import { safeExternalHref } from '@rivetdocs/shared';
 import { requireMe } from '../../../../../lib/server-api/auth';
 import { getPasswordDetail } from '../../../../../lib/server-api/passwords';
 import { resolvePortalCompany } from '../../../../../lib/portal-company';

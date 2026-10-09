@@ -20,8 +20,8 @@ import {
   type UpdateArticleInput,
   type UserRole,
   type IntegrationTargetProvenance,
-} from '@weavestream/shared';
-import { requireTenantContext } from '@weavestream/shared/server';
+} from '@rivetdocs/shared';
+import { requireTenantContext } from '@rivetdocs/shared/server';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AiSettingsService } from '../ai/ai-settings.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
@@ -75,7 +75,7 @@ export interface IntegrationArticleWriteResult {
 
 const INTEGRATION_AUDIT_META: AuditMeta = {
   ip: '0.0.0.0',
-  userAgent: 'weavestream-worker/integration-reconstruction',
+  userAgent: 'rivetdocs-worker/integration-reconstruction',
 };
 
 /**
@@ -183,7 +183,7 @@ export interface SerializedArticle {
  * on every row; the list query now `select`s exactly these columns so
  * the body never leaves Postgres. `excerpt` is the serve-time coalesce
  * `aiSummary ?? derivedExcerpt`. Mirrors `articleSummarySchema` in
- * `@weavestream/shared` (which is what clients type against).
+ * `@rivetdocs/shared` (which is what clients type against).
  */
 export interface SerializedArticleSummary {
   id: string;
@@ -1082,7 +1082,7 @@ export class ArticlesService {
         // cannot be bound as parameters). Scopes the folder create so the
         // guarded-update conflict below can discard it; the ROLLBACK TO
         // at that site must name this same savepoint.
-        await tx.$executeRaw`SAVEPOINT weavestream_managed_folder`;
+        await tx.$executeRaw`SAVEPOINT rivetdocs_managed_folder`;
         const row = await tx.folder.create({
           data: {
             companyId: input.companyId,
@@ -1191,7 +1191,7 @@ export class ArticlesService {
           // later outcome — a retry that blocks, an exhausted-conflict gap,
           // a caller-committed page — can strand an empty managed folder.
           // Fixed-literal statement, no interpolation.
-          await tx.$executeRaw`ROLLBACK TO SAVEPOINT weavestream_managed_folder`;
+          await tx.$executeRaw`ROLLBACK TO SAVEPOINT rivetdocs_managed_folder`;
         }
         return 'revision_conflict';
       }
@@ -2321,8 +2321,8 @@ function articleBlocked(
   };
 }
 
-const INTEGRATION_MANAGED_START = '<!-- weavestream:breeze:managed:start -->';
-const INTEGRATION_MANAGED_END = '<!-- weavestream:breeze:managed:end -->';
+const INTEGRATION_MANAGED_START = '<!-- rivetdocs:breeze:managed:start -->';
+const INTEGRATION_MANAGED_END = '<!-- rivetdocs:breeze:managed:end -->';
 
 function mergeIntegrationManagedMarkdown(
   existing: string,

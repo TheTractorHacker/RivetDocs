@@ -14,10 +14,10 @@ import type {
   LayoutFieldSummary,
   LayoutSummary,
   SourceFieldDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
-import { randomClientId } from '@weavestream/shared/browser';
-import { problemMessage } from '@weavestream/shared';
+import { randomClientId } from '@rivetdocs/shared/browser';
+import { problemMessage } from '@rivetdocs/shared';
 import {
   Btn,
   Field,
@@ -35,7 +35,7 @@ const DIRECTIONS: Array<{
   {
     value: 'source_wins',
     label: 'Source wins',
-    hint: 'Always overwrite Weavestream with upstream value.',
+    hint: 'Always overwrite RivetDocs with upstream value.',
   },
   {
     value: 'preserve_manual',
@@ -64,8 +64,8 @@ type FieldRow = {
  * every per-company mapping for this integration:
  *   1. Asset layout (drives target field options).
  *   2. Match-key fields (which AssetField ids the resolver uses to
- *      claim unsynced Weavestream assets).
- *   3. Field mappings (`source field` → `Weavestream field` + direction).
+ *      claim unsynced RivetDocs assets).
+ *   3. Field mappings (`source field` → `RivetDocs field` + direction).
  *      Replace-all semantics — the row order here is the order on disk.
  */
 export function FieldMappingsTab({
@@ -204,7 +204,7 @@ function disabledResourceDescription(resource: DriverResourceDescriptor): string
     case 'relation':
       return `Enable ${label} to review the dependency resources.`;
     case 'asset':
-      return `Enable ${label} to pick an asset layout, choose match-key fields, and project upstream columns onto Weavestream fields.`;
+      return `Enable ${label} to pick an asset layout, choose match-key fields, and project upstream columns onto RivetDocs fields.`;
   }
 }
 
@@ -551,7 +551,7 @@ function ResourceEditor({
         <h4 style={sectionHeader}>Target asset layout</h4>
         <p style={sectionHelp}>
           {resourceLabel} records will be written into this layout in every
-          mapped Weavestream company. Asset layouts are global, so this choice
+          mapped RivetDocs company. Asset layouts are global, so this choice
           applies tenant-wide.
         </p>
         {loadingLayouts ? (
@@ -583,7 +583,7 @@ function ResourceEditor({
             <h4 style={sectionHeader}>Match keys</h4>
             <p style={sectionHelp}>
               When upstream {resourceLabel.toLowerCase()} match unclaimed
-              Weavestream assets on these fields, the integration will{' '}
+              RivetDocs assets on these fields, the integration will{' '}
               <strong>claim</strong> the asset instead of creating a duplicate.
               Text / email / URL fields match case-insensitively; everything
               else is exact.

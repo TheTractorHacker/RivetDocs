@@ -1,0 +1,22 @@
+RivetDocs
+Open-source, self-hosted IT documentation platform.
+
+Copyright (C) the RivetDocs contributors.
+
+RivetDocs is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License, version 3 or later, as
+published by the Free Software Foundation. See the LICENSE file.
+
+Where RivetDocs comes from
+--------------------------
+
+RivetDocs is a fork of Weavestream, and all credit for the code it started
+from goes to the Weavestream project and its contributors:
+
+  Weavestream
+  https://github.com/Weavestream/Weavestream
+  Copyright (C) the Weavestream contributors.
+  Licensed under the GNU Affero General Public License v3.0 or later.
+
+RivetDocs adds a connector for the RivetIT and RivetMSP editions
+(TheTractorHacker / Foley IT).

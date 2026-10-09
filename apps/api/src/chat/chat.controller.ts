@@ -17,7 +17,7 @@ import {
   sendChatMessageSchema,
   type ApplyChatToolCallInput,
   type SendChatMessageInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { AuthedOnly } from '../rbac/require-permission.decorator.js';
 import { ZodBody } from '../common/zod-validation.pipe.js';

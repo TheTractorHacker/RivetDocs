@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import type { DriverDescriptor, IntegrationDto } from '@weavestream/shared';
+import type { DriverDescriptor, IntegrationDto } from '@rivetdocs/shared';
 import { requireMe } from '../../../../lib/server-api/auth';
 import { serverApiFetch } from '../../../../lib/server-api/core';
 import { hasCapability } from '../../../../lib/roles';
@@ -42,7 +42,7 @@ export default async function IntegrationsPage() {
           { label: 'Integrations' },
         ]}
         title="Integrations"
-        description="Connect external systems and sync their data with companies in Weavestream. Removing an integration keeps its assets in Weavestream."
+        description="Connect external systems and sync their data with companies in RivetDocs. Removing an integration keeps its assets in RivetDocs."
         actions={<CreateIntegrationButton drivers={drivers} />}
       />
       <PageBody>

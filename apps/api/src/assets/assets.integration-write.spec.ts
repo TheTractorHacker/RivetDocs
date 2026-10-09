@@ -986,7 +986,7 @@ describe('AssetsService integration system writes', () => {
     ['wrong target id', binding({ assetId: ids.manual })],
     ['wrong company', binding({ companyId: 'other-company' })],
     ['blocked state', binding({ state: 'blocked', provenance: { integrationId: ids.integration, ownership: 'breeze', state: 'blocked' } })],
-    ['manual provenance', binding({ provenance: { integrationId: ids.integration, ownership: 'weavestream', state: 'active' } })],
+    ['manual provenance', binding({ provenance: { integrationId: ids.integration, ownership: 'rivetdocs', state: 'active' } })],
   ])('rejects a %s persisted binding even when a caller forges the legacy flag', async (_label, persistedBinding) => {
     const { service, tx } = setup({ target: asset(), binding: persistedBinding });
     await expect(service.writeFromIntegration({

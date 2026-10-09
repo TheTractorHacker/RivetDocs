@@ -4,7 +4,7 @@ import {
   QueueNames,
   type CompanyExportJob,
   type ExportJobResult,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { QueuesService } from '../queues/queues.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { LocalStorageService } from '../storage/local-storage.service.js';

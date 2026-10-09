@@ -7,7 +7,7 @@ import {
   type PasswordSummary,
   type PasswordTotpResponse,
   type UpdatePasswordInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ApiError, apiFetch } from '../../lib/api';
 
 /**

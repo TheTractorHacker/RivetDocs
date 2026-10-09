@@ -1,12 +1,12 @@
 ---
 label: MCP Server
 icon: cpu
-description: Let AI agents read and update Weavestream through the Model Context Protocol, acting as you with an API key.
+description: Let AI agents read and update RivetDocs through the Model Context Protocol, acting as you with an API key.
 ---
 
 # MCP Server
 
-`apps/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server that lets an AI agent (Claude Code, Claude Desktop, any MCP client) work with Weavestream. It calls the Weavestream REST API with an [API key](../security/api-keys.md), so the agent has **exactly** the key owner's permissions and nothing more. Every guard, tenant scope, rate limit and audit entry is the server's own.
+`apps/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server that lets an AI agent (Claude Code, Claude Desktop, any MCP client) work with RivetDocs. It calls the RivetDocs REST API with an [API key](../security/api-keys.md), so the agent has **exactly** the key owner's permissions and nothing more. Every guard, tenant scope, rate limit and audit entry is the server's own.
 
 ## Setup
 
@@ -14,22 +14,22 @@ description: Let AI agents read and update Weavestream through the Model Context
 2. Create an API key: **Account → API keys → New API key**.
    - Leave **Allow this key to make changes** off if the agent only needs to answer questions. The write tools then fail with a clear error.
    - Leave **Allow password reveal** off: the MCP server never reveals passwords, so an agent's key does not need it.
-3. Build the server: `pnpm --filter @weavestream/mcp build`.
+3. Build the server: `pnpm --filter @rivetdocs/mcp build`.
 4. Register it with your MCP client. For Claude Code:
 
 ```bash
-claude mcp add weavestream \
-  -e WEAVESTREAM_URL=https://weavestream.example.com \
-  -e WEAVESTREAM_API_KEY=ws_… \
-  -- node /path/to/weavestream/apps/mcp/dist/index.js
+claude mcp add rivetdocs \
+  -e RIVETDOCS_URL=https://rivetdocs.example.com \
+  -e RIVETDOCS_API_KEY=ws_… \
+  -- node /path/to/rivetdocs/apps/mcp/dist/index.js
 ```
 
 Keep the key in a secret manager and inject it rather than pasting it into shared config.
 
 | Variable | Required | Meaning |
 |---|---|---|
-| `WEAVESTREAM_URL` | yes | Instance origin. `https://` only (`http://` is accepted for `localhost`). |
-| `WEAVESTREAM_API_KEY` | yes | A `ws_…` API key. |
+| `RIVETDOCS_URL` | yes | Instance origin. `https://` only (`http://` is accepted for `localhost`). |
+| `RIVETDOCS_API_KEY` | yes | A `ws_…` API key. |
 
 ## Tools
 
@@ -55,8 +55,8 @@ Everything a tool returns goes into the model's context: to the model provider, 
 
 ### Why new articles are hidden from clients
 
-The agent reads text people typed into Weavestream, and that text can contain instructions aimed at the model. `create_article` always sends `visibleToClients: false` (the server default is `true`), so injected instructions cannot publish one company's data to another company's client users. A person reviews and publishes.
+The agent reads text people typed into RivetDocs, and that text can contain instructions aimed at the model. `create_article` always sends `visibleToClients: false` (the server default is `true`), so injected instructions cannot publish one company's data to another company's client users. A person reviews and publishes.
 
 !!!warning Treat returned content as data
-Everything a tool returns was typed by a person into Weavestream. A note that says "ignore previous instructions" is just text in a note. The tool descriptions say so to the model, but choose what an agent may do with that data accordingly.
+Everything a tool returns was typed by a person into RivetDocs. A note that says "ignore previous instructions" is just text in a note. The tool descriptions say so to the model, but choose what an agent may do with that data accordingly.
 !!!

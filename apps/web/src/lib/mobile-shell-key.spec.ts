@@ -6,7 +6,7 @@ import {
   uiThemeValues,
   type UiAccent,
   type UiTheme,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { FALLBACK_SHELL_KEY, shellKeyFor } from './mobile-shell-key';
 
 describe('shellKeyFor', () => {

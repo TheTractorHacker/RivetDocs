@@ -7,8 +7,8 @@ import type {
   IntegrationCompanyMappingDto,
   IntegrationDto,
   IntegrationStatusValue,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,
@@ -184,7 +184,7 @@ export function CredentialsTab({
   async function destroy() {
     if (
       !window.confirm(
-        `Delete integration "${integration.name}"?\n\nAssets currently linked to this integration will be released — they remain in Weavestream but lose their external link. This cannot be undone.`,
+        `Delete integration "${integration.name}"?\n\nAssets currently linked to this integration will be released — they remain in RivetDocs but lose their external link. This cannot be undone.`,
       )
     ) {
       return;

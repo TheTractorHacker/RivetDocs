@@ -9,8 +9,8 @@ import {
   MERMAID_LANGUAGE,
   tiptapDocToMarkdown,
   tiptapToPlaintext,
-} from '@weavestream/shared';
-import type { CompanyExportData } from '@weavestream/api/exports';
+} from '@rivetdocs/shared';
+import type { CompanyExportData } from '@rivetdocs/api/exports';
 
 interface PdfBuildOpts {
   pdfPassword?: string;
@@ -169,7 +169,7 @@ export async function buildCompanyExportPdf(
       bufferPages: true,
       info: {
         Title: pdfMetadataTitle(data.company.name),
-        Author: 'Weavestream',
+        Author: 'RivetDocs',
         CreationDate: data.exportedAt,
       },
       // PDFKit's `userPassword` opens the document; `ownerPassword`
@@ -1897,7 +1897,7 @@ function drawTaskCheckbox(
  * "Diagram — mermaid" here while `apps/web` and `apps/mobile` rendered
  * the same block as ordinary code. A caption asserting something the
  * app does not do is worse than no caption, so the rule lives in
- * `@weavestream/shared` and every surface reads it from there.
+ * `@rivetdocs/shared` and every surface reads it from there.
  *
  * CR-020: `pdfSafeUserText` is applied to the LANGUAGE, which is
  * user-derived; the literal prefix is a compile-time constant and has no

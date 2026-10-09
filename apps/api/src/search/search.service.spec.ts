@@ -3,7 +3,7 @@ import type { PrismaService } from '../prisma/prisma.service.js';
 import {
   runWithTenantContext,
   type TenantContext,
-} from '@weavestream/shared/server';
+} from '@rivetdocs/shared/server';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 
 /**

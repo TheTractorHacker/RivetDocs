@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { IpReservationDto, SubnetOccupant } from '@weavestream/shared';
+import type { IpReservationDto, SubnetOccupant } from '@rivetdocs/shared';
 import {
   Btn,
   DataTable,

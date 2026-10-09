@@ -19,18 +19,18 @@ import type {
   CreateAssetInput,
   UpdateAssetInput,
   UserRole,
-} from '@weavestream/shared';
-import type { FieldType, IntegrationTargetProvenance } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import type { FieldType, IntegrationTargetProvenance } from '@rivetdocs/shared';
 import { readTargetProvenance } from '../integrations/reconstruction/integration-provenance.service.js';
-import { FILTERABLE_FIELD_TYPES } from '@weavestream/shared';
-import type { FileFieldEntry } from '@weavestream/shared';
+import { FILTERABLE_FIELD_TYPES } from '@rivetdocs/shared';
+import type { FileFieldEntry } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { isUniqueConstraintError } from '../prisma/prisma-errors.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
 import { RelationsService } from '../relations/relations.service.js';
-import { getTenantContext } from '@weavestream/shared/server';
+import { getTenantContext } from '@rivetdocs/shared/server';
 import { UploadContentMissingException, UploadsService } from '../uploads/uploads.service.js';
 import { describeError } from '../common/describe-error.js';
 import { SearchIndexService } from '../search/search-index.service.js';
@@ -175,7 +175,7 @@ export interface IntegrationAssetWriteResult {
 
 const INTEGRATION_AUDIT_META: AuditMeta = {
   ip: '0.0.0.0',
-  userAgent: 'weavestream-worker/integration-reconstruction',
+  userAgent: 'rivetdocs-worker/integration-reconstruction',
 };
 
 /**

@@ -21,17 +21,17 @@ import { apiFetch } from '../../lib/api';
 
 /**
  * The chip shape and wire serializers moved to
- * `@weavestream/shared/tag-chips` in Phase 2c so the mobile TAGS editor
+ * `@rivetdocs/shared/tag-chips` in Phase 2c so the mobile TAGS editor
  * shares them. Re-exported here so existing import sites are unchanged —
- * new code may import them from `@weavestream/shared` directly.
+ * new code may import them from `@rivetdocs/shared` directly.
  */
 export {
   coerceTagChips,
   toAssetWireTags,
   toPlainNameList,
   type TagChipDraft,
-} from '@weavestream/shared';
-import type { TagChipDraft } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import type { TagChipDraft } from '@rivetdocs/shared';
 
 type TagSuggestion = { id: string; name: string };
 

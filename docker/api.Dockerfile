@@ -33,10 +33,10 @@ FROM deps AS build
 COPY tsconfig.base.json tsconfig.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api
-RUN pnpm --filter @weavestream/db prisma:generate \
- && pnpm --filter @weavestream/shared build \
- && pnpm --filter @weavestream/db build \
- && pnpm --filter @weavestream/api build
+RUN pnpm --filter @rivetdocs/db prisma:generate \
+ && pnpm --filter @rivetdocs/shared build \
+ && pnpm --filter @rivetdocs/db build \
+ && pnpm --filter @rivetdocs/api build
 
 # Prune dev deps for the runner. CI=true tells pnpm it may
 # remove/recreate node_modules non-interactively.
@@ -50,12 +50,12 @@ FROM node:24-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl tini su-exec curl \
  && addgroup -S app && adduser -S app -G app
 
-ARG WEAVESTREAM_VERSION=dev
+ARG RIVETDOCS_VERSION=dev
 ENV NODE_ENV=production \
-    WEAVESTREAM_VERSION=${WEAVESTREAM_VERSION}
-LABEL org.opencontainers.image.source="https://github.com/Weavestream/Weavestream" \
+    RIVETDOCS_VERSION=${RIVETDOCS_VERSION}
+LABEL org.opencontainers.image.source="https://github.com/TheTractorHacker/RivetDocs" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \
-      org.opencontainers.image.version="${WEAVESTREAM_VERSION}"
+      org.opencontainers.image.version="${RIVETDOCS_VERSION}"
 WORKDIR /app
 
 COPY --from=build /repo/node_modules ./node_modules

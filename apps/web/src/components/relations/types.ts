@@ -1,4 +1,4 @@
-import type { RelationEndpointKind } from '@weavestream/shared';
+import type { RelationEndpointKind } from '@rivetdocs/shared';
 
 export type { RelationEndpointKind };
 

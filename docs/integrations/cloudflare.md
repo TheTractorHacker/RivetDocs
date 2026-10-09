@@ -10,8 +10,8 @@ One **Cloudflare** integration connects one Cloudflare account. It has two indep
 
 | | Zero Trust Gateway IP lists | Domain sync |
 |---|---|---|
-| **What it does** | Manage the IP and CIDR entries of Gateway lists in Weavestream | Keep every domain on the account in **Domains**, with registrar facts |
-| **Direction** | Weavestream → Cloudflare. Weavestream is the source of truth. | Cloudflare → Weavestream. Cloudflare is the source of truth for registrar facts. |
+| **What it does** | Manage the IP and CIDR entries of Gateway lists in RivetDocs | Keep every domain on the account in **Domains**, with registrar facts |
+| **Direction** | RivetDocs → Cloudflare. RivetDocs is the source of truth. | Cloudflare → RivetDocs. Cloudflare is the source of truth for registrar facts. |
 | **Turned on by** | Registering a list on the **Lists** tab | Setting **Sync domains into company** |
 | **Token permissions** | Account » Zero Trust » Edit | Zone » Zone » Read, and read access to Registrar |
 | **On each scheduled run** | Drift check and repair of every registered list | Registrar sync |
@@ -44,7 +44,7 @@ Set **Account Resources** to the account the integration connects.
 
 ### Add the integration
 
-1. In Weavestream, open **Admin → Integrations → New Integration**.
+1. In RivetDocs, open **Admin → Integrations → New Integration**.
 2. Select **Cloudflare** as the provider.
 3. Enter the **Cloudflare Account ID** and the **API Token**.
 4. To use domain sync, also set **Sync domains into company (slug)**. You can also do this later.
@@ -57,16 +57,16 @@ Set **Account Resources** to the account the integration connects.
 
 ### Schedule
 
-One schedule runs both features. On each run, Weavestream checks every registered list and repairs drift, then runs the domain sync if it is on. A blank schedule uses the global default (every 15 minutes unless an administrator changed it).
+One schedule runs both features. On each run, RivetDocs checks every registered list and repairs drift, then runs the domain sync if it is on. A blank schedule uses the global default (every 15 minutes unless an administrator changed it).
 
 ## Zero Trust Gateway IP lists
 
-Manage Cloudflare Zero Trust Gateway IP lists from Weavestream instead of editing them in each Cloudflare dashboard. You add, update and remove IP and CIDR entries in Weavestream, and each change is pushed to Cloudflare at once.
+Manage Cloudflare Zero Trust Gateway IP lists from RivetDocs instead of editing them in each Cloudflare dashboard. You add, update and remove IP and CIDR entries in RivetDocs, and each change is pushed to Cloudflare at once.
 
 ### Capabilities
 
 - **Push to Cloudflare**: every entry change is sent to Cloudflare immediately.
-- **Drift detection and repair**: each scheduled run compares Cloudflare with Weavestream and corrects changes made directly in Cloudflare.
+- **Drift detection and repair**: each scheduled run compares Cloudflare with RivetDocs and corrects changes made directly in Cloudflare.
 - **IPv4 and IPv6**: single addresses and CIDR blocks (for example `192.168.1.0/24` and `2601:280:5280:7bc0::/64`).
 - **Several lists**: register more than one Gateway IP list under one integration.
 
@@ -84,7 +84,7 @@ Manage Cloudflare Zero Trust Gateway IP lists from Weavestream instead of editin
 1. Open the Cloudflare integration and select the **Lists** tab.
 2. Click **Register list**.
 3. Select a Gateway IP list from the lists found on the account.
-4. Click **Register**. Weavestream imports the existing entries and manages the list from then on.
+4. Click **Register**. RivetDocs imports the existing entries and manages the list from then on.
 
 > [!NOTE]
 > For step-by-step instructions, including Cloudflare Gateway policies and firewall rules, see the [Cloudflare Zero Trust IP Lists guide](/guides/cloudflare-zero-trust-ip-lists/).
@@ -103,9 +103,9 @@ Keep **Domains** in step with every domain on the Cloudflare account: Cloudflare
 | Transfer lock, registration status | Registration (`active`, `expired`, `redemption_period`, …) |
 | Nameservers | The zone's assigned nameservers |
 
-Weavestream reads Cloudflare's [Registrar registrations API](https://developers.cloudflare.com/api/resources/registrar/subresources/registrations/methods/list/). The older `/registrar/domains` endpoints reached end of life on September 27, 2026 and are not used. The registrations API only knows domains that Cloudflare Registrar holds, so a zone whose registration is at another registrar shows no registrar facts; the domain's WHOIS check still reports its expiry.
+RivetDocs reads Cloudflare's [Registrar registrations API](https://developers.cloudflare.com/api/resources/registrar/subresources/registrations/methods/list/). The older `/registrar/domains` endpoints reached end of life on September 27, 2026 and are not used. The registrations API only knows domains that Cloudflare Registrar holds, so a zone whose registration is at another registrar shows no registrar facts; the domain's WHOIS check still reports its expiry.
 
-Weavestream owns everything else on the row: the company it belongs to, the monitoring toggles and client visibility. The sync only rewrites the registrar fields above.
+RivetDocs owns everything else on the row: the company it belongs to, the monitoring toggles and client visibility. The sync only rewrites the registrar fields above.
 
 ### Turn it on
 

@@ -33,11 +33,11 @@ COPY tsconfig.base.json tsconfig.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api
 COPY apps/worker ./apps/worker
-RUN pnpm --filter @weavestream/db prisma:generate \
- && pnpm --filter @weavestream/shared build \
- && pnpm --filter @weavestream/db build \
- && pnpm --filter @weavestream/api build \
- && pnpm --filter @weavestream/worker build
+RUN pnpm --filter @rivetdocs/db prisma:generate \
+ && pnpm --filter @rivetdocs/shared build \
+ && pnpm --filter @rivetdocs/db build \
+ && pnpm --filter @rivetdocs/api build \
+ && pnpm --filter @rivetdocs/worker build
 
 # Prune dev deps for the runner. CI=true tells pnpm it may
 # remove/recreate node_modules non-interactively.
@@ -54,12 +54,12 @@ FROM node:24-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl tini su-exec postgresql16-client \
  && addgroup -S app && adduser -S app -G app
 
-ARG WEAVESTREAM_VERSION=dev
+ARG RIVETDOCS_VERSION=dev
 ENV NODE_ENV=production \
-    WEAVESTREAM_VERSION=${WEAVESTREAM_VERSION}
-LABEL org.opencontainers.image.source="https://github.com/Weavestream/Weavestream" \
+    RIVETDOCS_VERSION=${RIVETDOCS_VERSION}
+LABEL org.opencontainers.image.source="https://github.com/TheTractorHacker/RivetDocs" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \
-      org.opencontainers.image.version="${WEAVESTREAM_VERSION}"
+      org.opencontainers.image.version="${RIVETDOCS_VERSION}"
 WORKDIR /app
 
 COPY --from=build /repo/node_modules ./node_modules
@@ -70,7 +70,7 @@ COPY --from=build /repo/packages/shared/package.json ./packages/shared/package.j
 COPY --from=build /repo/packages/db/dist ./packages/db/dist
 COPY --from=build /repo/packages/db/package.json ./packages/db/package.json
 COPY --from=build /repo/packages/db/prisma ./packages/db/prisma
-# The worker loads API code through `@weavestream/api/<entry>`, which
+# The worker loads API code through `@rivetdocs/api/<entry>`, which
 # resolves via the `exports` map in apps/api/package.json to apps/api/dist.
 # That code resolves its own packages from apps/api/node_modules.
 # apps/worker/scripts/check-worker-deps.mjs --wiring asserts these 3 lines.

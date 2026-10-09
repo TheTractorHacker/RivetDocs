@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { FIELD_TYPE_CATALOG, type FieldType } from '@weavestream/shared';
+import { FIELD_TYPE_CATALOG, type FieldType } from '@rivetdocs/shared';
 import { Icon } from '../../../../../../../components/ui';
 import { PALETTE_DRAG_PREFIX } from './layout-builder-state';
 

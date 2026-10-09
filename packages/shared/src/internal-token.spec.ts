@@ -5,7 +5,7 @@ import { INTERNAL_TOKEN_HEADER, deriveInternalApiToken } from './internal-token.
 // agree byte-for-byte with node:crypto over the same fixed label. This
 // pins both the algorithm (HMAC-SHA256, hex) and the label — change either
 // and this fails.
-const LABEL = 'weavestream:internal-api-token:v1';
+const LABEL = 'rivetdocs:internal-api-token:v1';
 const nodeToken = (secret: string): string =>
   createHmac('sha256', Buffer.from(secret, 'utf8')).update(LABEL).digest('hex');
 

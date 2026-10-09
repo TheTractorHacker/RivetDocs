@@ -5,7 +5,7 @@ import {
   type LayoutFieldSummary,
   type LayoutStats,
   type LayoutSummary,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { lower } from '../../../../../../../lib/term';
 import { useTerm } from '../../../../../../../lib/term-context';
 import { Icon, LayoutSwatch, Tag } from '../../../../../../../components/ui';

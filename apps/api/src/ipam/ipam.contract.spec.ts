@@ -4,7 +4,7 @@ import type {
   SubnetDetail as SharedSubnetDetail,
   SubnetDto,
   SubnetRow,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { SameShape, WireJson } from '../common/wire-contract.js';
 import type { IpamService, SubnetDetail } from './ipam.service.js';
 

@@ -4,27 +4,27 @@ import {
   QueueNames,
   integrationSyncMappingJobSchema,
   type IntegrationSyncMappingJob,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   EnvService,
   RedisService,
   PrismaService,
   AUDIT_ACTIONS,
   AuditLogService,
-} from '@weavestream/api/runtime';
+} from '@rivetdocs/api/runtime';
 import {
   IntegrationSyncService,
   buildResourceExecutionStages,
   IntegrationSyncRunnerService,
   type MappingRunOutcome,
   IntegrationProvenanceService,
-} from '@weavestream/api/integrations';
+} from '@rivetdocs/api/integrations';
 import {
   createManagedWorker,
   type ManagedWorker,
 } from '../common/managed-worker.js';
 
-const SYSTEM_AUDIT_USER_AGENT = 'weavestream-worker/integration-sync';
+const SYSTEM_AUDIT_USER_AGENT = 'rivetdocs-worker/integration-sync';
 
 /**
  * Phase 11 — per-mapping processor.

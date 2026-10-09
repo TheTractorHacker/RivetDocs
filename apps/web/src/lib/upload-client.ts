@@ -7,8 +7,8 @@ import {
   type ConfirmUploadResponse,
   type InitUploadResponse,
   type UploadProgress,
-} from '@weavestream/shared/browser';
-import type { UploadAttachmentType } from '@weavestream/shared';
+} from '@rivetdocs/shared/browser';
+import type { UploadAttachmentType } from '@rivetdocs/shared';
 import { apiFetch } from './api';
 
 /**
@@ -21,18 +21,18 @@ import { apiFetch } from './api';
  *
  * Phase 2c: the framework-free pieces (preflight, mime inference, the
  * progress PUT, error prose) moved to
- * `@weavestream/shared/browser/upload-client` so `apps/mobile` shares
+ * `@rivetdocs/shared/browser/upload-client` so `apps/mobile` shares
  * them. This module keeps only the web `apiFetch` orchestration and
  * re-exports the moved names so existing import sites are unchanged —
- * new code may import them from `@weavestream/shared/browser` directly.
+ * new code may import them from `@rivetdocs/shared/browser` directly.
  */
 
-export { describeUploadError, preflightFile } from '@weavestream/shared/browser';
+export { describeUploadError, preflightFile } from '@rivetdocs/shared/browser';
 export type {
   ConfirmUploadResponse,
   UploadProgress,
-} from '@weavestream/shared/browser';
-export type { UploadAttachmentType } from '@weavestream/shared';
+} from '@rivetdocs/shared/browser';
+export type { UploadAttachmentType } from '@rivetdocs/shared';
 
 export async function uploadFile(opts: {
   companyId: string;

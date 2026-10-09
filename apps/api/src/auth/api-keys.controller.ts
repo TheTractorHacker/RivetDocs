@@ -11,7 +11,7 @@ import {
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { createApiKeySchema, type CreateApiKeyInput } from '@weavestream/shared';
+import { createApiKeySchema, type CreateApiKeyInput } from '@rivetdocs/shared';
 import { ApiKeyService } from './api-key.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { AuthedOnly } from '../rbac/require-permission.decorator.js';

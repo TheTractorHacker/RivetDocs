@@ -1,4 +1,4 @@
-# Weavestream Mobile (`apps/mobile`)
+# RivetDocs Mobile (`apps/mobile`)
 
 The dedicated field-technician PWA, served same-origin at `/m` by the
 Next.js container. Vite + React 19 + TanStack Router/Query, static
@@ -65,7 +65,7 @@ flag once clients have picked it up.
 
 ## Publish pipeline
 
-`pnpm --filter @weavestream/mobile build` = `vite build` +
+`pnpm --filter @rivetdocs/mobile build` = `vite build` +
 `scripts/emit-to-web.mjs`, which publishes:
 
 - `apps/web/public/m/` — hashed assets, `manifest.webmanifest`,
@@ -98,7 +98,7 @@ isn't 3, or a `themePrefs` set that doesn't match the shared enum.
 - Icons are generated path data (`scripts/gen-icons.mjs`), never a
   webfont; add glyph names there and rerun `pnpm gen:icons` — never
   hand-edit `icon-paths.ts`.
-- `randomClientId()` from `@weavestream/shared/browser`, never
+- `randomClientId()` from `@rivetdocs/shared/browser`, never
   `crypto.randomUUID()` — the app is routinely served over plain HTTP
   to LAN devices in dev, where secure-context crypto is undefined.
 - No client-side token refresh: `AuthGuard.silentRefresh` rotates the

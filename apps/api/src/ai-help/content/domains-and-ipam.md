@@ -35,7 +35,7 @@ For email notifications, configure an expiration alert in **Admin → Alerts**. 
 
 Open a company’s **IPAM** section and select **New subnet**. Enter a descriptive name, a normalized IPv4 CIDR, and optionally VLAN, gateway, and notes. Save it. A company cannot have duplicate subnet CIDRs. Use the subnet action menu to edit, archive, restore, or include archived subnets in the browser.
 
-Open a subnet to view utilization and address space. Weavestream automatically detects occupants from asset fields of type **IP address** whose IPv4 values fall inside that subnet. The address-space view distinguishes free, asset-occupied, reserved, conflicting, and network/broadcast addresses. Large subnets use a compact assigned-address list instead of rendering every address.
+Open a subnet to view utilization and address space. RivetDocs automatically detects occupants from asset fields of type **IP address** whose IPv4 values fall inside that subnet. The address-space view distinguishes free, asset-occupied, reserved, conflicting, and network/broadcast addresses. Large subnets use a compact assigned-address list instead of rendering every address.
 
 Use separate subnet records for separate company networks. An IP address field can accept IPv4 only, IPv6 only, or both, but current subnet management is IPv4-focused.
 

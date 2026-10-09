@@ -3,7 +3,7 @@
  */
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { FILE_MULTI_CAP } from '@weavestream/shared';
+import { FILE_MULTI_CAP } from '@rivetdocs/shared';
 import { FileFieldEditor } from './FileFieldEditor';
 import { makeLayoutField } from './test-fixtures';
 import type { FieldEditorValue, FileEntryDraft } from './field-values';

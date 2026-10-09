@@ -5,8 +5,8 @@ import type {
   ArticleEditorMode,
   EmailSettings,
   PasswordGeneratorDefaults,
-} from '@weavestream/shared';
-import { DEFAULT_PASSWORD_GENERATOR_DEFAULTS } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { DEFAULT_PASSWORD_GENERATOR_DEFAULTS } from '@rivetdocs/shared';
 import { serverApiFetch } from './core';
 
 /**

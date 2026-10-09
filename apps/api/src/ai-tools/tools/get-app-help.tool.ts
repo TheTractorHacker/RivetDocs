@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type {
   GetAppHelpToolInput,
   GetAppHelpToolOutput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AppHelpService } from '../../ai-help/app-help.service.js';
 import { AI_TOOL_SPECS } from '../tool-specs.js';
 import type { AiReadTool, AiToolExecutionContext } from '../tool-registry.js';

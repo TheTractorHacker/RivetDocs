@@ -11,7 +11,7 @@ import {
   type ThrottlerStorage,
 } from '@nestjs/throttler';
 import type { Request } from 'express';
-import { ipLimitKey } from '@weavestream/shared';
+import { ipLimitKey } from '@rivetdocs/shared';
 import type { AuthedUser } from '../../common/current-user.decorator.js';
 import { AuditLogService } from '../../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../../audit/audit-actions.js';

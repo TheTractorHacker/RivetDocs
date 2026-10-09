@@ -17,7 +17,7 @@ import {
   type AlertConfigInput,
   type AlertConfigPatch,
   type AlertTestInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AlertsService } from './alerts.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { ZodBody } from '../common/zod-validation.pipe.js';

@@ -13,7 +13,7 @@ import type { AuthedUser } from '../common/current-user.decorator.js';
  * hardware, `Untitled <Layout>` rows) don't make pages skip or repeat
  * rows.
  *
- * Opt-in via `WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1` (set in CI's test
+ * Opt-in via `RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1` (set in CI's test
  * job, which provisions Postgres + `prisma migrate deploy`). Gating on
  * `DATABASE_URL` alone — the audit-immutability pattern — is NOT
  * sufficient here: importing `@prisma/client` loads the workspace
@@ -21,7 +21,7 @@ import type { AuthedUser } from '../common/current-user.decorator.js';
  * and this spec would silently create/delete rows in the configured
  * *development* database. An explicit flag keeps mutation opt-in.
  * Run locally with:
- *   WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @weavestream/api test
+ *   RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @rivetdocs/api test
  *
  * Deliberately NOT tested: stability when the cursor row's name is
  * renamed between pages. That is an accepted weakness of cursoring
@@ -29,7 +29,7 @@ import type { AuthedUser } from '../common/current-user.decorator.js';
  * comment in `assets.service.ts`).
  */
 const describeIfDb =
-  process.env.WEAVESTREAM_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
+  process.env.RIVETDOCS_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
 
 const COMPANY = '2ca00000-0000-4000-8000-00000000c001';
 const LAYOUT = '2ca00000-0000-4000-8000-00000000d001';

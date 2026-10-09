@@ -17,7 +17,7 @@
  * reaches the runtime bundle. Licence: Apache-2.0 (compatible with
  * AGPL-3.0); see `node_modules/@material-symbols/svg-400/LICENSE`.
  *
- * Run: `pnpm --filter @weavestream/mobile gen:icons`
+ * Run: `pnpm --filter @rivetdocs/mobile gen:icons`
  * A missing glyph is a hard error, so a package bump that renames one
  * fails here instead of silently shipping a blank icon.
  */
@@ -169,7 +169,7 @@ async function main() {
  *
  * Source: @material-symbols/svg-400@${version}, \`rounded\` variant
  * (weight 400, optical size 24, unfilled), Apache-2.0.
- * Regenerate: \`pnpm --filter @weavestream/mobile gen:icons\`
+ * Regenerate: \`pnpm --filter @rivetdocs/mobile gen:icons\`
  *
  * Paths are committed so the icon font never reaches the bundle — see
  * scripts/gen-icons.mjs for why.

@@ -3,12 +3,12 @@ import type {
   ArticleEditorMode,
   PasswordGeneratorDefaults,
   UpdateSettingsInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   DEFAULT_PASSWORD_GENERATOR_DEFAULTS,
   articleEditorModeSchema,
   passwordGeneratorDefaultsSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';

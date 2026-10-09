@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { ArticleSummary, FolderNode } from '@weavestream/shared';
+import type { ArticleSummary, FolderNode } from '@rivetdocs/shared';
 import { Icon } from '../ui';
 import { ArticleSideNav } from './article-side-nav';
 
-const STORAGE_KEY = 'weavestream.articleSideNav.collapsed';
+const STORAGE_KEY = 'rivetdocs.articleSideNav.collapsed';
 const COLLAPSED_W = '32px';
 const EXPANDED_W = '240px';
 

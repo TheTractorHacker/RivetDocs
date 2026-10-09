@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────
-# Weavestream — contributor overrides
+# RivetDocs — contributor overrides
 #
 # Layer this on top of compose.yml to build images from local source
 # instead of pulling from GHCR, and to expose Postgres/Redis host ports
@@ -13,7 +13,7 @@
 services:
   postgres:
     # 5432 is commonly claimed by other local stacks; 5434 is the
-    # Weavestream dev port so `pnpm dev` on the host can reach Postgres.
+    # RivetDocs dev port so `pnpm dev` on the host can reach Postgres.
     ports:
       - "5434:5432"
 
@@ -23,25 +23,25 @@ services:
       - "6381:6379"
 
   api:
-    image: weavestream-api:dev
+    image: rivetdocs-api:dev
     build:
       context: .
       dockerfile: docker/api.Dockerfile
       args:
-        WEAVESTREAM_VERSION: dev
+        RIVETDOCS_VERSION: dev
 
   worker:
-    image: weavestream-worker:dev
+    image: rivetdocs-worker:dev
     build:
       context: .
       dockerfile: docker/worker.Dockerfile
       args:
-        WEAVESTREAM_VERSION: dev
+        RIVETDOCS_VERSION: dev
 
   web:
-    image: weavestream-web:dev
+    image: rivetdocs-web:dev
     build:
       context: .
       dockerfile: docker/web.Dockerfile
       args:
-        WEAVESTREAM_VERSION: dev
+        RIVETDOCS_VERSION: dev

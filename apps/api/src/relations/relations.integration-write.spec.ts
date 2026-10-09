@@ -507,7 +507,7 @@ describe('RelationsService integration system writes', () => {
     ['wrong kind', binding({ targetKind: 'asset' })], ['wrong id', binding({ relationId: ids.other })],
     ['wrong company', binding({ companyId: 'other-company' })],
     ['blocked', binding({ state: 'blocked', provenance: { integrationId: ids.integration, ownership: 'breeze', state: 'blocked' } })],
-    ['manual', binding({ provenance: { integrationId: ids.integration, ownership: 'weavestream', state: 'active' } })],
+    ['manual', binding({ provenance: { integrationId: ids.integration, ownership: 'rivetdocs', state: 'active' } })],
   ])('rejects a %s relation binding despite a forged legacy flag', async (_label, persistedBinding) => {
     const existing = relation({ relationType: 'old-type' });
     const { service, tx } = setup({ bound: existing, binding: persistedBinding });

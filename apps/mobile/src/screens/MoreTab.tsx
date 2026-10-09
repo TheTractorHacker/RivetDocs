@@ -198,7 +198,7 @@ export function MoreTab() {
       <Sheet
         open={installHelpOpen}
         onClose={() => setInstallHelpOpen(false)}
-        title="Install Weavestream"
+        title="Install RivetDocs"
       >
         <ol className="flex flex-col gap-3.25 pb-2">
           <li className="flex items-center gap-3.25">

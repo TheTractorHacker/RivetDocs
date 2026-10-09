@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import {
   MFA_CHALLENGE_REQUIRED_CODE,
   MFA_ENROLLMENT_REQUIRED_CODE,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { MfaEnrollmentGuard } from './mfa-enrollment.guard.js';
 
 /**

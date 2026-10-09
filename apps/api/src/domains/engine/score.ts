@@ -33,7 +33,7 @@
  *    The UI surfaces the version in the "Why this score" panel.
  */
 
-import type { DomainCheckDetails, DomainScore } from '@weavestream/shared';
+import type { DomainCheckDetails, DomainScore } from '@rivetdocs/shared';
 
 export const DOMAIN_SCORE_VERSION = 2;
 

@@ -1,4 +1,4 @@
-import type { PasswordDetail, PasswordSummary } from '@weavestream/shared';
+import type { PasswordDetail, PasswordSummary } from '@rivetdocs/shared';
 
 /**
  * Spec-only factories (imported exclusively from `*.spec.ts` /

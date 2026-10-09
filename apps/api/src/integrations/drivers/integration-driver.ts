@@ -5,18 +5,18 @@ import type {
   TicketDetailDto,
   TicketListFilter,
   TicketListResponse,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type {
   ReconstructionGapDetails,
   ReconstructionInput,
 } from '../reconstruction/reconstruction-target.js';
-import type { ReconstructionGapKind } from '@weavestream/shared';
+import type { ReconstructionGapKind } from '@rivetdocs/shared';
 import type { FieldType } from '@prisma/client';
 
 /**
  * Phase 11 — universal integration driver port.
  *
- * Every external system Weavestream connects to (Action1, NinjaOne in
+ * Every external system RivetDocs connects to (Action1, NinjaOne in
  * Phase 7, …) is implemented as a class that satisfies this interface.
  * The class is registered in `IntegrationDriverRegistry`; every
  * cross-cutting concern (encryption, persistence, scheduling, RBAC) is
@@ -26,7 +26,7 @@ import type { FieldType } from '@prisma/client';
  *   - `testConnection` / `listSourceOrgs` / `listSourceFields` are
  *     called from the API (controller → service) on a single request.
  *   - `fetchRecords` is called from the worker (per-mapping job). The
- *     driver MUST NOT mutate Weavestream state; it pages through the
+ *     driver MUST NOT mutate RivetDocs state; it pages through the
  *     external system and yields normalised batches. The framework
  *     handles upserts, audit, sync-record bookkeeping, etc.
  *
@@ -55,7 +55,7 @@ export interface IntegrationContext {
   /** Opaque correlation id stamped on every outbound log line. */
   readonly correlationId: string;
   /**
-   * Stable Weavestream integration id. Optional so existing callers /
+   * Stable RivetDocs integration id. Optional so existing callers /
    * tests that don't supply it keep working, but drivers that need to
    * key process-wide caches (e.g. NinjaOne's OAuth token cache) read
    * it here. NEVER use this as a tenant scope — the framework already
@@ -84,7 +84,7 @@ export interface FetchRecordsContext extends IntegrationContext {
 /**
  * A normalised record produced by the driver — keyed by the driver's
  * own field names. The framework projects this through
- * `IntegrationFieldMapping` rows onto Weavestream `AssetField` slugs.
+ * `IntegrationFieldMapping` rows onto RivetDocs `AssetField` slugs.
  */
 export interface LegacyDriverRecord {
   readonly reconstructionInput?: undefined;
@@ -198,7 +198,7 @@ export class DriverRateLimitError extends Error {
  * `externalOrgId` is nullable: when null, the call is a GLOBAL admin
  * browse (Phase 12+) — the driver should return every ticket the API
  * client can see and let the service layer resolve each row's upstream
- * client id to a Weavestream company. When set, the driver MUST
+ * client id to a RivetDocs company. When set, the driver MUST
  * enforce that every returned row belongs to that single upstream org
  * (IDOR backstop for the legacy per-company surface).
  */

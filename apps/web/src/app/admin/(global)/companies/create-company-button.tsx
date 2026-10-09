@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createCompanySchema, problemMessage } from '@weavestream/shared';
+import { createCompanySchema, problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import {
   Btn,
@@ -17,7 +17,7 @@ import {
 import { lower } from '../../../../lib/term';
 import { useTerm } from '../../../../lib/term-context';
 import { companyTypeOptions, slugify } from '../../../../lib/company-format';
-import type { CompanyType } from '@weavestream/shared';
+import type { CompanyType } from '@rivetdocs/shared';
 
 /**
  * Create dialog for companies. Kept deliberately lean: name, slug,

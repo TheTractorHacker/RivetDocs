@@ -7,13 +7,13 @@ import {
   type IntegrationTargetKind,
   type ReconstructionGapKind,
   type SafeIntegrationProvenance,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 export const MAX_RECONSTRUCTION_INPUT_BYTES = 262_144;
 const MAX_INPUT_DEPTH = 8;
 const MAX_INPUT_ENTRIES = 1_024;
 const BLOCKED_CHECKSUM = createHash('sha256')
-  .update('weavestream-reconstruction-blocked-v1')
+  .update('rivetdocs-reconstruction-blocked-v1')
   .digest('hex');
 
 const sourceRefSchema = z
@@ -275,7 +275,7 @@ export function contextGap(
       candidateCount: 1,
     });
   }
-  if (previous?.ownership === 'weavestream') {
+  if (previous?.ownership === 'rivetdocs') {
     return safeGap('ambiguous', 'The existing target is manually owned.', {
       reasonCode: 'manual_ownership',
       candidateCount: 1,

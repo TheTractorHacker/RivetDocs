@@ -3,7 +3,7 @@ import type {
   MembershipRole,
   PlatformCapability,
   UserRole,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   PermissionService,
   type MembershipSnapshot,

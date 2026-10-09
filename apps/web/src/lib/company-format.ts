@@ -1,4 +1,4 @@
-import type { CompanyType } from '@weavestream/shared';
+import type { CompanyType } from '@rivetdocs/shared';
 import type { TagTone } from '../components/ui';
 
 // Stable per-id brand accent. Kept as a plain function so every caller

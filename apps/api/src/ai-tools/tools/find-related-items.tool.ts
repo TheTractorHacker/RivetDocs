@@ -3,7 +3,7 @@ import type {
   FindRelatedItemsToolInput,
   FindRelatedItemsToolOutput,
   SearchEntityKind,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { SearchService } from '../../search/search.service.js';
 import { PermissionService } from '../../rbac/permission.service.js';
 import { AI_TOOL_SPECS } from '../tool-specs.js';

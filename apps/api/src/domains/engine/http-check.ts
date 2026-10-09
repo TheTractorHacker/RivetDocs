@@ -89,7 +89,7 @@ async function fetchWithTimeout(
       method,
       redirect: 'manual',
       timeoutMs,
-      headers: { 'User-Agent': 'weavestream-alerts/1.0 (+https://weavestream.io)' },
+      headers: { 'User-Agent': 'rivetdocs-alerts/1.0 (+https://github.com/TheTractorHacker/RivetDocs)' },
     });
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location');
@@ -129,7 +129,7 @@ async function fetchWithTimeout(
 // (private-IP block, response size cap, hard timeout) still applies.
 // =====================================================================
 
-const HTTP_USER_AGENT = 'weavestream-domain-check/2.0 (+https://weavestream.io)';
+const HTTP_USER_AGENT = 'rivetdocs-domain-check/2.0 (+https://github.com/TheTractorHacker/RivetDocs)';
 const MAX_REDIRECTS = 5;
 
 const HSTS_RE =

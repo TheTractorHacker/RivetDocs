@@ -344,7 +344,7 @@ describe('CompanyExportDataService reconstruction export', () => {
       title: 'APP-01 Offline Procedure',
       editorMode: 'markdown',
       content: null,
-      markdownSource: `<!-- weavestream:breeze:managed:start -->\n# Rebuild APP-01\nInstall Windows Server from verified media.\nPolicy UUID: ${ids.assetA}\n## Source provenance\nSource UUID: ${ids.article}\nSource revision: ${revision}\nSource fingerprint: distinctive-fingerprint\nExported source date: 2026-07-14T00:00:00.000Z\n<!-- weavestream:breeze:managed:end -->`,
+      markdownSource: `<!-- rivetdocs:breeze:managed:start -->\n# Rebuild APP-01\nInstall Windows Server from verified media.\nPolicy UUID: ${ids.assetA}\n## Source provenance\nSource UUID: ${ids.article}\nSource revision: ${revision}\nSource fingerprint: distinctive-fingerprint\nExported source date: 2026-07-14T00:00:00.000Z\n<!-- rivetdocs:breeze:managed:end -->`,
       contentPlaintext: `Rebuild APP-01\nInstall Windows Server from verified media.\nSource UUID: ${ids.article}\nSource revision: ${revision}`,
       updatedAt: NOW,
       archivedAt: null,
@@ -362,7 +362,7 @@ describe('CompanyExportDataService reconstruction export', () => {
     expect(serialized).toContain('Last synchronized');
     expect(serialized).toContain('Breeze');
     expect(serialized).toContain('uplinks');
-    for (const raw of [interfaceId, addressId, ...modernSourceIds, revision, 'distinctive-fingerprint', 'Source UUID', 'Source revision', 'Source fingerprint', 'weavestream:breeze:managed']) {
+    for (const raw of [interfaceId, addressId, ...modernSourceIds, revision, 'distinctive-fingerprint', 'Source UUID', 'Source revision', 'Source fingerprint', 'rivetdocs:breeze:managed']) {
       expect(serialized).not.toContain(raw);
     }
     // WS-CR-019: the operator-curated reference field is not integration
@@ -491,7 +491,7 @@ describe('CompanyExportDataService reconstruction export', () => {
   });
 
   it.each([
-    ['weavestream-owned Breeze binding', 'breeze', 'weavestream'],
+    ['rivetdocs-owned Breeze binding', 'breeze', 'rivetdocs'],
     ['non-Breeze driver binding', 'other-driver', 'breeze'],
   ])('preserves authored projection-like content for a %s', async (
     _label,

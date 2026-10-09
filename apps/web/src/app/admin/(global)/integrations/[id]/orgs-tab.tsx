@@ -6,7 +6,7 @@ import type {
   DriverDescriptor,
   IntegrationCompanyMappingDto,
   IntegrationDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Btn, Icon, Tag } from '../../../../../components/ui';
 import { CreateMappingDialog } from './create-mapping-dialog';
 import { MappingDetailDialog } from './mapping-detail-dialog';
@@ -15,7 +15,7 @@ import { MappingDetailDialog } from './mapping-detail-dialog';
  * Phase 11 — organizations tab.
  *
  * Lists every `IntegrationCompanyMapping` for this integration. Each
- * row links the upstream org → Weavestream company. Layout, match
+ * row links the upstream org → RivetDocs company. Layout, match
  * keys, and field mappings are configured GLOBALLY on the integration
  * (see the "Field mappings" tab); per-row config here is limited to
  * enable/disable + delete. Manual run controls live on the
@@ -67,7 +67,7 @@ export function OrgsTab({
             Organizations
           </h3>
           <p style={{ margin: 0, fontSize: 12.5, color: 'var(--muted)' }}>
-            Map each upstream organization to a Weavestream company.
+            Map each upstream organization to a RivetDocs company.
             Mappings drive every enabled resource —{' '}
             {integration.resources.map((r) => r.resourceLabel).join(', ') ||
               'configure resources on their dedicated tabs'}
@@ -111,7 +111,7 @@ export function OrgsTab({
           }}
         >
           No company mappings yet. Add one to start syncing data into a
-          Weavestream company.
+          RivetDocs company.
         </div>
       ) : (
         <div

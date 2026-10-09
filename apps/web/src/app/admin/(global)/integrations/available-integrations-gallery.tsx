@@ -1,4 +1,4 @@
-import type { DriverDescriptor } from '@weavestream/shared';
+import type { DriverDescriptor } from '@rivetdocs/shared';
 import { Panel } from '../../../../components/ui';
 
 const TILE_BG = '#212121';

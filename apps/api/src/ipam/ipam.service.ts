@@ -16,8 +16,8 @@ import {
   type UpdateSubnetInput,
   type CreateIpReservationInput,
   type UpdateIpReservationInput,
-} from '@weavestream/shared';
-import type { IntegrationTargetProvenance } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import type { IntegrationTargetProvenance } from '@rivetdocs/shared';
 import { readTargetProvenance } from '../integrations/reconstruction/integration-provenance.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
@@ -88,7 +88,7 @@ export interface IntegrationIpamWriteResult {
 
 const INTEGRATION_AUDIT_META: AuditMeta = {
   ip: '0.0.0.0',
-  userAgent: 'weavestream-worker/integration-reconstruction',
+  userAgent: 'rivetdocs-worker/integration-reconstruction',
 };
 
 export interface SubnetOccupant {

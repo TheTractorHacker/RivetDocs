@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { DriverDescriptor } from '@weavestream/shared';
+import type { DriverDescriptor } from '@rivetdocs/shared';
 import type { IntegrationDriver } from './integration-driver.js';
 import { Action1Driver } from './action1/action1.driver.js';
 import { NinjaOneDriver } from './ninjaone/ninjaone.driver.js';
@@ -7,15 +7,16 @@ import { UniFiSiteManagerDriver } from './unifi/unifi.driver.js';
 import { CloudflareDriver } from './cloudflare/cloudflare.driver.js';
 import { CloudflareApiClient } from './cloudflare/cloudflare-api.client.js';
 import { BreezeDriver } from './breeze/breeze.driver.js';
+import { RivetEditionDriver } from './rivetedition/rivetedition.driver.js';
 
 /**
  * Phase 11 — global registry of every available integration driver.
  *
  * Two driver kinds coexist behind one descriptor surface:
- *   - `pull` drivers (Action1, UniFi) implement `IntegrationDriver` and
+ *   - `pull` drivers (Action1, UniFi, RivetIT, RivetMSP) implement `IntegrationDriver` and
  *     feed records into the asset-import pipeline.
  *   - `security` drivers (Cloudflare) manage external state where
- *     Weavestream is the source of truth. They do NOT implement
+ *     RivetDocs is the source of truth. They do NOT implement
  *     `IntegrationDriver`; their controller surfaces (e.g.
  *     `CloudflareListsController`) call the driver's narrow methods
  *     directly. They live in a parallel `securityDrivers` slot so
@@ -37,6 +38,8 @@ export class IntegrationDriverRegistry {
       new Action1Driver(),
       new NinjaOneDriver(),
       new UniFiSiteManagerDriver(),
+      new RivetEditionDriver('rivetit'),
+      new RivetEditionDriver('rivetmsp'),
     ];
     const securityDrivers: CloudflareDriver[] = [new CloudflareDriver(new CloudflareApiClient())];
 

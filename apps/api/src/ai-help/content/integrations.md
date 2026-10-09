@@ -4,7 +4,7 @@
 <!-- aliases: integration overview | rmm sync | import devices | external inventory | connectors -->
 <!-- requires: integration.manage -->
 
-Action1, NinjaOne, UniFi, and Breeze are pull integrations. A connection stores provider credentials and configuration. Upstream organizations map to Weavestream companies. Enabled resources select target asset layouts, match keys, and field projections to create, claim, or update assets during sync runs.
+Action1, NinjaOne, UniFi, and Breeze are pull integrations. A connection stores provider credentials and configuration. Upstream organizations map to RivetDocs companies. Enabled resources select target asset layouts, match keys, and field projections to create, claim, or update assets during sync runs.
 
 Match keys claim existing unclaimed assets instead of duplicating them. Once linked, integration sync records preserve identity across runs.
 
@@ -49,15 +49,15 @@ After **Test connection** succeeds, map organizations on **Organizations**. Conf
 <!-- aliases: connect ninjaone | ninja rmm | ninja client id | ninjaone devices | ninja ticketing -->
 <!-- requires: integration.manage -->
 
-In NinjaOne, create an API client under **Administration → Apps → API** (monitoring scope required; ticketing scope if needed). In Weavestream, create a **NinjaOne RMM** integration with **Client ID** and **Client Secret**.
+In NinjaOne, create an API client under **Administration → Apps → API** (monitoring scope required; ticketing scope if needed). In RivetDocs, create a **NinjaOne RMM** integration with **Client ID** and **Client Secret**.
 
-Override default US API URL for EU, CA, or OC tenants if needed. Test connection, map NinjaOne organizations to Weavestream companies, and configure **Agent devices fields** (recommended match key: `uid`) and optional **Network & non-agent devices fields**.
+Override default US API URL for EU, CA, or OC tenants if needed. Test connection, map NinjaOne organizations to RivetDocs companies, and configure **Agent devices fields** (recommended match key: `uid`) and optional **Network & non-agent devices fields**.
 
 ## Configure UniFi Site Manager
 <!-- aliases: connect unifi | ubiquiti integration | unifi api key | sync switches | sync clients -->
 <!-- requires: integration.manage -->
 
-Create a **UniFi Site Manager** integration with a Site Manager **API Key**. Test connection, then map UniFi hosts/consoles to Weavestream companies.
+Create a **UniFi Site Manager** integration with a Site Manager **API Key**. Test connection, then map UniFi hosts/consoles to RivetDocs companies.
 
 Configure **Devices fields** for switches, access points, and gateways (recommended match: `mac`). Configure **Clients fields** separately for connected clients (recommended match: `name`).
 
@@ -67,7 +67,7 @@ Configure **Devices fields** for switches, access points, and gateways (recommen
 
 1. In Breeze, create a read-only partner service principal with needed scopes (`organizations:read`, `sites:read`, `devices:read`, `inventory:read`, `configuration:read`, `scripts:read`, `backup-configuration:read`, `custom-fields:read`).
 2. Issue a `brz_sp_...` key and store it in **Partner API key**. Set **Breeze URL** to the public Breeze origin.
-3. Select **Test connection**, open **Organizations**, and map Breeze organization UUIDs to Weavestream companies.
+3. Select **Test connection**, open **Organizations**, and map Breeze organization UUIDs to RivetDocs companies.
 4. Configure resource destinations (assets, IPAM, versioned articles, relations).
 5. Set field rules (**Source wins**, **Preserve manual**, **Manual only**). Breeze sync never overwrites manual articles, relations, notes, uploads, or passwords.
 6. Run a **Dry run**, inspect run history and gaps, then run an incremental or full sync.
@@ -80,13 +80,13 @@ Use **Completeness** tab to track synchronized current, manually documented, sec
 
 Create a **Cloudflare** integration using the **Cloudflare Account ID** and an **API Token**. Give the token only the permissions of the features you use: **Account → Zero Trust → Edit** for Gateway IP lists, and **Zone → Zone → Read** plus read access to **Registrar** for domain sync.
 
-After **Test connection** succeeds, save and activate. For IP lists, open the **Lists** tab, select **Register list**, and choose an IP list from Cloudflare. Existing entries import upon registration, and Weavestream is the source of truth from then on. For domain sync, set **Sync domains into company (slug)**; the **Domains** tab shows the latest sync and has **Sync domains now**.
+After **Test connection** succeeds, save and activate. For IP lists, open the **Lists** tab, select **Register list**, and choose an IP list from Cloudflare. Existing entries import upon registration, and RivetDocs is the source of truth from then on. For domain sync, set **Sync domains into company (slug)**; the **Domains** tab shows the latest sync and has **Sync domains now**.
 
 ## Manage a registered Cloudflare Gateway IP list
 <!-- aliases: cloudflare list entries | add IP to Cloudflare list | remove IP from zero trust list | CIDR allow list | cloudflare drift repair -->
 <!-- requires: integration.manage -->
 
-Open **Admin → Integrations**, select the Cloudflare integration, and open the **Lists** tab. Registering imports current entries and sets Weavestream as source of truth.
+Open **Admin → Integrations**, select the Cloudflare integration, and open the **Lists** tab. Registering imports current entries and sets RivetDocs as source of truth.
 
 Open a registered list to add, edit, or remove IP/CIDR entries with descriptive comments. Changes push to Cloudflare; scheduled drift sweeps repair out-of-band Cloudflare changes back to desired state.
 
@@ -107,7 +107,7 @@ A dry run fetches and evaluates upstream records without creating, claiming, or 
 
 On **Credentials & schedule**, select **Run sync now**. Runs cover enabled organization mappings and resources in the background; track status in **Run history**.
 
-Records are created on first run, claimed when match keys identify an eligible asset, and updated on later runs. Upstream removal does not hard-delete Weavestream history.
+Records are created on first run, claimed when match keys identify an eligible asset, and updated on later runs. Upstream removal does not hard-delete RivetDocs history.
 
 ## Schedule automatic syncs
 <!-- aliases: sync schedule | cron | automatic import | run imports automatically | every six hours | recurring sync | background sync -->
@@ -133,4 +133,4 @@ Troubleshoot by using **Test connection** for credentials and **Dry run** for ma
 
 When a configured integration supplies ticketing data, open **Admin → Tickets** to browse live tickets across mapped companies. Use the available status, priority, board, company, and text filters to narrow the list, then open a ticket for its current provider data. An unmapped upstream client may be shown as unmapped rather than silently assigned to a company.
 
-Tickets are live integration data, not imported Weavestream records. They do not create an asset or article by themselves. Open a ticket and use it as AI context only when your organization authorizes sharing its body and internal notes with the configured AI provider. The intended workflow is to ask AI to draft a knowledge-base article from a resolved ticket, then review and save the draft as an article in the correct company and visibility scope.
+Tickets are live integration data, not imported RivetDocs records. They do not create an asset or article by themselves. Open a ticket and use it as AI context only when your organization authorizes sharing its body and internal notes with the configured AI provider. The intended workflow is to ask AI to draft a knowledge-base article from a resolved ticket, then review and save the draft as an article in the correct company and visibility scope.

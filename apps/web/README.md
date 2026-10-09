@@ -1,6 +1,6 @@
-# @weavestream/web
+# @rivetdocs/web
 
-Next.js App Router frontend for Weavestream.
+Next.js App Router frontend for RivetDocs.
 
 ## Replacing the logo
 

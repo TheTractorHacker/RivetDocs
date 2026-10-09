@@ -1,5 +1,5 @@
 /**
- * Maximum pixel count (width × height) any Weavestream process will fully
+ * Maximum pixel count (width × height) any RivetDocs process will fully
  * decode from an untrusted image (WS-027). A tiny, highly compressible file
  * far under the upload byte cap can declare enormous dimensions and expand
  * to gigabytes of raster memory when decoded ("decompression bomb").

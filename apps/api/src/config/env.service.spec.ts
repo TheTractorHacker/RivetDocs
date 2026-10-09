@@ -1,4 +1,4 @@
-import { loadEnv } from '@weavestream/shared/server';
+import { loadEnv } from '@rivetdocs/shared/server';
 
 function validEnv(): NodeJS.ProcessEnv {
   const key = Buffer.alloc(32, 2).toString('base64');
@@ -13,7 +13,7 @@ function validEnv(): NodeJS.ProcessEnv {
     MFA_ENCRYPTION_KEY: key,
     COOKIE_SIGNING_KEY: key,
     CSRF_SIGNING_KEY: key,
-    FILE_STORAGE_DIR: '/tmp/weavestream-test-files',
+    FILE_STORAGE_DIR: '/tmp/rivetdocs-test-files',
     PASSWORD_ENCRYPTION_KEY: key,
     PASSWORD_ENCRYPTION_KEY_KID: 'pk-1',
     INTEGRATION_SECRET_KEY: key,

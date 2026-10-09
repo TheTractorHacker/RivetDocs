@@ -392,7 +392,7 @@ describe('MatchResolverService.resolve', () => {
   it('CLAIMS an asset already owned by a DIFFERENT integration (cross-integration matching)', async () => {
     // Phase 11.2 — an Action1 endpoint (asset-XI) and a UniFi client
     // representing the same physical machine should resolve to the
-    // SAME Weavestream asset when their match key (e.g. IP address)
+    // SAME RivetDocs asset when their match key (e.g. IP address)
     // lines up. The asset already has a sync record from the Action1
     // (mapping, resource); a UniFi resolve should still claim it.
     const svc = makeService({

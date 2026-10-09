@@ -1,4 +1,4 @@
-import type { FolderNode } from '@weavestream/shared';
+import type { FolderNode } from '@rivetdocs/shared';
 import { Chip } from '../../components/primitives';
 import { flattenFolderTree } from './folders';
 

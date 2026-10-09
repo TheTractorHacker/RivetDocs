@@ -7,7 +7,7 @@ import {
 import type {
   CreateCompanyInput,
   UpdateCompanyInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { MembershipCacheService } from '../cache/membership-cache.service.js';

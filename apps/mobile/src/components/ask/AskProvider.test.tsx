@@ -49,7 +49,7 @@ interface StreamInvocation {
   resolve: () => void;
 }
 const streamInvocations: StreamInvocation[] = [];
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   randomClientId: () => `id-${counter++}`,
   streamChatMessage: (
     conversationId: string,

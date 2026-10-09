@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type CSSProperties } from 'react';
-import type { ChatToolCallDto } from '@weavestream/shared';
+import type { ChatToolCallDto } from '@rivetdocs/shared';
 import {
   buildPatchPreview,
   computeLineDiff,
@@ -13,7 +13,7 @@ import {
   type DiffOp,
   type PatchPreview,
   type PatchSource,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import type { ArticleDetail } from '../../lib/server-api/articles';
 import { Icon } from '../ui';

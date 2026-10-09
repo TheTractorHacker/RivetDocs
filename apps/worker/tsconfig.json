@@ -8,9 +8,9 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "paths": {
-      "@weavestream/shared": ["../../packages/shared/dist/index.d.ts"],
-      "@weavestream/shared/server": ["../../packages/shared/dist/server.d.ts"],
-      "@weavestream/api/*": ["../api/dist/public/*.d.ts"]
+      "@rivetdocs/shared": ["../../packages/shared/dist/index.d.ts"],
+      "@rivetdocs/shared/server": ["../../packages/shared/dist/server.d.ts"],
+      "@rivetdocs/api/*": ["../api/dist/public/*.d.ts"]
     }
   },
   "include": ["src/**/*.ts"],

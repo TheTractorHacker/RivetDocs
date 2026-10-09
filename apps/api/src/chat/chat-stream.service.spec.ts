@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import type { Response } from 'express';
-import type { SendChatMessageInput } from '@weavestream/shared';
+import type { SendChatMessageInput } from '@rivetdocs/shared';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 import { AiCompletionService } from '../ai/ai-completion.service.js';
 import { ChatStreamService } from './chat-stream.service.js';
@@ -32,8 +32,8 @@ jest.mock('../common/egress/safe-fetch.js', () => ({
 import { safeFetch } from '../common/egress/safe-fetch.js';
 const safeFetchMock = safeFetch as jest.Mock;
 
-jest.mock('@weavestream/shared/server', () => ({
-  ...jest.requireActual('@weavestream/shared/server'),
+jest.mock('@rivetdocs/shared/server', () => ({
+  ...jest.requireActual('@rivetdocs/shared/server'),
   requireTenantContext: () => ({
     requestId: 'req-1',
     ip: '127.0.0.1',

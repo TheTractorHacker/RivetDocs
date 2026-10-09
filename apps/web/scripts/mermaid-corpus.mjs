@@ -23,8 +23,8 @@
  *
  * ## Usage
  *
- *   pnpm --filter @weavestream/web mermaid:corpus         # write
- *   pnpm --filter @weavestream/web mermaid:corpus --check  # CI: fail on drift
+ *   pnpm --filter @rivetdocs/web mermaid:corpus         # write
+ *   pnpm --filter @rivetdocs/web mermaid:corpus --check  # CI: fail on drift
  *
  * `--check` is what stops a Mermaid version bump landing on stale
  * fixtures. When it fails after an upgrade, read the diff before
@@ -544,7 +544,7 @@ async function main() {
             lines.map((l) => `    ${name}: ${l}`).join('\n'),
           )
           .join('\n') +
-        '\n\n  Run `pnpm --filter @weavestream/web mermaid:corpus` and review the diff.\n' +
+        '\n\n  Run `pnpm --filter @rivetdocs/web mermaid:corpus` and review the diff.\n' +
         '  A new element or attribute means the allowlist in\n' +
         '  packages/shared/src/browser/diagram-svg.ts needs widening DELIBERATELY.\n' +
         '  (Geometry is not compared — it is font- and date-dependent. See the\n' +

@@ -5,7 +5,7 @@ import type {
   AssetSummary,
   LayoutFieldSummary,
   LayoutSummary,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { LayoutAssetsTable } from './layout-assets-table';
 
 const push = jest.fn();

@@ -12,7 +12,7 @@
  * logic here.
  */
 
-import type { DomainCheckDetails } from '@weavestream/shared';
+import type { DomainCheckDetails } from '@rivetdocs/shared';
 
 /** A monotonically-increasing millisecond clock, injectable for tests. */
 export interface Clock {

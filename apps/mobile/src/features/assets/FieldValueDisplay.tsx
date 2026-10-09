@@ -3,7 +3,7 @@ import {
   formatCalendarDate,
   formatDateTime,
   safeExternalHref,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { FileTile, FileTileGrid } from '../../components/FileTile';
 import { Icon } from '../../components/Icon';
 import { Card } from '../../components/primitives';

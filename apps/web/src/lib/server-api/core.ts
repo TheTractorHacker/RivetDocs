@@ -1,6 +1,6 @@
 import { cookies, headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { getResolvedClientIp } from '../client-ip';
 import { API_INTERNAL_URL, SESSION_COOKIE_NAME } from '../api-config';
 import { ApiUnavailableError, RateLimitedError } from '../api-errors';

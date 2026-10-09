@@ -7,7 +7,7 @@ description: Append-only tamper-resistant mutation history with database-role pr
 
 # Audit Log
 
-Every mutation in Weavestream writes an immutable record to the audit log. The log is accessible to `SUPER_ADMIN` users and is protected at the database-role level against tampering.
+Every mutation in RivetDocs writes an immutable record to the audit log. The log is accessible to `SUPER_ADMIN` users and is protected at the database-role level against tampering.
 
 ## What Is Logged
 
@@ -60,9 +60,9 @@ For security actions:
 
 The audit table is protected at the **Postgres database-role level**:
 
-- The `weavestream` application role has `INSERT` access only to the audit table
+- The `rivetdocs` application role has `INSERT` access only to the audit table
 - `UPDATE` and `DELETE` are not granted to the application role
-- Altering or deleting audit entries requires **Postgres superuser access** — not available through the Weavestream API or admin UI
+- Altering or deleting audit entries requires **Postgres superuser access** — not available through the RivetDocs API or admin UI
 
 This provides a meaningful tamper-resistance guarantee for insider threats: even a fully compromised `SUPER_ADMIN` account cannot modify audit history through the application.
 

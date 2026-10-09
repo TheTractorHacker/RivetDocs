@@ -1,4 +1,4 @@
-import type { GlobalAccess, MembershipRole, PlatformCapability } from '@weavestream/shared';
+import type { GlobalAccess, MembershipRole, PlatformCapability } from '@rivetdocs/shared';
 
 /**
  * Single source of truth for every authorization decision in the system.

@@ -7,7 +7,7 @@ description: Read-only per-tenant portal for client users, with server-side fiel
 
 # Client Portal
 
-Each tenant in Weavestream has a dedicated **Client Portal** — a read-only interface where `CLIENT_USER` accounts can view the data their operator has chosen to share with them.
+Each tenant in RivetDocs has a dedicated **Client Portal** — a read-only interface where `CLIENT_USER` accounts can view the data their operator has chosen to share with them.
 
 ## URL Structure
 

@@ -7,7 +7,7 @@ description: Append-only mutation history with before/after diffs and tamper pro
 
 # Audit & Compliance
 
-Weavestream maintains an append-only audit log of every mutation in the system. The log is tamper-resistant at the database-role level and accessible to `SUPER_ADMIN` users via a filterable, paginated UI.
+RivetDocs maintains an append-only audit log of every mutation in the system. The log is tamper-resistant at the database-role level and accessible to `SUPER_ADMIN` users via a filterable, paginated UI.
 
 ![Audit Log](./assets/audit-log.png)
 
@@ -35,7 +35,7 @@ For sensitive operations (password reveals, credential access), the before/after
 The audit table is protected at the **Postgres database-role level**:
 
 - The application's database role has `INSERT`-only access to the audit table — no `UPDATE` or `DELETE`.
-- Rewriting or deleting audit history requires direct Postgres superuser access — it cannot be done through the Weavestream API or admin UI.
+- Rewriting or deleting audit history requires direct Postgres superuser access — it cannot be done through the RivetDocs API or admin UI.
 
 This means even a fully compromised operator account cannot cover its tracks.
 
@@ -60,7 +60,7 @@ Audit records are never deleted or archived by the application. Retention manage
 
 The audit log and security model support several common compliance requirements:
 
-| Requirement | How Weavestream addresses it |
+| Requirement | How RivetDocs addresses it |
 |---|---|
 | Change history | Every mutation logged with before/after state |
 | Access control | Two-layer RBAC with per-tenant scoping |

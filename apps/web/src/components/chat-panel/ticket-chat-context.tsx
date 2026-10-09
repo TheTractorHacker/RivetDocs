@@ -20,7 +20,7 @@ export function TicketChatContext({
   ticket,
   markdown,
 }: {
-  /** Resolved Weavestream company; null on the global tickets
+  /** Resolved RivetDocs company; null on the global tickets
    *  surface when the upstream client has no mapping. */
   companyId: string | null;
   ticket: TicketDetail;

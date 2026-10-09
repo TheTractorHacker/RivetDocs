@@ -14,7 +14,7 @@ import {
   stepUpVerifySchema,
   type StepUpStatus,
   type StepUpVerifyInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AuthedOnly } from '../../rbac/require-permission.decorator.js';
 import {
   CurrentUser,

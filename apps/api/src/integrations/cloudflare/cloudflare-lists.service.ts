@@ -16,7 +16,7 @@ import {
   type CloudflareIpEntryDto,
   type CloudflareIpListDto,
   type CloudflarePushResponse,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditLogService } from '../../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../../audit/audit-actions.js';
@@ -259,9 +259,9 @@ export class CloudflareListsService {
   // -------------------------------------------------------------------
 
   /**
-   * Compute drift between Weavestream and Cloudflare; if drift is detected
+   * Compute drift between RivetDocs and Cloudflare; if drift is detected
    * AND this list is reconcilable, self-heal by pushing the local entries
-   * back to Cloudflare. Weavestream is the source of truth, so a manual
+   * back to Cloudflare. RivetDocs is the source of truth, so a manual
    * edit on the Cloudflare dashboard is treated as out-of-band noise that
    * we silently undo on the next sweep.
    *
@@ -339,7 +339,7 @@ export class CloudflareListsService {
         ? 'in_sync'
         : 'drift_detected';
 
-    // Self-heal: Weavestream is the source of truth, so when the sweep
+    // Self-heal: RivetDocs is the source of truth, so when the sweep
     // finds a discrepancy we re-push the local entries to Cloudflare.
     // On success the post-heal state is `in_sync`; on failure we leave
     // the row in `drift_detected` and let the next sweep retry — the

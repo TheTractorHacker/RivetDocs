@@ -23,7 +23,7 @@ import {
   type UpdateAssetLayoutInput,
   type ReorderAssetLayoutsInput,
   type SaveAssetFieldsInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AssetLayoutsService } from './asset-layouts.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import {

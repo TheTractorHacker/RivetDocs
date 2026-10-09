@@ -7,7 +7,7 @@ description: Configure email alerts for expirations, uptime, record lifecycle, a
 
 # Alert System Setup
 
-Weavestream ships **email-only** alerts. Each alert is a saved configuration with one or more recipient addresses, an optional **company scope**, and a **type** that determines when it fires. Creating an alert is a two-step dialog: pick what to watch for from the type cards, then fill in the details.
+RivetDocs ships **email-only** alerts. Each alert is a saved configuration with one or more recipient addresses, an optional **company scope**, and a **type** that determines when it fires. Creating an alert is a two-step dialog: pick what to watch for from the type cards, then fill in the details.
 
 ## Prerequisites
 
@@ -46,7 +46,7 @@ The three security types watch the platform itself rather than customer records,
 
 **What triggers each type:**
 
-- **Repeated failed sign-ins** — driven by `auth.login.failure` audit events. Weavestream already locks sign-in after **`LOCKOUT_MAX_FAILURES`** failures (default 5) per IP or per account within **`LOCKOUT_WINDOW_MIN`** minutes (default 15); this alert emails at exactly the moment a counter reaches that threshold. One email per lockout episode — once locked, further attempts are rejected before they can count, so the threshold is crossed at most once per window.
+- **Repeated failed sign-ins** — driven by `auth.login.failure` audit events. RivetDocs already locks sign-in after **`LOCKOUT_MAX_FAILURES`** failures (default 5) per IP or per account within **`LOCKOUT_WINDOW_MIN`** minutes (default 15); this alert emails at exactly the moment a counter reaches that threshold. One email per lockout episode — once locked, further attempts are rejected before they can count, so the threshold is crossed at most once per window.
 - **IP blocked or rate limited** — three sources: a request denied by a **DENY** rule in **Admin → Security → IP rules** (both the API guard and the web page layer report these — page-load denials never reach the API, so the web tier reports them through an internal endpoint); a rejection by the global or sign-in **rate limiter**; and the sign-in lockout engaging (the same event as above, so one incident can notify both types if you enabled both). IP-rule and rate-limit events are coalesced at the source — one audit entry (and one email) per blocked IP + rule per lockout window, and one per rate-limited client per block window — so a hostile client hammering at request rate cannot flood the audit log or your inbox.
 - **Suspicious account behavior** — immediate for `auth.refresh.reused` (a revoked refresh token was presented again — the classic stolen-session signal) and `security.stepup.anomaly` (an account flagged MFA-enabled with no stored secret; this is a persistent misconfiguration, so it emails at most once per user per UTC day). Threshold-based, using the same lockout threshold, for repeated MFA verification failures, step-up verification failures, and password-change verification failures.
 
@@ -56,13 +56,13 @@ The three security types watch the platform itself rather than customer records,
 
 **Scheduled scan** — **Single expiration**, **Expiration list**, and **Website down** are evaluated when the repeatable **`alerts:scan`** job runs. By default the cron is **`*/5 * * * *`** (every five minutes), configurable via **`ALERTS_SCAN_CRON`** in environment; set it to **`off`** to disable scheduled scans (**real-time record/password alerts still fire**).
 
-**Audit-driven** — **Record**, **Password**, and all three **security** alerts subscribe to **`AuditLogService`**: after a matching audit row is persisted, Weavestream enqueues an **`alerts:send`** job with subject/body derived from that event (including resolved record and company labels where possible). Security matching is fully separate from record matching — a record alert set to "all record types" never receives security events, and vice versa.
+**Audit-driven** — **Record**, **Password**, and all three **security** alerts subscribe to **`AuditLogService`**: after a matching audit row is persisted, RivetDocs enqueues an **`alerts:send`** job with subject/body derived from that event (including resolved record and company labels where possible). Security matching is fully separate from record matching — a record alert set to "all record types" never receives security events, and vice versa.
 
 All sends go through **`EmailService`** on the worker; successful sends write an **`alert.fired`** audit entry with recipients and outcome.
 
 ## Deduplication (built-in)
 
-Weavestream stores **`AlertTrigger`** keys so the same logical condition does not email repeatedly:
+RivetDocs stores **`AlertTrigger`** keys so the same logical condition does not email repeatedly:
 
 - **Record/password events:** keyed to the audit row and config (`audit:<auditId>:<configId>`).
 - **Single expiration:** typically once per item per kind (`single:<kind>:<itemId>`) while **Stop alerting after the first trigger per item** is on; when off, the key includes the UTC date so you can receive repeats on subsequent days inside the window.

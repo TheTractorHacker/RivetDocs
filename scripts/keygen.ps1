@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────
-# Weavestream — key generator (Windows PowerShell 5.1+ / PowerShell 7+)
+# RivetDocs — key generator (Windows PowerShell 5.1+ / PowerShell 7+)
 #
 # Writes fresh random secrets to stdout in KEY=value form, ready to
 # append to your .env file. Uses the .NET RandomNumberGenerator — no

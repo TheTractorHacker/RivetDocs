@@ -7,7 +7,7 @@ import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
  * Phase 11 — match-by-key conflict resolution.
  *
  * When the worker pulls an external record it has to decide: which
- * Weavestream `Asset` (if any) does this row belong to?
+ * RivetDocs `Asset` (if any) does this row belong to?
  *
  * Decision tree (encoded in `resolve()`):
  *   1. There is already an `IntegrationSyncRecord` for this
@@ -25,7 +25,7 @@ import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
  *      TEXT/EMAIL/URL, strict otherwise.
  *      - Single match → "claim" the asset (an asset can be claimed by
  *        multiple integrations simultaneously — a UniFi client and an
- *        Action1 endpoint with the same IP both link to one Weavestream
+ *        Action1 endpoint with the same IP both link to one RivetDocs
  *        asset; only the FIRST integration to touch the asset writes
  *        `Asset.externalId` / `externalSource`).
  *      - Two or more matches → ambiguous; return a conflict so the run
@@ -134,7 +134,7 @@ export class MatchResolverService {
    * owned by other integrations (or other resources of the same
    * integration) ARE eligible — that is the whole point of cross-
    * integration matching: an Action1 endpoint and a UniFi client with
-   * the same IP should resolve to the SAME Weavestream asset.
+   * the same IP should resolve to the SAME RivetDocs asset.
    *
    * The exclusion guards against the only invariant the writer needs:
    * a single (mapping, resource) cannot bind two different external

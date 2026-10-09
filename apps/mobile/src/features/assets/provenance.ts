@@ -1,4 +1,4 @@
-import type { IntegrationTargetProvenance } from '@weavestream/shared';
+import type { IntegrationTargetProvenance } from '@rivetdocs/shared';
 
 /**
  * Provenance → attention mapping for the detail screen's T2 disclosure.

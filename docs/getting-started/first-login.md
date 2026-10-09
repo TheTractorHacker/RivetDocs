@@ -17,7 +17,7 @@ Enter the email and password you set with `create-admin`.
 
 ## 2. Enroll your authenticator app
 
-Weavestream requires TOTP MFA on **every account**. On first login, you will be redirected to the MFA enrollment screen.
+RivetDocs requires TOTP MFA on **every account**. On first login, you will be redirected to the MFA enrollment screen.
 
 1. Open an authenticator app (Google Authenticator, Authy, 1Password, Bitwarden, etc.)
 2. Scan the QR code displayed on screen, or manually enter the secret key

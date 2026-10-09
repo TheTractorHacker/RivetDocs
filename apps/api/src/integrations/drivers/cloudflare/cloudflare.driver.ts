@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import type { DriverDescriptor } from '@weavestream/shared';
+import type { DriverDescriptor } from '@rivetdocs/shared';
 import { DriverAuthError } from '../integration-driver.js';
 import {
   CloudflareApiClient,
@@ -46,7 +46,7 @@ export type CloudflareSecret = z.infer<typeof cloudflareSecretSchema>;
  *  - registrar → Domains sync, on when `domainsCompanyId` is set.
  *
  * Unlike asset-import drivers, this does NOT implement
- * `IntegrationDriver`. Weavestream is the source of truth for the IP
+ * `IntegrationDriver`. RivetDocs is the source of truth for the IP
  * entries; the framework still owns the credential row (in `Integration`
  * + `IntegrationSecret`) so token rotation and the test-connection UX
  * are reused as-is. A separate registry slot (`securityDrivers`) keeps

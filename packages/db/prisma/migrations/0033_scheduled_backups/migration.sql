@@ -8,7 +8,7 @@
 --
 -- Does NOT touch the filesystem — the dumps themselves land on the
 -- host via a bind mount added in compose.yml
--- (`${DATA_DIR}/backup:/var/lib/weavestream/backup`). Operators must
+-- (`${DATA_DIR}/backup:/var/lib/rivetdocs/backup`). Operators must
 -- back up both `${DATA_DIR}/backup` and `${DATA_DIR}/files` to
 -- survive a host loss; the application layer only owns the metadata
 -- rows in this migration.

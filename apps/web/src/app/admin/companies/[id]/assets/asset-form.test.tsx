@@ -1,8 +1,8 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { FILE_MULTI_CAP } from '@weavestream/shared';
-import type { LayoutFieldSummary, LayoutSummary } from '@weavestream/shared';
+import { FILE_MULTI_CAP } from '@rivetdocs/shared';
+import type { LayoutFieldSummary, LayoutSummary } from '@rivetdocs/shared';
 import { ToastProvider } from '../../../../../components/ui';
 import { AssetForm } from './asset-form';
 

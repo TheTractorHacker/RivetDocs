@@ -3,7 +3,7 @@ import {
   MFA_ENROLLMENT_REQUIRED_CODE,
   STEP_UP_REQUIRED_CODE,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ApiError } from './api';
 
 export type Recovery = '/app' | '/login' | '/mfa/challenge' | '/mfa/setup';

@@ -503,7 +503,7 @@ describe('IntegrationProvenanceService', () => {
       entityId: targetId,
       companyId: ids.company,
       ip: '0.0.0.0',
-      userAgent: 'weavestream-worker/integration-reconstruction',
+      userAgent: 'rivetdocs-worker/integration-reconstruction',
       after: {
         integrationId: ids.integration,
         integrationCompanyMappingId: ids.mapping,
@@ -522,7 +522,7 @@ describe('IntegrationProvenanceService', () => {
       const targetId = `${targetKind}-shared`;
       const disappearing = binding('disappearing', targetKind, targetId);
       const stillActive = binding('still-active', targetKind, targetId);
-      stillActive.provenance = { ...stillActive.provenance, ownership: 'weavestream' };
+      stillActive.provenance = { ...stillActive.provenance, ownership: 'rivetdocs' };
       const findMany = jest.fn()
         .mockResolvedValueOnce([disappearing])
         .mockResolvedValueOnce([stillActive]);

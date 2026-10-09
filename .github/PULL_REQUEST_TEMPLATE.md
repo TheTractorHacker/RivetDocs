@@ -1,5 +1,5 @@
 <!--
-Thanks for contributing to Weavestream!
+Thanks for contributing to RivetDocs!
 
 Please review CONTRIBUTING.md before opening this PR.
 Security issues go through SECURITY.md, not this form.

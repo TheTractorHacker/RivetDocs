@@ -19,7 +19,7 @@ export const articleEditorModeSchema = z.enum(['tiptap', 'markdown']);
 /**
  * A Tiptap / ProseMirror JSON document. We keep the Zod shape loose
  * (root `doc` + array of nodes) and delegate the deep structural check
- * to `isValidTiptapDoc` in `@weavestream/shared/tiptap`. The API calls
+ * to `isValidTiptapDoc` in `@rivetdocs/shared/tiptap`. The API calls
  * `tiptapToPlaintext` on ingest, which tolerates unknown node types, so
  * the editor is free to add extensions without breaking the round-trip.
  */

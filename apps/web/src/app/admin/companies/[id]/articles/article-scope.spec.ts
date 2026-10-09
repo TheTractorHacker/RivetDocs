@@ -1,4 +1,4 @@
-import type { ArticleSummary, FolderNode } from '@weavestream/shared';
+import type { ArticleSummary, FolderNode } from '@rivetdocs/shared';
 import { articleCounts, scopeArticles } from './article-scope';
 
 function article(

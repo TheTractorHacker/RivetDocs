@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
-const SAFE_DATABASE_NAME = /^weavestream_task11_[a-z0-9_]+$/;
+const SAFE_DATABASE_NAME = /^rivetdocs_task11_[a-z0-9_]+$/;
 const SAFE_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1', 'postgres']);
 const MAX_IDENTIFIER_BYTES = 63;
 const RUN_DIGEST_LENGTH = 12;
@@ -25,7 +25,7 @@ export function reconstructionDatabaseTemplate(
 ): ReconstructionDatabaseTemplate {
   if (!raw) {
     throw new Error(
-      'WEAVESTREAM_RECONSTRUCTION_TEST_DATABASE_URL is required for the real-database suite.',
+      'RIVETDOCS_RECONSTRUCTION_TEST_DATABASE_URL is required for the real-database suite.',
     );
   }
   let url: URL;
@@ -41,7 +41,7 @@ export function reconstructionDatabaseTemplate(
     !SAFE_DATABASE_NAME.test(databaseName)
   ) {
     throw new Error(
-      'The reconstruction test database URL must target a local dedicated weavestream_task11_* database.',
+      'The reconstruction test database URL must target a local dedicated rivetdocs_task11_* database.',
     );
   }
   const result = { databaseName } as ReconstructionDatabaseTemplate;
@@ -101,7 +101,7 @@ export async function createDisposableReconstructionDatabase(
     try {
       execFileSync(
         'pnpm',
-        ['--filter', '@weavestream/db', 'prisma:deploy'],
+        ['--filter', '@rivetdocs/db', 'prisma:deploy'],
         {
           env: { ...process.env, DATABASE_URL: databaseUrl.toString() },
           stdio: 'pipe',

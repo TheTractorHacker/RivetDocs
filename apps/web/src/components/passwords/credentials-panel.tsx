@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type {
   PasswordFolderSchema,
   PasswordSummary,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { getSettings } from '../../lib/server-api/settings';
 import {
   listPasswordFolders,

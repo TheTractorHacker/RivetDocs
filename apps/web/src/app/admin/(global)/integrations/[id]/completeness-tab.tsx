@@ -10,7 +10,7 @@ import {
   type IntegrationGapRow,
   type IntegrationResourceDto,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { Btn, Tag } from '../../../../../components/ui';
 import { FormattedDateTime } from '../../../../../lib/timezone-context';

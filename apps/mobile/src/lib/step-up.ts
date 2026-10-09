@@ -1,4 +1,4 @@
-import type { StepUpFactor, StepUpStatus } from '@weavestream/shared';
+import type { StepUpFactor, StepUpStatus } from '@rivetdocs/shared';
 
 /**
  * Client-side step-up (re-authentication) coordinator.

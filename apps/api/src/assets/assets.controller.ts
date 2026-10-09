@@ -26,7 +26,7 @@ import {
   type CloneAssetInput,
   type CreateAssetInput,
   type UpdateAssetInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AssetsService } from './assets.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';

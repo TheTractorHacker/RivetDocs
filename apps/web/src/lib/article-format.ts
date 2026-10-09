@@ -1,10 +1,10 @@
 import { generateHTML, generateJSON } from '@tiptap/html';
-import type { TiptapDoc } from '@weavestream/shared';
+import type { TiptapDoc } from '@rivetdocs/shared';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import { getArticleBodyExtensions } from '../components/editor/article-tiptap-extensions';
-import { normaliseTiptapDoc } from '@weavestream/shared';
+import { normaliseTiptapDoc } from '@rivetdocs/shared';
 
 const articleBodyExtensions = getArticleBodyExtensions();
 

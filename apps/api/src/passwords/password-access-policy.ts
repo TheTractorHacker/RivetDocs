@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import type { UserRole } from '@weavestream/shared';
+import type { UserRole } from '@rivetdocs/shared';
 
 export type PasswordAccessActor = {
   id: string;

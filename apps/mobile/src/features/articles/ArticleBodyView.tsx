@@ -1,4 +1,4 @@
-import type { ArticleDetail } from '@weavestream/shared';
+import type { ArticleDetail } from '@rivetdocs/shared';
 import { TiptapView } from '../../components/richtext/TiptapView';
 import { MarkdownBody } from '../../components/richtext/MarkdownBody';
 

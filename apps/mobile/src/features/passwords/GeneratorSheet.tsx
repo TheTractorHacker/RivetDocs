@@ -4,8 +4,8 @@ import {
   type PasswordGeneratorDefaults,
   type PasswordGeneratorPreset,
   type PasswordGeneratorSeparator,
-} from '@weavestream/shared';
-import { generatePassword } from '@weavestream/shared/browser';
+} from '@rivetdocs/shared';
+import { generatePassword } from '@rivetdocs/shared/browser';
 import { Icon } from '../../components/Icon';
 import { Sheet } from '../../components/Sheet';
 import { Button, Chip, SectionLabel } from '../../components/primitives';

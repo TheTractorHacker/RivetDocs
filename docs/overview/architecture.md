@@ -2,14 +2,14 @@
 label: Architecture
 icon: workflow
 order: 700
-description: How Weavestream's processes, data, and security model fit together.
+description: How RivetDocs's processes, data, and security model fit together.
 ---
 
 # Architecture
 
 ## Topology
 
-Weavestream runs as five Docker containers orchestrated by a single `compose.yml`:
+RivetDocs runs as five Docker containers orchestrated by a single `compose.yml`:
 
 ```
                            ┌───────────────┐
@@ -39,9 +39,9 @@ Weavestream runs as five Docker containers orchestrated by a single `compose.yml
 
 | Service | Image | Role |
 |---|---|---|
-| `web` | `ghcr.io/weavestream/weavestream-web` | Next.js 15 App Router — admin UI, client portals, auth flows |
-| `api` | `ghcr.io/weavestream/weavestream-api` | NestJS REST API — auth, RBAC, audit, uploads, settings |
-| `worker` | `ghcr.io/weavestream/weavestream-worker` | NestJS BullMQ consumer — domain checks, thumbnails, search indexing, alerts, integrations |
+| `web` | `ghcr.io/thetractorhacker/rivetdocs-web` | Next.js 15 App Router — admin UI, client portals, auth flows |
+| `api` | `ghcr.io/thetractorhacker/rivetdocs-api` | NestJS REST API — auth, RBAC, audit, uploads, settings |
+| `worker` | `ghcr.io/thetractorhacker/rivetdocs-worker` | NestJS BullMQ consumer — domain checks, thumbnails, search indexing, alerts, integrations |
 | `postgres` | `postgres:16` | Primary relational database |
 | `redis` | `redis:7` | Session store, rate-limit buckets, BullMQ queues, cache |
 

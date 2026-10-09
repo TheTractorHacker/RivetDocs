@@ -1,5 +1,5 @@
 import type { DriverRecord, LegacyDriverRecord, TypedDriverRecord } from '../integration-driver.js';
-import { ipInCidr, normalizeCidrV4, normalizeIpv4V4 } from '@weavestream/shared';
+import { ipInCidr, normalizeCidrV4, normalizeIpv4V4 } from '@rivetdocs/shared';
 import {
   MAX_RECONSTRUCTION_INPUT_BYTES,
   reconstructionInputByteLength,
@@ -21,8 +21,8 @@ import {
   type BreezeSourceEndpoint,
 } from './breeze.schemas.js';
 
-const MANAGED_START = '<!-- weavestream:breeze:managed:start -->';
-const MANAGED_END = '<!-- weavestream:breeze:managed:end -->';
+const MANAGED_START = '<!-- rivetdocs:breeze:managed:start -->';
+const MANAGED_END = '<!-- rivetdocs:breeze:managed:end -->';
 const FORBIDDEN_CONFIGURATION_KEYS = new Set([
   'authorization', 'credential', 'credentials', 'encryptionkey', 'apikey', 'accesstoken',
   'refreshtoken', 'privatekey', 'providerconfig', 'password', 'passwd', 'passphrase', 'pwd', 'secret',
@@ -54,7 +54,7 @@ export class BreezeBoundedDefinitionError extends Error {
 }
 
 /**
- * A record Weavestream could not read (a field it relies on is missing or
+ * A record RivetDocs could not read (a field it relies on is missing or
  * has an unexpected type). Carries only field paths and issue codes, never
  * values, so nothing from the record reaches logs or the run viewer.
  */
@@ -350,7 +350,7 @@ export function transformBreezeRecord(
           )]
         : [];
     case 'device-relationships':
-      // Edges to endpoint kinds Weavestream does not model are skipped.
+      // Edges to endpoint kinds RivetDocs does not model are skipped.
       return record.edges
         .filter((relationship: Record<string, any>) =>
           relationshipResourceKey(relationship.from.type) !== null &&
@@ -809,7 +809,7 @@ function renderDesiredConfiguration(
       `OS filter: ${record.osFilter?.map(singleLine).join(', ') || 'none'}`,
       '', record.level === 'site' || record.level === 'device'
         ? 'The target relation is resolved during the native relation stage.'
-        : 'The exported target has no durable Weavestream asset relation for this target level.',
+        : 'The exported target has no durable RivetDocs asset relation for this target level.',
     );
   } else if (resource === 'scripts') {
     lines.push(
@@ -845,8 +845,8 @@ function renderDesiredConfiguration(
   }
   lines.push('', '## Source provenance', `Source UUID: ${record.id}`, `Source revision: ${record.revision}`, `Source fingerprint: ${record.revision}`, `Exported source date: ${record.sourceUpdatedAt}`);
   const body = lines.join('\n')
-    .replaceAll(MANAGED_START, '&lt;!-- weavestream:breeze:managed:start --&gt;')
-    .replaceAll(MANAGED_END, '&lt;!-- weavestream:breeze:managed:end --&gt;');
+    .replaceAll(MANAGED_START, '&lt;!-- rivetdocs:breeze:managed:start --&gt;')
+    .replaceAll(MANAGED_END, '&lt;!-- rivetdocs:breeze:managed:end --&gt;');
   const markdown = `${MANAGED_START}\n${body}\n${MANAGED_END}`;
   if (markdown.split(MANAGED_START).length !== 2 || markdown.split(MANAGED_END).length !== 2) {
     throw new Error('Breeze desired configuration produced invalid managed-region markers.');

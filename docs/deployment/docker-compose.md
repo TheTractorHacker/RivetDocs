@@ -7,7 +7,7 @@ description: Production Docker Compose deployment walkthrough.
 
 # Docker Compose
 
-The canonical way to deploy Weavestream is with the published `compose.yml`. This guide covers a production-grade setup.
+The canonical way to deploy RivetDocs is with the published `compose.yml`. This guide covers a production-grade setup.
 
 ## The compose.yml
 
@@ -24,9 +24,9 @@ services:
 
 Uploaded files (attachments, thumbnails, logos, export PDFs) live on a host bind-mounted directory (`${DATA_DIR}/files`) shared by `api` and `worker`. No additional storage container is required.
 
-All Weavestream images are pulled from GitHub Container Registry:
+All RivetDocs images are pulled from GitHub Container Registry:
 ```
-ghcr.io/weavestream/weavestream-{api,web,worker}:<version>
+ghcr.io/thetractorhacker/rivetdocs-{api,web,worker}:<version>
 ```
 
 ## Production Setup
@@ -36,16 +36,16 @@ ghcr.io/weavestream/weavestream-{api,web,worker}:<version>
 Pin to a specific release tag:
 
 ```bash
-mkdir weavestream && cd weavestream
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/v1.1.1/compose.yml
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/v1.1.1/.env.example
+mkdir rivetdocs && cd rivetdocs
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/v1.1.1/compose.yml
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/v1.1.1/.env.example
 mv .env.example .env
 ```
 
 ### 2. Generate secrets
 
 ```bash
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/v1.1.1/scripts/keygen.sh
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/v1.1.1/scripts/keygen.sh
 chmod +x keygen.sh
 ./keygen.sh >> .env
 ```
@@ -55,16 +55,16 @@ Update `DATABASE_URL` and `REDIS_URL` to use the newly generated passwords.
 ### 3. Set critical variables in .env
 
 ```bash
-WEAVESTREAM_VERSION=1.1.1
+RIVETDOCS_VERSION=1.1.1
 APP_URL=https://your-domain.com
 API_URL=https://your-domain.com/api
-DATA_DIR=/opt/weavestream/data   # or your preferred path
+DATA_DIR=/opt/rivetdocs/data   # or your preferred path
 ```
 
 ### 4. Configure data directory
 
 ```bash
-mkdir -p /opt/weavestream/data/{postgres,redis,files}
+mkdir -p /opt/rivetdocs/data/{postgres,redis,files}
 ```
 
 Or let Docker create it automatically on first boot.
@@ -100,7 +100,7 @@ The API exposes three health endpoints:
 | Endpoint | Access | Purpose |
 |---|---|---|
 | `GET /health` | Public | Liveness only. Returns `{ "status": "ok" }` and intentionally exposes no version or backend diagnostics. |
-| `GET /health/ready` | Authenticated | Readiness check for Postgres and Redis, plus the running Weavestream version. |
+| `GET /health/ready` | Authenticated | Readiness check for Postgres and Redis, plus the running RivetDocs version. |
 | `GET /health/queues` | Authenticated, requires `AUDIT_READ` | BullMQ queue counts for background job lanes. |
 
 ## Useful Commands

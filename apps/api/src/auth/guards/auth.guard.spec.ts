@@ -127,7 +127,7 @@ describe('AuthGuard bearer handling', () => {
     payload: { sub: 'u-1', sid: 's-1', role: 'OPERATOR' },
   };
 
-  it('ignores a Bearer that is not a Weavestream key and authenticates the cookie', async () => {
+  it('ignores a Bearer that is not a RivetDocs key and authenticates the cookie', async () => {
     // An SSO proxy (oauth2-proxy, Cloudflare Access) in front of the app may
     // add its own JWT as Bearer on every request. Treating that as a failed
     // API key would log every browser out.

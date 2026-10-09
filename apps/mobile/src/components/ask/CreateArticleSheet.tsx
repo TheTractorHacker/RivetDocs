@@ -4,7 +4,7 @@ import {
   flattenFolderTree,
   splitMarkdownTitleAndBody,
   type ChatPendingCreate,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import type { Org } from '../../lib/org-scope';
 import { useArticleFolders } from '../../features/articles/queries';

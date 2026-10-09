@@ -6,7 +6,7 @@ import {
   companyExportJobSchema,
   type CompanyExportJob,
   type ExportJobResult,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   RedisService,
   LocalStorageService,
@@ -14,11 +14,11 @@ import {
   exportPdfPasswordAad,
   AuditLogService,
   AUDIT_ACTIONS,
-} from '@weavestream/api/runtime';
+} from '@rivetdocs/api/runtime';
 import {
   CompanyExportDataService,
   type CompanyExportData,
-} from '@weavestream/api/exports';
+} from '@rivetdocs/api/exports';
 import { buildCompanyExportPdf, pdfEmbedSizeBlockReason } from './pdf-builder.js';
 import {
   createManagedWorker,
@@ -171,7 +171,7 @@ export class CompanyPdfExportWorker implements OnModuleDestroy {
       entityId: exportId,
       companyId,
       ip: '127.0.0.1',
-      userAgent: 'weavestream-worker/company-pdf-export',
+      userAgent: 'rivetdocs-worker/company-pdf-export',
       before: null,
       after: {
         includePasswords,
@@ -247,7 +247,7 @@ export class CompanyPdfExportWorker implements OnModuleDestroy {
         entityId: exportId,
         companyId,
         ip: '127.0.0.1',
-        userAgent: 'weavestream-worker/company-pdf-export',
+        userAgent: 'rivetdocs-worker/company-pdf-export',
         before: null,
         after: {
           includePasswords,

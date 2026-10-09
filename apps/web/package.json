@@ -1,5 +1,5 @@
 {
-  "name": "@weavestream/web",
+  "name": "@rivetdocs/web",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -41,7 +41,7 @@
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/suggestion": "^3.31.4",
     "@uiw/react-codemirror": "^4.25.12",
-    "@weavestream/shared": "workspace:*",
+    "@rivetdocs/shared": "workspace:*",
     "cmdk": "^1.1.1",
     "css-tree": "3.2.1",
     "dompurify": "3.4.16",
@@ -65,7 +65,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/turndown": "^5.0.6",
-    "@weavestream/mobile": "workspace:*",
+    "@rivetdocs/mobile": "workspace:*",
     "autoprefixer": "^10.6.1",
     "dotenv": "17.4.2",
     "eslint": "^9.39.5",

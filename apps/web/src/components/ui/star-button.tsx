@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { Icon } from './icon';
 import { useToast } from './toast';

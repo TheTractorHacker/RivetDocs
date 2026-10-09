@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { Btn, Icon, Panel, Tag, useToast } from '../ui';
 import { apiFetch } from '../../lib/api';
 import { AddLinkModal } from './add-link-modal';

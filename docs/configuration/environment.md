@@ -2,12 +2,12 @@
 label: Environment Variables
 icon: terminal
 order: 900
-description: Complete reference for all Weavestream environment variables.
+description: Complete reference for all RivetDocs environment variables.
 ---
 
 # Environment Variables
 
-All runtime configuration is environment-driven. This page is the **complete reference** for every variable Weavestream reads; the `.env.example` file in the repository is the minimal getting-started template.
+All runtime configuration is environment-driven. This page is the **complete reference** for every variable RivetDocs reads; the `.env.example` file in the repository is the minimal getting-started template.
 
 Variables fall into two tiers:
 
@@ -20,7 +20,7 @@ Each table lists the default (where one exists) and its operational impact. Vali
 
 | Variable | Default | Notes |
 |---|---|---|
-| `WEAVESTREAM_VERSION` | `latest` | Image tag pulled from `ghcr.io/weavestream/weavestream-*`. **Always pin in production.** |
+| `RIVETDOCS_VERSION` | `latest` | Image tag pulled from `ghcr.io/thetractorhacker/rivetdocs-*`. **Always pin in production.** |
 
 ## Host Ports
 
@@ -46,7 +46,7 @@ For local development, `compose.build.yml` publishes Postgres on `5434` and Redi
 
 | Variable | Notes |
 |---|---|
-| `POSTGRES_USER` | Database role name. Default: `weavestream`. |
+| `POSTGRES_USER` | Database role name. Default: `rivetdocs`. |
 | `POSTGRES_PASSWORD` | Must match the password embedded in `DATABASE_URL`. |
 | `POSTGRES_DB` | Database name. |
 | `DATABASE_URL` | Full connection string. Inside compose, host is `postgres:5432`. |
@@ -166,7 +166,7 @@ Every thumbnail, attachment, logo, and export PDF is streamed through the API on
 
 | Variable | Default | Notes |
 |---|---|---|
-| `DATA_DIR` | `./data` | Host path for persistent data. Set to an absolute path for NAS deployments (e.g. `/volume1/docker/weavestream`). |
+| `DATA_DIR` | `./data` | Host path for persistent data. Set to an absolute path for NAS deployments (e.g. `/volume1/docker/rivetdocs`). |
 
 ## Logging
 

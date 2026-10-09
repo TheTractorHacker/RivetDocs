@@ -3,7 +3,7 @@ import {
   apiKeysRevokedNotice,
   isCurrentPasswordInvalidProblem,
   passwordSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { useState } from 'react';
 import { FieldBlock, Hint } from '../../components/FieldBlock';
 import { FormScreenChrome } from '../../components/FormScreenChrome';

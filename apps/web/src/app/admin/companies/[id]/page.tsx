@@ -8,7 +8,7 @@ import {
 } from '../../../../lib/server-api/companies';
 import { listAssets } from '../../../../lib/server-api/assets';
 import { throwUnlessFound } from '../../../../lib/server-api/core';
-import type { MonitoredDomainDto } from '@weavestream/shared';
+import type { MonitoredDomainDto } from '@rivetdocs/shared';
 import { getCompanyDomainsBasic } from '../../../../lib/server-api/domains';
 import { canWriteCompany } from '../../../../lib/roles';
 import { DetailTitle, PageBody } from '../../../../components/shell/page-header';

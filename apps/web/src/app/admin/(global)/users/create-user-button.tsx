@@ -7,13 +7,13 @@ import type {
   MembershipRole,
   PlatformCapability,
   UserRole,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   GlobalAccessValues,
   MANAGER_PRESET,
   PlatformCapabilityValues,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import { FormattedDateTime } from '../../../../lib/timezone-context';
 import {

@@ -1,4 +1,4 @@
-import type { ChatToolCallDto } from '@weavestream/shared';
+import type { ChatToolCallDto } from '@rivetdocs/shared';
 import { proposalViews } from './proposal-card';
 
 const ART = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';

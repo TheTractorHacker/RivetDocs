@@ -14,7 +14,7 @@ import {
   Textarea,
   useToast,
 } from '../../../../../components/ui';
-import { problemMessage, type CompanyType } from '@weavestream/shared';
+import { problemMessage, type CompanyType } from '@rivetdocs/shared';
 import type {
   CompanyDetail,
   CompanyParentRef,

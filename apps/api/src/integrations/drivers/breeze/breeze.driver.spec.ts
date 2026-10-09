@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { FetchRecordsContext, IntegrationContext } from '../integration-driver.js';
-import { driverDescriptorSchema, fieldSlugSchema, layoutSlugSchema } from '@weavestream/shared';
+import { driverDescriptorSchema, fieldSlugSchema, layoutSlugSchema } from '@rivetdocs/shared';
 import { assertRecommendedDestinations } from '../driver-utils.js';
 import { BreezeDriver } from './breeze.driver.js';
 import {
@@ -485,7 +485,7 @@ describe('Breeze transforms', () => {
     });
     expect(policy.markdown).toContain('rebootPolicy');
     expect(policy.markdown).toContain(`Source fingerprint: ${REVISION}`);
-    expect(policy.markdown).toContain('<!-- weavestream:breeze:managed:start -->');
+    expect(policy.markdown).toContain('<!-- rivetdocs:breeze:managed:start -->');
 
     const assignment = article('configuration-assignments', {
       ...base, id: SEGMENT, siteId: null, policyId, policyName: 'Server baseline',
@@ -886,16 +886,16 @@ describe('Breeze transforms', () => {
   });
 
   it('neutralizes source-supplied managed marker tokens and emits exactly one region', () => {
-    const marker = '<!-- weavestream:breeze:managed:start -->';
+    const marker = '<!-- rivetdocs:breeze:managed:start -->';
     const [record] = transformBreezeRecord('scripts', {
       ...base, siteId: null, sourceScope: 'organization', name: `Marker ${marker}`, description: marker,
       category: null, osTypes: ['linux'], language: 'bash', content: `echo '${marker}'`, parameters: null,
       timeoutSeconds: 30, runAs: 'system', version: 1, exitCodeSeverityMapping: null,
     }) as Array<{ reconstructionInput: Record<string, any> }>;
     const markdown = record!.reconstructionInput.markdown as string;
-    expect(markdown.split('<!-- weavestream:breeze:managed:start -->')).toHaveLength(2);
-    expect(markdown.split('<!-- weavestream:breeze:managed:end -->')).toHaveLength(2);
-    expect(markdown).toContain('&lt;!-- weavestream:breeze:managed:start --&gt;');
+    expect(markdown.split('<!-- rivetdocs:breeze:managed:start -->')).toHaveLength(2);
+    expect(markdown.split('<!-- rivetdocs:breeze:managed:end -->')).toHaveLength(2);
+    expect(markdown).toContain('&lt;!-- rivetdocs:breeze:managed:start --&gt;');
   });
 
   it('keeps one scalar custom value within the native bound or blocks the row', () => {
@@ -989,7 +989,7 @@ describe('Breeze transforms', () => {
           id: SOFTWARE,
           name: 'Weave Agent',
           version: '2.4.0',
-          vendor: 'Weavestream',
+          vendor: 'RivetDocs',
           installedOn: '2026-01-02',
           managed: true,
         },
@@ -1001,7 +1001,7 @@ describe('Breeze transforms', () => {
       externalId: DEVICE,
       fields: expect.objectContaining({
         installedSoftware:
-          'Weave Agent 2.4.0 · Weavestream · installed 2026-01-02 · managed',
+          'Weave Agent 2.4.0 · RivetDocs · installed 2026-01-02 · managed',
         softwareCompleteness: 'software: 1/1 complete',
       }),
     });
@@ -1395,7 +1395,7 @@ describe('Breeze transforms', () => {
     expect(JSON.stringify(records)).not.toMatch(/configuration.assignment|backup.procedure/i);
 
     // A new edge type between known endpoints syncs as plain text; an edge to
-    // an endpoint kind Weavestream does not model is skipped, not fatal.
+    // an endpoint kind RivetDocs does not model is skipped, not fatal.
     expect(transformBreezeRecord('device-relationships', {
       ...relationships,
       edges: [
@@ -1623,7 +1623,7 @@ describe('BreezeDriver transport delegation', () => {
     expect(page.records).toHaveLength(1);
     expect(page.blockedInputs).toEqual([expect.objectContaining({
       kind: 'secret_blocked', externalId: `${ORG}:scripts:${DEVICE}`,
-      message: expect.stringMatching(/^Weavestream withheld a scripts record/),
+      message: expect.stringMatching(/^RivetDocs withheld a scripts record/),
       details: expect.objectContaining({ reasonCode: 'secret_like_material', sourceId: DEVICE }),
     })]);
     const serialized = JSON.stringify(page);
@@ -2121,7 +2121,7 @@ describe('BreezeDriver transport delegation', () => {
       }),
     };
     // Ordering and clock skew are Breeze's concern. The checkpoint is the
-    // snapshot, so neither can move it past a change Weavestream has not seen.
+    // snapshot, so neither can move it past a change RivetDocs has not seen.
     const page = await new BreezeDriver(client).fetchRecords({ ...ctx(), updatedSince }, null);
     expect(page.records.length).toBeGreaterThan(0);
     expect(page).toMatchObject({ sourceHighWater: '2026-07-14T12:00:00.000Z', blockedInputs: [] });
@@ -2396,8 +2396,8 @@ describe('Breeze scalar custom-field value contract', () => {
   it('strips unknown scalar keys and blocks secret-semantic scalar values safely', async () => {
     expect(JSON.stringify(transformBreezeRecord('custom-field-values', {
       ...scalarValue,
-      providerConfig: { accessToken: 'must-never-enter-weavestream' },
-    }))).not.toMatch(/providerConfig|must-never-enter-weavestream/u);
+      providerConfig: { accessToken: 'must-never-enter-rivetdocs' },
+    }))).not.toMatch(/providerConfig|must-never-enter-rivetdocs/u);
     // The binding comes from `deviceId` alone; Breeze's `target` echo is not read.
     expect(transformBreezeRecord('custom-field-values', {
       ...scalarValue,
@@ -2406,7 +2406,7 @@ describe('Breeze scalar custom-field value contract', () => {
       bindingRef: { resourceKey: 'devices', externalId: `${ORG}:devices:${DEVICE}` },
     })]);
 
-    const secret = 'must-never-enter-weavestream';
+    const secret = 'must-never-enter-rivetdocs';
     const client = {
       testConnection: jest.fn(),
       listOrganizations: jest.fn(),
@@ -2435,7 +2435,7 @@ describe('Breeze scalar custom-field value contract', () => {
   });
 });
 
-// Breeze adds fields within schemaVersion "1" (Weavestream/Weavestream#47).
+// Breeze adds fields within schemaVersion "1" (TheTractorHacker/RivetDocs#47).
 // These payloads mirror Breeze v0.121's partner API contract.
 describe('Breeze upgrade tolerance', () => {
   const memoryModule = {

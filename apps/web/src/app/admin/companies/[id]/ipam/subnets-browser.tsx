@@ -2,8 +2,8 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
-import type { SubnetRow } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { SubnetRow } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,

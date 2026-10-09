@@ -33,7 +33,7 @@ import {
  *
  * NOTE for browser callers: `document.cookie` returns the value still
  * percent-encoded (Express encodes on write), so decode before calling
- * `parseUiCookie`. `readBrowserCookie` from `@weavestream/shared/browser`
+ * `parseUiCookie`. `readBrowserCookie` from `@rivetdocs/shared/browser`
  * does that for you. Server-side readers (`next/headers`, cookie-parser)
  * decode already.
  */

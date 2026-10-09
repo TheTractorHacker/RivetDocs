@@ -19,7 +19,7 @@ import {
   type ArchiveFolderInput,
   type CreateFolderInput,
   type UpdateFolderInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { FoldersService } from './folders.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { RequirePermission } from '../rbac/require-permission.decorator.js';

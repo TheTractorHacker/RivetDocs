@@ -11,7 +11,7 @@ import {
   type SaveAssetFieldsInput,
   fieldOptionsSchemaFor,
   type FieldType,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { FieldTypesRegistry } from '../field-types/field-types.registry.js';

@@ -7,7 +7,7 @@ description: Full-text search across articles, assets, and uploads with a comman
 
 # Search
 
-Weavestream provides full-text search across all documentation content — articles, assets, and uploads — backed by PostgreSQL's native `tsvector` indexing.
+RivetDocs provides full-text search across all documentation content — articles, assets, and uploads — backed by PostgreSQL's native `tsvector` indexing.
 
 ![Comprehensive Search](./assets/search.png)
 

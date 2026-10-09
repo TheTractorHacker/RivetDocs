@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../../../lib/api';
 import { Btn, Dialog, useToast } from '../../../../components/ui';
-import type { LayoutStats, LayoutSummary } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { LayoutStats, LayoutSummary } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 
 /**
  * Archive / restore confirmation modal used from both the builder and

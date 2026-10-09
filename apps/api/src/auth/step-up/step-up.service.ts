@@ -6,7 +6,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { StepUpFactor, StepUpStatus } from '@weavestream/shared';
+import type { StepUpFactor, StepUpStatus } from '@rivetdocs/shared';
 import { RedisService } from '../../redis/redis.service.js';
 import { EnvService } from '../../config/env.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';

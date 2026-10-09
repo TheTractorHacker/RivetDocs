@@ -2,19 +2,19 @@
 label: Quickstart
 icon: zap
 order: 900
-description: Deploy Weavestream with Docker Compose in under 10 minutes.
+description: Deploy RivetDocs with Docker Compose in under 10 minutes.
 ---
 
 # Quickstart
 
-This guide takes you from zero to a running Weavestream instance.
+This guide takes you from zero to a running RivetDocs instance.
 
 ## Step 1 — Download the two files you need
 
 ```bash
-mkdir weavestream && cd weavestream
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/main/compose.yml
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/main/.env.example
+mkdir rivetdocs && cd rivetdocs
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/compose.yml
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/.env.example
 mv .env.example .env
 ```
 
@@ -25,7 +25,7 @@ You can pin to a specific release tag by replacing `main` with `v1.1.1` (or your
 ### macOS / Linux / WSL
 
 ```bash
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/main/scripts/keygen.sh
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/scripts/keygen.sh
 chmod +x keygen.sh
 ./keygen.sh >> .env
 ```
@@ -34,7 +34,7 @@ chmod +x keygen.sh
 
 ```powershell
 Invoke-WebRequest `
-  -Uri https://raw.githubusercontent.com/Weavestream/Weavestream/main/scripts/keygen.ps1 `
+  -Uri https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/scripts/keygen.ps1 `
   -OutFile keygen.ps1
 .\keygen.ps1 | Out-File -Append -Encoding ascii .env
 ```
@@ -49,18 +49,18 @@ Open `.env` in a text editor and delete the `REPLACEME` placeholder rows — the
 Edit `.env` and set a specific release:
 
 ```bash
-WEAVESTREAM_VERSION=1.1.1
+RIVETDOCS_VERSION=1.1.1
 ```
 
-Using `latest` is fine for evaluation but can surface breaking changes without warning. Browse published tags at [GitHub Container Registry](https://github.com/Weavestream/Weavestream/pkgs/container/weavestream-api).
+Using `latest` is fine for evaluation but can surface breaking changes without warning. Browse published tags at [GitHub Container Registry](https://github.com/TheTractorHacker/RivetDocs/pkgs/container/rivetdocs-api).
 
 ## Step 4 — Choose where data lives (optional)
 
 By default, persistent data is stored in `./data/` next to `compose.yml`. To use a different location (e.g. a NAS share), set `DATA_DIR` in `.env`:
 
 ```bash
-DATA_DIR=/volume1/docker/weavestream   # Synology / UGREEN
-DATA_DIR=/srv/weavestream               # plain Linux
+DATA_DIR=/volume1/docker/rivetdocs   # Synology / UGREEN
+DATA_DIR=/srv/rivetdocs               # plain Linux
 ```
 
 Docker auto-creates `$DATA_DIR/{postgres,redis,files}` on first boot.
@@ -101,5 +101,5 @@ If you get a permission error talking to the Docker daemon, your shell user isn'
 - [Configuration Reference](/configuration/environment/) — review all environment variables
 
 !!!warning Pin your version before going to production
-Never run `:latest` in production. Set `WEAVESTREAM_VERSION` in `.env` to a specific release tag so upgrades are deliberate. See the [upgrade guide](/deployment/upgrades/).
+Never run `:latest` in production. Set `RIVETDOCS_VERSION` in `.env` to a specific release tag so upgrades are deliberate. See the [upgrade guide](/deployment/upgrades/).
 !!!

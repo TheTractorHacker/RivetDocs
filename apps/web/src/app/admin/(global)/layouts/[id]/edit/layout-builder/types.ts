@@ -1,4 +1,4 @@
-import type { FieldType } from '@weavestream/shared';
+import type { FieldType } from '@rivetdocs/shared';
 
 export type BuilderField = {
   /** Persisted id, or undefined for unsaved rows. */

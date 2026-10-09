@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: 'Tickets' };
 /**
  * Phase 12+ — global admin tickets browse. Aggregates every ticket
  * the system's ticketing integration can see, with each row stitched
- * to a resolved Weavestream company (or a muted "(unmapped client …)"
+ * to a resolved RivetDocs company (or a muted "(unmapped client …)"
  * label when no mapping exists). Filters + cursor live in the URL so
  * deep links survive cleanly.
  *

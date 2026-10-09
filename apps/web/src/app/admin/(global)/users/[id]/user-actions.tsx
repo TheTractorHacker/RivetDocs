@@ -6,8 +6,8 @@ import type {
   GlobalAccess,
   PlatformCapability,
   UserRole,
-} from '@weavestream/shared';
-import { MANAGER_PRESET, PlatformCapabilityValues, problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { MANAGER_PRESET, PlatformCapabilityValues, problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { FormattedDateTime } from '../../../../../lib/timezone-context';
 import {

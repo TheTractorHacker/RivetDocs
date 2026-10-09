@@ -10,7 +10,7 @@ import {
   Tag,
   type TagTone,
 } from '../../../components/ui';
-import type { DomainAlertDto } from '@weavestream/shared';
+import type { DomainAlertDto } from '@rivetdocs/shared';
 
 type ScoreFilter = 'all' | 'lt55' | 'lt35';
 

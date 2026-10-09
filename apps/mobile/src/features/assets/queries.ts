@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import type { CreateAssetInput, UpdateAssetInput } from '@weavestream/shared';
+import type { CreateAssetInput, UpdateAssetInput } from '@rivetdocs/shared';
 import { UUID_RE } from '../../lib/uuid';
 import {
   archiveAsset,

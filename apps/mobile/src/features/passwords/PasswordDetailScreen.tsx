@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { copyToClipboard } from '@weavestream/shared/browser';
-import { formatDate, formatShortDateTime } from '@weavestream/shared';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
+import { formatDate, formatShortDateTime } from '@rivetdocs/shared';
 import { ConfirmSheet } from '../../components/ConfirmSheet';
 import { DetailHeader } from '../../components/DetailHeader';
 import { DeepLinkNotFound } from '../../components/DeepLinkNotFound';

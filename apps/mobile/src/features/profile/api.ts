@@ -1,4 +1,4 @@
-import type { ChangePasswordInput, ChangePasswordResult } from '@weavestream/shared';
+import type { ChangePasswordInput, ChangePasswordResult } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 
 /**

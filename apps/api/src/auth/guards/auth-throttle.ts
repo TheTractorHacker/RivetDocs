@@ -2,7 +2,7 @@
 import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { ThrottlerOptions } from '@nestjs/throttler';
-import { ipLimitKey } from '@weavestream/shared';
+import { ipLimitKey } from '@rivetdocs/shared';
 import { AUTH_THROTTLE_KEY } from '../../common/public.decorator.js';
 
 // Stateless metadata reader; safe to share across requests.

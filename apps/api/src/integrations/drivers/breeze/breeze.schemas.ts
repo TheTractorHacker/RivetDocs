@@ -77,11 +77,11 @@ export const BREEZE_ENDPOINT_BY_RESOURCE: Readonly<
 //
 // - Unknown keys are stripped (Zod's default), so they are never scanned,
 //   rendered, or stored, and they never fail a page.
-// - Only fields Weavestream reads are declared. Value sets Weavestream only
+// - Only fields RivetDocs reads are declared. Value sets RivetDocs only
 //   displays (OS, roles, languages, statuses, edge types, ...) are plain text.
 // - Breeze's own length limits and internal consistency rules are not
-//   repeated here; Weavestream's writers enforce Weavestream's bounds.
-// - A field Weavestream reads but Breeze omits becomes null (or an empty
+//   repeated here; RivetDocs's writers enforce RivetDocs's bounds.
+// - A field RivetDocs reads but Breeze omits becomes null (or an empty
 //   list), so an older or newer Breeze still parses.
 //
 // The record identity (`id`, `orgId`, `sourceUpdatedAt`, `revision`) and the
@@ -98,7 +98,7 @@ const optionalBoolean = z.boolean().nullish().transform((value) => value ?? null
 const optionalTextList = z.array(z.string()).nullish().transform((value) => value ?? null);
 
 /**
- * A list Weavestream reads. Over the bound, the record is unreadable rather
+ * A list RivetDocs reads. Over the bound, the record is unreadable rather
  * than truncated: dropped items would vanish silently, and a full traversal
  * could then archive what they had synced.
  */
@@ -110,7 +110,7 @@ function list<T extends z.ZodTypeAny>(item: T) {
     .transform((value): z.output<T>[] => value ?? []);
 }
 
-/** A nested object Weavestream reads field by field; omitted means all-null. */
+/** A nested object RivetDocs reads field by field; omitted means all-null. */
 function section<T extends z.ZodRawShape>(shape: T) {
   const schema = z.object(shape);
   return schema.nullish().transform((value) => value ?? schema.parse({}));
@@ -473,7 +473,7 @@ const VARIANT_KEYS: Partial<Record<BreezeSourceEndpoint, { key: string; values: 
 const VARIANT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/u;
 
 /**
- * False only for a well-formed record variant Weavestream does not read (a
+ * False only for a well-formed record variant RivetDocs does not read (a
  * subject type or backup kind added after this driver was written); such
  * records are skipped. A missing, blank, or malformed discriminator returns
  * true so the schema reports the record as unreadable: skipping it silently
@@ -493,7 +493,7 @@ export type BreezeRecordRead<T> =
 
 /**
  * Read one record without throwing. Unknown keys are stripped before NULs are
- * removed, so a deeply nested field Weavestream does not read can never trip
+ * removed, so a deeply nested field RivetDocs does not read can never trip
  * the sanitize bound. Any failure, including that bound, is reported for this
  * record only, by field path (never by value).
  */

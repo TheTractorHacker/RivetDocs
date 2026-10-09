@@ -1,4 +1,4 @@
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 
 export function safeIntegrationProblemMessage(
   problem: unknown,

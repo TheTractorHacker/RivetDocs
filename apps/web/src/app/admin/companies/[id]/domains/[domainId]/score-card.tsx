@@ -12,7 +12,7 @@ import type {
   DomainCheckDto,
   DomainScoreBreakdownItem,
   DomainScoreTier,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Domain Check v2 — hygiene score card.

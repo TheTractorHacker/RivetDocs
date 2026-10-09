@@ -13,7 +13,7 @@ import { BreezeDriver } from './drivers/breeze/breeze.driver.js';
 import { buildResourceExecutionStages } from './integration-sync.service.js';
 import type { AssetReconstructionInput } from './reconstruction/reconstruction-target.js';
 import { z } from 'zod';
-import { integrationReconstructionGapInputSchema } from '@weavestream/shared';
+import { integrationReconstructionGapInputSchema } from '@rivetdocs/shared';
 import { integrationAssetExternalSource } from './integration-asset-source.js';
 import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
 import { assetReconstructionInputSchema } from './reconstruction/reconstruction-target.js';
@@ -563,7 +563,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
       entityId: 'subnet-id',
       companyId: 'company',
       ip: '0.0.0.0',
-      userAgent: 'weavestream-worker/integration-reconstruction',
+      userAgent: 'rivetdocs-worker/integration-reconstruction',
       after: {
         integrationId: 'integration',
         integrationCompanyMappingId: 'mapping',
@@ -681,7 +681,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
       entityId: 'subnet-id',
       companyId: 'company',
       ip: '0.0.0.0',
-      userAgent: 'weavestream-worker/integration-reconstruction',
+      userAgent: 'rivetdocs-worker/integration-reconstruction',
       after: {
         integrationId: 'integration',
         integrationCompanyMappingId: 'mapping',

@@ -10,7 +10,7 @@ import type {
   ArchiveFolderInput,
   CreateFolderInput,
   UpdateFolderInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';

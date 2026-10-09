@@ -4,7 +4,7 @@ import type {
   MembershipRole,
   PlatformCapability,
   UserRole,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
 import { PERMISSIONS, type Action } from './permissions.js';

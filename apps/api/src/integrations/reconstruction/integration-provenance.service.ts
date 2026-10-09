@@ -9,7 +9,7 @@ import {
   type IntegrationTargetProvenance,
   type ReconstructionGapKind,
   type SafeIntegrationProvenance,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { AuditLogService, type AuditEntry } from '../../audit/audit.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { INTEGRATION_WRITE_ACTOR } from '../../common/integration-write-actor.js';
@@ -623,7 +623,7 @@ export class IntegrationProvenanceService {
           entityId: targetId,
           companyId: input.companyId,
           ip: '0.0.0.0',
-          userAgent: 'weavestream-worker/integration-reconstruction',
+          userAgent: 'rivetdocs-worker/integration-reconstruction',
           after: integrationTargetAuditAfter({
             integrationId: input.integrationId,
             integrationCompanyMappingId: input.integrationCompanyMappingId,

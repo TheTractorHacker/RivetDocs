@@ -1,4 +1,4 @@
-/* Weavestream — semantic color tokens, shared by every app.
+/* RivetDocs — semantic color tokens, shared by every app.
  *
  * This is the color layer only. Geometry is deliberately NOT here:
  * `apps/web` keeps its own 3/5/8px radius scale and `apps/mobile` has a

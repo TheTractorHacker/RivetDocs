@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
-import { ipAddressOptionsSchema } from '@weavestream/shared';
+import { ipAddressOptionsSchema } from '@rivetdocs/shared';
 import type { FieldTypeStrategy } from '../field-type-strategy.js';
 
 /**

@@ -2,12 +2,12 @@
 label: Features
 icon: stack
 order: 800
-description: Reference pages for Weavestream's major modules and platform features.
+description: Reference pages for RivetDocs's major modules and platform features.
 ---
 
 # Feature Reference
 
-Use this section as a module reference for Weavestream. Each page explains what the feature does, how data is structured, what permissions apply, and where the feature fits into the rest of the platform.
+Use this section as a module reference for RivetDocs. Each page explains what the feature does, how data is structured, what permissions apply, and where the feature fits into the rest of the platform.
 
 ## Documentation Records
 

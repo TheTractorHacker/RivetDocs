@@ -30,7 +30,7 @@ export default async function UsersPage({
           { label: 'Users' },
         ]}
         title="Users"
-        description="Every person with an account in Weavestream. Creating a user generates a one-time setup link; the user sets their own password and enables MFA."
+        description="Every person with an account in RivetDocs. Creating a user generates a one-time setup link; the user sets their own password and enables MFA."
         actions={hasCapability(me, 'USER_MANAGE') ? <CreateUserButton /> : null}
       />
       <PageBody>

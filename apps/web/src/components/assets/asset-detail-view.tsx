@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import type { AssetSummary } from '@weavestream/shared';
+import type { AssetSummary } from '@rivetdocs/shared';
 import { Panel, Tag } from '../ui';
 import { RichTextView } from '../editor/rich-text-view';
 import { AssetFieldValue, type AssetFieldContext } from './asset-field-value';

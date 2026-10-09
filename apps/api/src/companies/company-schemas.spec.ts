@@ -2,7 +2,7 @@ import {
   createCompanySchema,
   updateCompanySchema,
   companyTypeSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Phase 9a schema coverage. We focus on the tricky bits:

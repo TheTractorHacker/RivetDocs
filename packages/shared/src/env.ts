@@ -204,7 +204,7 @@ export const envSchema = z.object({
   // Default is `./data/files` so a fresh checkout / bare host install
   // lands files alongside `./data/postgres` and `./data/redis`. Inside
   // the api/worker containers, compose.yml sets this to the absolute
-  // bind-mount target (`/var/lib/weavestream/files`) which is fed by
+  // bind-mount target (`/var/lib/rivetdocs/files`) which is fed by
   // `${DATA_DIR}/files` on the host — same effective location, just
   // with the container/host paths spelled out explicitly.
   FILE_STORAGE_DIR: z.string().min(1).default('./data/files'),
@@ -214,7 +214,7 @@ export const envSchema = z.object({
   // sidecar `*.manifest.json` files written by the worker. Mirrors the
   // FILE_STORAGE_DIR pattern: defaults to `./data/backup` for bare-host
   // / dev checkouts; compose.yml overrides it inside the api/worker
-  // containers to `/var/lib/weavestream/backup` (host-bind-mounted from
+  // containers to `/var/lib/rivetdocs/backup` (host-bind-mounted from
   // `${DATA_DIR}/backup`). The api mounts this read-only (downloads
   // only); the worker mounts it read-write (dump + prune).
   BACKUP_STORAGE_DIR: z.string().min(1).default('./data/backup'),
@@ -223,7 +223,7 @@ export const envSchema = z.object({
   // BullMQ lock expires and the job is treated as stalled. Sized for
   // worst-case `pg_dump --format=custom` runtime on slow disks or
   // NAS-backed Docker hosts. The default of 360 (6 hours) covers
-  // everything from the typical sub-GB Weavestream Postgres up to
+  // everything from the typical sub-GB RivetDocs Postgres up to
   // tens-of-GB audit-heavy installs on consumer NAS hardware. Operators
   // with unusually large databases can raise this further; smaller /
   // SSD-backed installs can lower it for quicker stall detection.
@@ -526,7 +526,7 @@ export function topologyWarnings(env: Env): string[] {
     warnings.push(
       'APP_URL is plain HTTP on a public host (' +
         host +
-        '). Weavestream does not terminate TLS — put a trusted reverse proxy ' +
+        '). RivetDocs does not terminate TLS — put a trusted reverse proxy ' +
         '(Caddy, Nginx, Traefik, …) in front of the `web` container for HTTPS. ' +
         'Exposing the web port directly to the internet is intended for ' +
         'local/LAN use only. See docs/deployment/tls.',

@@ -35,7 +35,7 @@ export const FieldTypeValues = [
 
 export type FieldType = (typeof FieldTypeValues)[number];
 
-/** Icon key from the `@weavestream/web` icon set — rendered in the palette and the field row. */
+/** Icon key from the `@rivetdocs/web` icon set — rendered in the palette and the field row. */
 export type FieldTypeIcon =
   | 'text'
   | 'align'

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { PasswordSummary } from '@weavestream/shared';
+import type { PasswordSummary } from '@rivetdocs/shared';
 import { Icon } from '../../components/Icon';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Screen } from '../../components/primitives';

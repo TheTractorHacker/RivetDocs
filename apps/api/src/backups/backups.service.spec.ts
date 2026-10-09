@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import type { BackupConfigInput } from '@weavestream/shared';
+import type { BackupConfigInput } from '@rivetdocs/shared';
 import { BackupsService } from './backups.service.js';
 
 /**
@@ -44,7 +44,7 @@ describe('BackupsService config validation', () => {
     };
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
     const queues = { get: jest.fn() };
-    const env = { values: { BACKUP_STORAGE_DIR: '/var/lib/weavestream/backup' } };
+    const env = { values: { BACKUP_STORAGE_DIR: '/var/lib/rivetdocs/backup' } };
     const registrar = { reassert: jest.fn().mockResolvedValue(undefined) };
     const service = new BackupsService(
       prisma as never,

@@ -9,8 +9,8 @@ import {
   QueueNames,
   backupJobSchema,
   type BackupJob,
-} from '@weavestream/shared';
-import { resolveDataDir } from '@weavestream/shared/server';
+} from '@rivetdocs/shared';
+import { resolveDataDir } from '@rivetdocs/shared/server';
 import {
   RedisService,
   PrismaService,
@@ -18,7 +18,7 @@ import {
   AUDIT_ACTIONS,
   EmailService,
   EnvService,
-} from '@weavestream/api/runtime';
+} from '@rivetdocs/api/runtime';
 import {
   createManagedWorker,
   type ManagedWorker,
@@ -27,24 +27,24 @@ import {
 /**
  * Postgres `pg_try_advisory_lock` argument used to guarantee at most
  * one backup is running at a time. The hash of the literal string
- * `'weavestream:backup'` is stable across restarts, so a job that
+ * `'rivetdocs:backup'` is stable across restarts, so a job that
  * fires while one is in flight fails fast with `error='concurrent'`
  * instead of racing.
  */
 const ADVISORY_LOCK_KEY_SQL =
-  "SELECT pg_try_advisory_lock(hashtext('weavestream:backup')) AS got";
+  "SELECT pg_try_advisory_lock(hashtext('rivetdocs:backup')) AS got";
 const ADVISORY_UNLOCK_SQL =
-  "SELECT pg_advisory_unlock(hashtext('weavestream:backup'))";
+  "SELECT pg_advisory_unlock(hashtext('rivetdocs:backup'))";
 
 const SYSTEM_META = {
   ip: '127.0.0.1',
-  userAgent: 'weavestream-worker/backup',
+  userAgent: 'rivetdocs-worker/backup',
 };
 
 const NOTIFY_TIMEOUT_MS = 30_000;
 
 interface ManifestPayload {
-  weavestreamVersion: string;
+  rivetdocsVersion: string;
   prismaMigrationHash: string;
   passwordEncryptionKid: string | null;
   databaseUrlHostname: string;
@@ -64,7 +64,7 @@ export class BackupWorker implements OnModuleDestroy {
 
   /**
    * Resolved absolute backup directory. In compose this is
-   * `/var/lib/weavestream/backup` (host-bind-mounted from
+   * `/var/lib/rivetdocs/backup` (host-bind-mounted from
    * `${DATA_DIR}/backup`); in dev `./data/backup` is anchored to the
    * monorepo root via `resolveDataDir` so api and worker land on the
    * same path under `pnpm dev`. Operators can override via
@@ -226,7 +226,7 @@ export class BackupWorker implements OnModuleDestroy {
         .toISOString()
         .replace(/[:.]/g, '-')
         .replace(/-\d+Z$/, 'Z');
-      const baseName = `weavestream-postgres-${ts}`;
+      const baseName = `rivetdocs-postgres-${ts}`;
       const tmpDump = path.join(this.backupDir, `.${baseName}.dump.tmp`);
       const finalDump = path.join(this.backupDir, `${baseName}.dump`);
 
@@ -402,7 +402,7 @@ export class BackupWorker implements OnModuleDestroy {
     const migrationHash = await readPrismaMigrationHash();
     const databaseHostname = parseDatabaseHostname(process.env.DATABASE_URL);
     return {
-      weavestreamVersion: process.env.WEAVESTREAM_VERSION ?? 'dev',
+      rivetdocsVersion: process.env.RIVETDOCS_VERSION ?? 'dev',
       prismaMigrationHash: migrationHash,
       passwordEncryptionKid: process.env.PASSWORD_ENCRYPTION_KEY_KID ?? null,
       databaseUrlHostname: databaseHostname,
@@ -460,8 +460,8 @@ export class BackupWorker implements OnModuleDestroy {
     if (cfg.notifyEmails.length === 0) return;
     const subject =
       kind === 'success'
-        ? `[Weavestream] Backup succeeded — ${cfg.name}`
-        : `[Weavestream] Backup FAILED — ${cfg.name}`;
+        ? `[RivetDocs] Backup succeeded — ${cfg.name}`
+        : `[RivetDocs] Backup FAILED — ${cfg.name}`;
     const lines: string[] = [];
     lines.push(`Schedule: ${cfg.name}`);
     if (kind === 'success' && extras) {

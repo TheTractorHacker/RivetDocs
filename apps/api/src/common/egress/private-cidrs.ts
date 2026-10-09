@@ -10,7 +10,7 @@
  * by `configureEgressGuard`.
  */
 
-import { ipv6Mask, ipv6ToBigInt as parseIpv6 } from '@weavestream/shared';
+import { ipv6Mask, ipv6ToBigInt as parseIpv6 } from '@rivetdocs/shared';
 
 export type Cidr = {
   readonly raw: string;
@@ -157,7 +157,7 @@ function ipv4Mask(prefix: number): number {
   return (0xffffffff << (32 - prefix)) >>> 0;
 }
 
-// The IPv6 parser and mask live in `@weavestream/shared` (`ipv6.ts`),
+// The IPv6 parser and mask live in `@rivetdocs/shared` (`ipv6.ts`),
 // shared with the IP allow/deny matcher. That parser rejects zone IDs
 // outright — right for IP rules, wrong here: DNS can hand back a scoped
 // link-local result (`fe80::1%eth0`), and an address that failed to

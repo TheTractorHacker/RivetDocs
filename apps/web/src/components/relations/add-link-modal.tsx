@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { Btn, Dialog, Field, Icon, Input, Tag, useToast } from '../ui';
 import { apiFetch } from '../../lib/api';
 import type { LinkedItem, MentionSearchItem, RelationEndpointKind } from './types';

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { problemMessage } from '@weavestream/shared';
-import type { PasswordVersionSummary } from '@weavestream/shared';
-import { copyToClipboard } from '@weavestream/shared/browser';
+import { problemMessage } from '@rivetdocs/shared';
+import type { PasswordVersionSummary } from '@rivetdocs/shared';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
 import { apiFetch } from '../../../../../../../lib/api';
 import { FormattedShortDateTime } from '../../../../../../../lib/timezone-context';
 import { Btn, Icon, Panel, useToast } from '../../../../../../../components/ui';

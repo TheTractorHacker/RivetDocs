@@ -7,7 +7,7 @@ import {
   uiThemeValues,
   userUiPreferencesSchema,
   userUiPreferencesUpdateSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Phase 9b.1 — shared schema coverage. The important invariants:

@@ -5,7 +5,7 @@ import {
   PASSWORD_STRENGTH_LABELS,
   PASSWORD_STRENGTH_TONES,
   type PasswordStrengthTone,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 const LABELS = PASSWORD_STRENGTH_LABELS;
 // The shared tones are semantic names; this is the desktop mapping to

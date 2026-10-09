@@ -7,9 +7,9 @@ description: Installable field-technician app served at /m — passwords, articl
 
 # Mobile App
 
-Weavestream ships a dedicated mobile app for field technicians, served from your existing instance at **`/m`**. It is a purpose-built interface — not a shrunken desktop — that answers one question: *what does a technician need while standing in a client's server closet?*
+RivetDocs ships a dedicated mobile app for field technicians, served from your existing instance at **`/m`**. It is a purpose-built interface — not a shrunken desktop — that answers one question: *what does a technician need while standing in a client's server closet?*
 
-No extra deployment, no separate server, no app store: the mobile app is part of the normal Weavestream container and uses the same accounts, sessions, and permissions as the desktop app. Everything a technician does on mobile is authorized server-side exactly like a desktop request and lands in the same audit trail.
+No extra deployment, no separate server, no app store: the mobile app is part of the normal RivetDocs container and uses the same accounts, sessions, and permissions as the desktop app. Everything a technician does on mobile is authorized server-side exactly like a desktop request and lands in the same audit trail.
 
 ## Opening the mobile app
 
@@ -56,7 +56,7 @@ Two-factor authentication is not managed here — setup and backup codes live on
 
 The app itself opens offline once installed, but **data is never stored on the device**: passwords, articles, and assets require a connection, and screens show an honest "no connection" state instead of stale records. Revealed secrets live only in memory and clear when the app goes to the background. This is a deliberate security posture for a tool that handles credentials on portable hardware.
 
-What is cached is the app *itself* — its code and static assets, nothing account-specific. When you deploy a new Weavestream version the phone picks up the new app on its next launch; there is nothing to clear or reinstall.
+What is cached is the app *itself* — its code and static assets, nothing account-specific. When you deploy a new RivetDocs version the phone picks up the new app on its next launch; there is nothing to clear or reinstall.
 
 ## What's not on mobile
 

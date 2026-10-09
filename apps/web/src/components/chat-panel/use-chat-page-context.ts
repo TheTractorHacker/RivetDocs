@@ -167,7 +167,7 @@ export function useChatDomainPageContext(
  */
 export function useChatTicketPageContext(
   snapshot: {
-    /** Resolved Weavestream company; null on the global admin surface
+    /** Resolved RivetDocs company; null on the global admin surface
      *  when the upstream client id has no mapping. */
     companyId: string | null;
     ticketId: string;

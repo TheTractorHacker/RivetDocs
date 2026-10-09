@@ -1,5 +1,5 @@
 import { useLocation } from '@tanstack/react-router';
-import type { StepUpFactor } from '@weavestream/shared';
+import type { StepUpFactor } from '@rivetdocs/shared';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiError, apiErrorMessage, apiFetch } from '../lib/api';
 import {

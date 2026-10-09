@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { Observable } from 'rxjs';
-import { runWithTenantContext, type TenantContext } from '@weavestream/shared/server';
+import { runWithTenantContext, type TenantContext } from '@rivetdocs/shared/server';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { RedisService } from '../../redis/redis.service.js';
 import { MembershipCacheService } from '../../cache/membership-cache.service.js';

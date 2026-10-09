@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { normaliseTiptapDoc, type TiptapNode } from '@weavestream/shared';
+import { normaliseTiptapDoc, type TiptapNode } from '@rivetdocs/shared';
 import { boundedInt, isRecord, str } from './attr';
 import { MentionPill } from './MentionPill';
 import { ProseImg } from './ProseImg';

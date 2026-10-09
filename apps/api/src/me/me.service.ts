@@ -10,11 +10,11 @@ import type {
   ChangePasswordInput,
   UpdateMeInput,
   UserUiPreferencesUpdate,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   CURRENT_PASSWORD_INVALID_CODE,
   userSearchDefaultsSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PasswordService } from '../auth/password.service.js';

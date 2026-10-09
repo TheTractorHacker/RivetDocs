@@ -9,7 +9,7 @@ import {
   type ChangePasswordResult,
   passwordSchema,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { Btn, Field, Icon, Input, useToast } from '../../components/ui';
 

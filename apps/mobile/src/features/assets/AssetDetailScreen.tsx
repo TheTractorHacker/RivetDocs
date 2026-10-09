@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { formatShortDateTime } from '@weavestream/shared';
+import { formatShortDateTime } from '@rivetdocs/shared';
 import { ConfirmSheet } from '../../components/ConfirmSheet';
 import { DetailHeader } from '../../components/DetailHeader';
 import { DeepLinkNotFound } from '../../components/DeepLinkNotFound';
@@ -52,7 +52,7 @@ const NOT_FOUND_COPY =
  * as ordinary password rows (locked 2c decision: no dedicated
  * Credentials card), then Attachments — the files hung on the asset
  * itself, which are distinct from any FILE field on its layout and
- * were missing from mobile entirely until now. Weavestream's own
+ * were missing from mobile entirely until now. RivetDocs's own
  * metadata (actors, timestamps, sync provenance, external identity) is
  * T2 behind ShowMore, whose collapsed label carries the provenance
  * attention dot so a blocked sync is never silently buried.

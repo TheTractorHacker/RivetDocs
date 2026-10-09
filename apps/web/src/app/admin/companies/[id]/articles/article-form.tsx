@@ -12,10 +12,10 @@ import {
   tiptapDocToMarkdown as tiptapDocToSharedMarkdown,
   type ArticleEditorMode,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { useTimezone } from '../../../../../lib/timezone-context';
-import type { FolderNode } from '@weavestream/shared';
+import type { FolderNode } from '@rivetdocs/shared';
 import type { ArticleDetail } from '../../../../../lib/server-api/articles';
 import {
   Btn,

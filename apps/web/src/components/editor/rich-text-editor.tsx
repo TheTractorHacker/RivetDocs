@@ -18,11 +18,11 @@ import { ResizableImage } from './image-extension';
 import { buildMentionExtension } from './mention-extension';
 import { SlashMenu } from './slash-menu';
 import { uploadFile } from '../../lib/upload-client';
-import { normaliseTiptapDoc } from '@weavestream/shared';
+import { normaliseTiptapDoc } from '@rivetdocs/shared';
 import './editor.css';
 
 /**
- * Weavestream rich-text editor. One component, two shapes:
+ * RivetDocs rich-text editor. One component, two shapes:
  *   - `variant="article"`: full toolbar + headings H1-H3, images, code blocks,
  *     task lists, internal mentions.
  *   - `variant="field"`: compact bubble menu, no H1, no images, still supports

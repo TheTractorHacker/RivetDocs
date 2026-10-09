@@ -6,8 +6,8 @@ import {
   flattenFolderTree,
   problemMessage,
   splitMarkdownTitleAndBody,
-} from '@weavestream/shared';
-import type { ChatPendingCreate, FolderNode } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import type { ChatPendingCreate, FolderNode } from '@rivetdocs/shared';
 import {
   Btn,
   CompanyPicker,

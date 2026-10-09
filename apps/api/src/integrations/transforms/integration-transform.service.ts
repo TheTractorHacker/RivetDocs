@@ -5,7 +5,7 @@ import {
   normalizeCidrV4,
   type IntegrationTransform,
   type IntegrationTransformStep,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { containsSensitiveMaterial } from '../sensitive-material.js';
 
 const MAX_INPUT_BYTES = 262_144;

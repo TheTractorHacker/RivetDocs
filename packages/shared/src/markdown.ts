@@ -1,7 +1,7 @@
 /**
  * Plaintext extraction from Markdown for search indexing and excerpts.
  * Conservative regex-based stripping — no full parser — so this stays
- * dependency-free in `@weavestream/shared`.
+ * dependency-free in `@rivetdocs/shared`.
  */
 
 export const MAX_MARKDOWN_SOURCE = 500_000;

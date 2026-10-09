@@ -1,4 +1,4 @@
-import { copyToClipboard, copyWithPromise } from '@weavestream/shared/browser';
+import { copyToClipboard, copyWithPromise } from '@rivetdocs/shared/browser';
 import { scheduleClipboardClear } from './clipboard-guard';
 
 /**

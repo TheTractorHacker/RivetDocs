@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { humanSize } from '@weavestream/shared';
+import { humanSize } from '@rivetdocs/shared';
 import { Icon } from './Icon';
 
 /**

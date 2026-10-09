@@ -10,7 +10,7 @@ import type {
   TicketDetailDto,
   TicketListFilter,
   TicketListResponse,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { EnvService } from '../config/env.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
@@ -34,7 +34,7 @@ export interface TicketAuditMeta {
 /**
  * Phase 12 — real-time external-ticket browse surface.
  *
- * Tickets are NEVER persisted in the Weavestream database. This
+ * Tickets are NEVER persisted in the RivetDocs database. This
  * service resolves the company's active ticketing-capable integration
  * mapping, loads the decrypted driver context, and forwards the call
  * to the driver. The result flows straight back to the controller
@@ -82,7 +82,7 @@ export class TicketsService {
 
   /**
    * Global ticket browse: aggregate every visible ticket across the
-   * system, with each row stitched to its resolved Weavestream
+   * system, with each row stitched to its resolved RivetDocs
    * company (when an `IntegrationCompanyMapping` exists for the
    * upstream client). This is admin-only by controller-level
    * permission; the service intentionally does NOT check tenant
@@ -117,7 +117,7 @@ export class TicketsService {
         cursor,
       );
       // Stitch resolved company info onto each row in-place. Rows
-      // whose upstream client isn't mapped to a Weavestream company
+      // whose upstream client isn't mapped to a RivetDocs company
       // keep `companyId/companyName: null` and the UI renders an
       // "unmapped client" label.
       const stitched = result.records.map((r) => {
@@ -174,7 +174,7 @@ export class TicketsService {
 
   /**
    * Global ticket detail: fetches one ticket from the system's
-   * ticketing integration, stitches the resolved Weavestream company
+   * ticketing integration, stitches the resolved RivetDocs company
    * onto the response. No IDOR check at this layer — admin-only.
    */
   async getAnyTicket(
@@ -255,7 +255,7 @@ export class TicketsService {
    * Resolves the single ACTIVE ticketing integration deployed in the
    * system and builds a `{ externalClientId -> {companyId, companyName} }`
    * map from every enabled mapping it owns. The map is the source of
-   * truth for converting NinjaOne `clientId` rows into Weavestream
+   * truth for converting NinjaOne `clientId` rows into RivetDocs
    * company chips on the admin UI.
    *
    * Returns null when there is no ticketing-capable integration.

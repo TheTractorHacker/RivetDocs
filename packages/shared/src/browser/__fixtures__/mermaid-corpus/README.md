@@ -39,7 +39,7 @@ the runtime seam in each app). So the generator lives in the package that
 *does* have Mermaid, and renders through a real browser:
 
 ```bash
-pnpm --filter @weavestream/web mermaid:corpus
+pnpm --filter @rivetdocs/web mermaid:corpus
 ```
 
 That writes `*.svg` next to each `*.mmd` here. CI runs the same command

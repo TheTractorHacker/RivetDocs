@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ChatPendingCreate } from '@weavestream/shared';
+import type { ChatPendingCreate } from '@rivetdocs/shared';
 import { SaveAsArticleDialog } from './save-as-article-dialog';
 
 /**

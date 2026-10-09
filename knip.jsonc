@@ -6,8 +6,8 @@
   //
   // `--workspace` is NOT web-only on its own: Knip evaluates the named
   // workspace together with its ancestors AND its dependencies, and
-  // `apps/web` depends on both `@weavestream/shared` and
-  // `@weavestream/mobile`. `ignoreWorkspaces` below is what actually scopes
+  // `apps/web` depends on both `@rivetdocs/shared` and
+  // `@rivetdocs/mobile`. `ignoreWorkspaces` below is what actually scopes
   // this to web + the repo root. Broadening to api / worker / packages, and
   // wiring a CI job, is deliberately not done yet — each needs its own
   // triage pass first.
@@ -41,7 +41,7 @@
         // mobile build before web's — see the header of
         // `apps/web/scripts/check-mobile-bundle.mjs`. Dropping it brings back
         // the nondeterministic stale-PWA-bundle race.
-        "@weavestream/mobile"
+        "@rivetdocs/mobile"
       ]
     }
   }

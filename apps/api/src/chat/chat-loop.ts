@@ -17,7 +17,7 @@
  * the re-proposal is grounded in the read results and no duplicate
  * cards render).
  */
-import type { ChatToolCallDto } from '@weavestream/shared';
+import type { ChatToolCallDto } from '@rivetdocs/shared';
 import type { AiToolExecutionResult } from '../ai-tools/ai-tool-executor.service.js';
 import {
   isProposalToolName,

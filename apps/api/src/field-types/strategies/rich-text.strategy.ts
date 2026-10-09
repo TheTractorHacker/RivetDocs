@@ -4,7 +4,7 @@ import {
   isValidTiptapDoc,
   stringToTiptapDoc,
   tiptapToPlaintext,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { FieldTypeStrategy } from '../field-type-strategy.js';
 
 const optionsSchema = z.object({}).strict();

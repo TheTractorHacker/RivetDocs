@@ -5,7 +5,7 @@ import { z } from 'zod';
  * ticketing system (currently NinjaOne; the DTO shape is intentionally
  * generic so a second driver can plug in without changing the web UI).
  *
- * Tickets are NEVER persisted in the Weavestream database. Every list /
+ * Tickets are NEVER persisted in the RivetDocs database. Every list /
  * detail request hits the upstream system in real time, so these DTOs
  * are validated at the API boundary only (no Prisma model). The driver
  * normalises whatever the upstream returns into this shape; provider-
@@ -44,7 +44,7 @@ export type TicketPriority = z.infer<typeof ticketPrioritySchema>;
 
 /**
  * Minimal person reference returned alongside a ticket. `id` is the
- * provider-side identifier (opaque to Weavestream) and `name` is the
+ * provider-side identifier (opaque to RivetDocs) and `name` is the
  * display label. Either may be null when the upstream record is
  * partially populated.
  */
@@ -82,13 +82,13 @@ export const ticketListDtoSchema = z.object({
   createdAt: z.string().nullable(),
   updatedAt: z.string().nullable(),
   /**
-   * Resolved Weavestream company UUID for the upstream tenant the
+   * Resolved RivetDocs company UUID for the upstream tenant the
    * ticket belongs to. Null when the upstream client id has no
    * matching `IntegrationCompanyMapping` (and the UI renders an
    * "unmapped client" label instead of a link).
    */
   companyId: z.string().uuid().nullable().default(null),
-  /** Display name for the resolved Weavestream company. */
+  /** Display name for the resolved RivetDocs company. */
   companyName: z.string().nullable().default(null),
   /**
    * Raw upstream tenant id (NinjaOne `clientId`). Always surfaced so

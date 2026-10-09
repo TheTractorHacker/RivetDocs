@@ -1,4 +1,4 @@
-import { DEFAULT_PASSWORD_GENERATOR_DEFAULTS } from '@weavestream/shared';
+import { DEFAULT_PASSWORD_GENERATOR_DEFAULTS } from '@rivetdocs/shared';
 import { SettingsService } from './settings.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 

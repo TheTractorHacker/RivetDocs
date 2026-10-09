@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { uiAccentValues, uiThemeValues, type UiAccent, type UiTheme } from '@weavestream/shared';
+import { uiAccentValues, uiThemeValues, type UiAccent, type UiTheme } from '@rivetdocs/shared';
 
 type ResolvedTheme = 'dark' | 'light';
 type Rgb = { r: number; g: number; b: number; alpha: number };

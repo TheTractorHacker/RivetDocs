@@ -17,7 +17,7 @@
  *
  * (3) is the one that directly tests the white-screen condition.
  *
- * The ordering fix itself is the `@weavestream/mobile` devDependency in
+ * The ordering fix itself is the `@rivetdocs/mobile` devDependency in
  * this package, which makes pnpm serialise the two builds on every
  * `pnpm -r build` rather than only inside Docker. This guard is what
  * proves the fix held — the race is nondeterministic, so a single green
@@ -38,7 +38,7 @@ const PUBLIC_M = join(WEB, 'public', 'm');
 const MARKER = join(SHELL_DIR, 'mobile-build.json');
 
 const BUILD_HINT =
-  'Run `pnpm --filter @weavestream/mobile build` (or `pnpm build` from the repo root).';
+  'Run `pnpm --filter @rivetdocs/mobile build` (or `pnpm build` from the repo root).';
 
 function fail(lines) {
   console.error('\n✖ mobile bundle check failed\n');
@@ -109,7 +109,7 @@ async function main() {
     problems.push('marker records no shell variants');
   }
   // The accent and theme-pref sets are checked against the enums from
-  // `@weavestream/shared`, NOT against the marker's own lists. Trusting
+  // `@rivetdocs/shared`, NOT against the marker's own lists. Trusting
   // `marker.accents`/`marker.themePrefs` lets a truncated or hand-edited
   // marker pass by simply declaring fewer members than exist — the guard
   // would then green-light a build whose users get the fallback variant
@@ -117,7 +117,7 @@ async function main() {
   // enums are the same source the publisher iterates, so this compares
   // the output against the requirement rather than against itself.
   const { uiAccentValues, uiThemeValues, DEFAULT_UI_ACCENT, DEFAULT_UI_THEME } =
-    await import('@weavestream/shared');
+    await import('@rivetdocs/shared');
   const expectedAccents = [...uiAccentValues].sort();
   const expectedPrefs = [...uiThemeValues].sort();
 

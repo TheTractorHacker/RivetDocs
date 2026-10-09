@@ -1,5 +1,5 @@
 import type { Me } from './server-api/auth';
-import { normalizeTimeZone } from '@weavestream/shared';
+import { normalizeTimeZone } from '@rivetdocs/shared';
 
 /**
  * The timezone a signed-in user's timestamps should render in: their saved

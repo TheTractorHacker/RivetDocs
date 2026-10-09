@@ -7,7 +7,7 @@ description: Bearer tokens for scripts and AI agents that act as you, with conta
 
 # API Keys
 
-An API key lets a script, integration or AI agent call the Weavestream API as you. A key carries **your** permissions through the normal permission engine; it never has more authority than its owner.
+An API key lets a script, integration or AI agent call the RivetDocs API as you. A key carries **your** permissions through the normal permission engine; it never has more authority than its owner.
 
 ## Turning API keys on
 
@@ -17,7 +17,7 @@ While the switch is off, every request with a key is refused, and no one can cre
 
 ## Creating a key
 
-**Account → API keys → New API key.** Creating a key asks for your MFA code again (step-up). The key is shown **once**: copy it into your password manager. Weavestream stores only a SHA-256 hash.
+**Account → API keys → New API key.** Creating a key asks for your MFA code again (step-up). The key is shown **once**: copy it into your password manager. RivetDocs stores only a SHA-256 hash.
 
 Send it on every request:
 

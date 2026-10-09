@@ -1,4 +1,4 @@
-import { BackupJobNames } from '@weavestream/shared';
+import { BackupJobNames } from '@rivetdocs/shared';
 import { BackupQueueRegistrar } from './backup-queue.registrar.js';
 
 /**

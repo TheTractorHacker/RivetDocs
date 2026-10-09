@@ -7,7 +7,7 @@ body:
       value: |
         Thanks for taking the time to suggest a feature. Larger ideas are
         often better started in a
-        [Discussion](https://github.com/Weavestream/Weavestream/discussions)
+        [Discussion](https://github.com/TheTractorHacker/RivetDocs/discussions)
         so we can talk through the shape before committing to a scope.
   - type: textarea
     id: problem

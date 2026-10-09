@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { AiSettings } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { AiSettings } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import { Btn, Field, Input, Select, Tag, useToast } from '../../../../components/ui';
 
@@ -362,7 +362,7 @@ export function AiSettingsForm({ initial }: { initial: AiSettings }) {
         AI chat sends conversation text and attached context to the endpoint
         configured here — including article content, asset field values,
         domain details, and ticket bodies with internal notes. Choose a
-        provider you trust to handle this data; Weavestream does not proxy or
+        provider you trust to handle this data; RivetDocs does not proxy or
         filter these requests.
       </section>
 

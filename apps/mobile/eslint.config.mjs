@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
  * `DataTable`/`DataColumn` are a desktop standard, the icon set is drawn
  * for a 16px viewport, and the radius scale is 3–8px against mobile's
  * 9–30px. Sharing components would drag both toward a compromise neither
- * wants. Share logic via `@weavestream/shared` instead.
+ * wants. Share logic via `@rivetdocs/shared` instead.
  *
  * `no-restricted-imports` matches the literal specifier, not the resolved
  * path, so the depth of `../` matters. An earlier version listed
@@ -55,14 +55,14 @@ export default tseslint.config(
 
       // Mirrors the ban in apps/web: these hydration-mismatch across
       // timezones and ICU versions. Use the formatters in
-      // @weavestream/shared, which take an explicit time zone.
+      // @rivetdocs/shared, which take an explicit time zone.
       'no-restricted-syntax': [
         'warn',
         {
           selector:
             "CallExpression[callee.property.name=/^(toLocaleString|toLocaleDateString|toLocaleTimeString)$/]",
           message:
-            'Do not format dates with toLocale* — use formatDateTime/formatDate/formatCalendarDate/formatRelative from @weavestream/shared with an explicit time zone.',
+            'Do not format dates with toLocale* — use formatDateTime/formatDate/formatCalendarDate/formatRelative from @rivetdocs/shared with an explicit time zone.',
         },
       ],
     },

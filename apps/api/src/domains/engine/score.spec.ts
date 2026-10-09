@@ -1,4 +1,4 @@
-import type { DomainCheckDetails } from '@weavestream/shared';
+import type { DomainCheckDetails } from '@rivetdocs/shared';
 
 import { DOMAIN_SCORE_VERSION, computeScore } from './score.js';
 

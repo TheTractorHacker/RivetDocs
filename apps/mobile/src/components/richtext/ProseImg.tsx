@@ -1,4 +1,4 @@
-import { safeProseHref } from '@weavestream/shared';
+import { safeProseHref } from '@rivetdocs/shared';
 import { parseCssWidth, str } from './attr';
 
 /**

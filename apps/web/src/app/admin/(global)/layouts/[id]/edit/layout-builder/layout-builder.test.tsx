@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { LayoutSummary } from '@weavestream/shared';
+import type { LayoutSummary } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../../lib/api';
 import { LayoutBuilder } from './layout-builder';
 

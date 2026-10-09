@@ -57,7 +57,7 @@ function makeSetupTokens() {
     issue: jest.fn().mockResolvedValue({
       token: 'tok',
       expiresAt: new Date(Date.now() + 3600_000),
-      url: 'https://weavestream/setup/tok',
+      url: 'https://rivetdocs/setup/tok',
     }),
   };
 }
@@ -98,7 +98,7 @@ describe('UsersService.create', () => {
       }),
     );
     expect(tokens.issue).toHaveBeenCalledWith('u-1', ACTOR.id);
-    expect(result.setupUrl).toBe('https://weavestream/setup/tok');
+    expect(result.setupUrl).toBe('https://rivetdocs/setup/tok');
     expect(result.membership).toBeNull();
     const actions = audit.log.mock.calls.map((c) => c[0].action);
     expect(actions).toEqual(expect.arrayContaining(['user.create', 'user.invite.created']));

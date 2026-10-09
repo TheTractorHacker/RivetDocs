@@ -22,7 +22,7 @@ import {
   type CreateMonitoredDomainInput,
   type DomainStatusValue,
   type UpdateMonitoredDomainInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { DomainsService } from './domains.service.js';
 import { QueuesService } from '../queues/queues.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';

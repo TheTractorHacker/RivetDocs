@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { RelationsService } from './relations.service.js';
-import type { UserRole } from '@weavestream/shared';
+import type { UserRole } from '@rivetdocs/shared';
 
 /**
  * Phase 5 tests for the read-side of RelationsService: `listRelated`,

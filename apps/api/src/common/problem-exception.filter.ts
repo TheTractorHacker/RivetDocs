@@ -103,7 +103,7 @@ export class ProblemExceptionFilter implements ExceptionFilter {
     }
 
     const body: ProblemDetail = {
-      type: `https://weavestream.app/problems/${status}`,
+      type: `https://rivetdocs.app/problems/${status}`,
       title: STATUS_TITLES[status] ?? 'Error',
       status,
       ...(detail ? { detail } : {}),

@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { z } from 'zod';
-import { searchQuerySchema, type SearchResponse } from '@weavestream/shared';
+import { searchQuerySchema, type SearchResponse } from '@rivetdocs/shared';
 import { SearchService, type MentionKind } from './search.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { AuthedOnly } from '../rbac/require-permission.decorator.js';

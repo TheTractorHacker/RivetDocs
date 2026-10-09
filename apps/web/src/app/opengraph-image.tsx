@@ -6,7 +6,7 @@ import { ImageResponse } from 'next/og';
  * appear in password managers and Slack unfurls of the login URL.
  */
 
-export const alt = 'Weavestream';
+export const alt = 'RivetDocs';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const dynamic = 'force-static';

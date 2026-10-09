@@ -1,4 +1,4 @@
-import type { IntegrationTargetKind } from '@weavestream/shared';
+import type { IntegrationTargetKind } from '@rivetdocs/shared';
 
 export interface ReconstructionBindingIdentity {
   integrationCompanyMappingId: string;

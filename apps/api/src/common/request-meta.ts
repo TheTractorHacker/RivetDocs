@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import { matchIpRule, type IpRuleLike } from '@weavestream/shared';
+import { matchIpRule, type IpRuleLike } from '@rivetdocs/shared';
 
 /**
  * Audit-row metadata extracted from an Express request: the resolved

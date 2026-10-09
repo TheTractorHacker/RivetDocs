@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type {
   PasswordFolderSchema,
   PasswordGeneratorDefaults,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Btn, Icon } from '../ui';
 import { CreatePasswordDialog } from './create-password-dialog';
 

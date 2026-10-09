@@ -5,8 +5,8 @@ import {
   optionalHttpUrlError,
   type PasswordGeneratorDefaults,
   problemMessage,
-} from '@weavestream/shared';
-import type { PasswordDetail, PasswordFolderSchema } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import type { PasswordDetail, PasswordFolderSchema } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../../lib/api';
 import { Btn, Dialog, Field, Input, Select, Textarea } from '../../../../../../../components/ui';
 import { SecretInput } from '../../../../../../../components/passwords/secret-input';

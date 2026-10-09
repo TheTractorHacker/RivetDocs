@@ -1,4 +1,4 @@
-import { humanSize } from '@weavestream/shared';
+import { humanSize } from '@rivetdocs/shared';
 import { Icon } from '../ui';
 
 /** One entry of a FILE field value, as the asset API serializes it. */

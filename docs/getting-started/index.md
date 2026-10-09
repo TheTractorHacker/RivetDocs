@@ -2,12 +2,12 @@
 label: Getting Started
 icon: rocket
 order: 700
-description: Prerequisites and overview for deploying Weavestream.
+description: Prerequisites and overview for deploying RivetDocs.
 ---
 
 # Getting Started
 
-Weavestream is designed for a fast, friction-free deployment. You do not need the source tree, Node.js, or pnpm — just Docker and two files.
+RivetDocs is designed for a fast, friction-free deployment. You do not need the source tree, Node.js, or pnpm — just Docker and two files.
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ The stack consists of five containers:
 
 Uploaded files (attachments, thumbnails, logos, exports) live on a host bind-mounted directory (`${DATA_DIR}/files`) shared by `api` and `worker`. No additional storage container is required.
 
-All images are published to GitHub Container Registry (`ghcr.io/weavestream/weavestream-*`). No build step required.
+All images are published to GitHub Container Registry (`ghcr.io/thetractorhacker/rivetdocs-*`). No build step required.
 
 ## Installation Steps
 
@@ -54,7 +54,7 @@ All images are published to GitHub Container Registry (`ghcr.io/weavestream/weav
 Set `DATA_DIR` in `.env` to an absolute path on your NAS volume:
 
 ```bash
-DATA_DIR=/volume1/docker/weavestream
+DATA_DIR=/volume1/docker/rivetdocs
 ```
 
 Docker auto-creates the subdirectories on first boot.

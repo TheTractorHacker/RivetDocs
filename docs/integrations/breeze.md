@@ -6,13 +6,13 @@ description: Configure and operate the read-only Breeze reconstruction integrati
 
 # Breeze reconstruction sync
 
-The built-in Breeze integration copies durable, non-secret reconstruction facts into native Weavestream records. It is a read-only Partner API consumer: it does not install an agent, copy monitoring state, run commands, or write back to Breeze. The resulting company data, export, and PDF remain usable when Breeze is offline.
+The built-in Breeze integration copies durable, non-secret reconstruction facts into native RivetDocs records. It is a read-only Partner API consumer: it does not install an agent, copy monitoring state, run commands, or write back to Breeze. The resulting company data, export, and PDF remain usable when Breeze is offline.
 
 ## Prerequisites
 
-In Breeze, create a partner service principal for Weavestream. Human JWTs and ordinary organization API keys do not authenticate to the Partner API. For complete reconstruction, grant exactly these read scopes:
+In Breeze, create a partner service principal for RivetDocs. Human JWTs and ordinary organization API keys do not authenticate to the Partner API. For complete reconstruction, grant exactly these read scopes:
 
-| Scope | Data used by Weavestream |
+| Scope | Data used by RivetDocs |
 |---|---|
 | `organizations:read` | Organization discovery and mapping |
 | `sites:read` | Sites |
@@ -25,27 +25,27 @@ In Breeze, create a partner service principal for Weavestream. Human JWTs and or
 
 A deliberately narrower integration may omit a scope only when every resource that requires it will remain disabled. No listed scope permits remote access, command execution, secret reads, user management, or administrative writes.
 
-Use the public Breeze origin as **Breeze URL**, for example `https://breeze.example.com`. Do not add credentials, query parameters, fragments, or `/api/v1/partner-api` to the value. Weavestream validates and appends the allowlisted Partner API paths and sends the key only in `X-API-Key`; redirects do not receive the key. The Partner API surface (`/api/v1/partner-api/...`, introduced in the July 2026 Breeze release) must exist on the deployment — on an older Breeze every partner request 404s, so upgrade Breeze first.
+Use the public Breeze origin as **Breeze URL**, for example `https://breeze.example.com`. Do not add credentials, query parameters, fragments, or `/api/v1/partner-api` to the value. RivetDocs validates and appends the allowlisted Partner API paths and sends the key only in `X-API-Key`; redirects do not receive the key. The Partner API surface (`/api/v1/partner-api/...`, introduced in the July 2026 Breeze release) must exist on the deployment — on an older Breeze every partner request 404s, so upgrade Breeze first.
 
 ### Private Breeze deployments
 
-Outbound integration requests use Weavestream's SSRF and DNS-rebinding guard. Private, loopback, link-local, metadata, multicast, and other non-public destinations are blocked by default. If Breeze is intentionally private, add only its required network ranges to `EGRESS_ALLOWED_PRIVATE_CIDRS`, restart the API and worker, and test the connection. Never disable the guard broadly. DNS is resolved and pinned for each request, and a redirect is revalidated rather than treated as an allowlist bypass.
+Outbound integration requests use RivetDocs's SSRF and DNS-rebinding guard. Private, loopback, link-local, metadata, multicast, and other non-public destinations are blocked by default. If Breeze is intentionally private, add only its required network ranges to `EGRESS_ALLOWED_PRIVATE_CIDRS`, restart the API and worker, and test the connection. Never disable the guard broadly. DNS is resolved and pinned for each request, and a redirect is revalidated rather than treated as an allowlist bypass.
 
-An optional source CIDR allowlist also exists on the Breeze service principal. Configure it only after Breeze's trusted-proxy/client-IP boundary is correct and tested; otherwise valid Weavestream requests will fail closed.
+An optional source CIDR allowlist also exists on the Breeze service principal. Configure it only after Breeze's trusted-proxy/client-IP boundary is correct and tested; otherwise valid RivetDocs requests will fail closed.
 
 ## Create the connection
 
 1. In Breeze **Settings → Service Principals**, create the read-only principal and issue a key. Capture the `brz_sp_...` plaintext once.
-2. In Weavestream, open **Admin → Integrations → New Integration**, choose **Breeze RMM**, enter **Breeze URL** and the one-time key, and save.
+2. In RivetDocs, open **Admin → Integrations → New Integration**, choose **Breeze RMM**, enter **Breeze URL** and the one-time key, and save.
 3. Select **Test connection**. A `401` means the key, expiry, revocation, principal status, partner status, or source CIDR needs correction. A `403` means an enabled resource lacks its exact read scope.
-4. Open **Organizations**. Weavestream lists every organization visible to the principal. Map each source organization UUID explicitly to one Weavestream company and enable the mapping.
+4. Open **Organizations**. RivetDocs lists every organization visible to the principal. Map each source organization UUID explicitly to one RivetDocs company and enable the mapping.
 5. Leave unwanted organizations unmapped. Discovery alone never writes tenant data. One source organization maps to at most the company the operator explicitly selected; names are display labels, not identity.
 
-Weavestream encrypts the Partner API key at rest with the kid-tagged `INTEGRATION_SECRET_KEY` envelope. The masked credential is never refilled as plaintext. Keep the current key and any `INTEGRATION_PREVIOUS_KEYS` needed to decrypt existing ciphertext in the deployment's secret manager, not in source control, logs, exports, or support tickets.
+RivetDocs encrypts the Partner API key at rest with the kid-tagged `INTEGRATION_SECRET_KEY` envelope. The masked credential is never refilled as plaintext. Keep the current key and any `INTEGRATION_PREVIOUS_KEYS` needed to decrypt existing ciphertext in the deployment's secret manager, not in source control, logs, exports, or support tickets.
 
 ## Resources and ordering
 
-Enabled resources execute as an acyclic dependency graph. Weavestream rejects cycles and does not run a child before its configured parents.
+Enabled resources execute as an acyclic dependency graph. RivetDocs rejects cycles and does not run a child before its configured parents.
 
 | Native target | Breeze resources and dependencies |
 |---|---|
@@ -56,7 +56,7 @@ Enabled resources execute as an acyclic dependency graph. Weavestream rejects cy
 
 Recommended destinations store bounded structured fields, not entire upstream records. Devices may include durable hardware, operating-system, firmware, disk, interface, software, warranty, virtualization, and selected custom facts. Online/offline state, heartbeat/last-seen telemetry, health, alerts, patch posture, vulnerabilities, agent tokens, commands, remote-access state, runtime output, and job logs are excluded.
 
-Custom-field definitions and values have independent cursors. `/custom-fields` returns definition metadata only. `/custom-field-values` returns one bounded scalar row with a stable value UUID plus `orgId`, `deviceId`, `definitionId`, and an explicit device target. Weavestream walks both endpoints through every page, uses the supplied value UUID for provenance and idempotence, and uses the separate device reference only to resolve the native asset. It never rebuilds value identity from a definition/device pair or expects an embedded `values` array.
+Custom-field definitions and values have independent cursors. `/custom-fields` returns definition metadata only. `/custom-field-values` returns one bounded scalar row with a stable value UUID plus `orgId`, `deviceId`, `definitionId`, and an explicit device target. RivetDocs walks both endpoints through every page, uses the supplied value UUID for provenance and idempotence, and uses the separate device reference only to resolve the native asset. It never rebuilds value identity from a definition/device pair or expects an embedded `values` array.
 
 Scalar custom fields are opt-in. For each selected definition, configure a `custom-field-values` mapping whose source field is the immutable Breeze `definitionId` and whose target is a distinct field on the Breeze Devices layout. Each mapping carries its own ownership rule. A scalar row writes only the field mapped to its definition; unmapped definitions do not write native state. The mutable Breeze field key and name remain display metadata and are not mapping identities.
 
@@ -70,15 +70,15 @@ Only an exact Breeze-owned binding for the same integration, organization mappin
 
 ## Breeze upgrades
 
-Weavestream reads only the Breeze fields it maps to Weavestream fields, so a Breeze upgrade within the same partner API `schemaVersion` does not need a Weavestream release:
+RivetDocs reads only the Breeze fields it maps to RivetDocs fields, so a Breeze upgrade within the same partner API `schemaVersion` does not need a RivetDocs release:
 
 - A field Breeze adds is ignored. It is not inspected, rendered, or stored.
-- A new value in a list Weavestream only displays (an OS, role, equipment type, script language, relationship type) syncs as plain text.
-- A new record variant (a subject type or backup kind) or a relationship to an endpoint kind Weavestream does not model is skipped.
-- A field Weavestream reads but Breeze no longer sends becomes empty.
-- A record that Weavestream still cannot read (a field it uses has an unexpected type, a record type is missing, a list it reads holds more than 1,000 items, or nesting is too deep) is skipped with a `validation` gap that names the field paths (never the values). Weavestream never truncates such a list. The other records in the page sync. The resource is reported incomplete, so no stale sweep archives data because of that record.
+- A new value in a list RivetDocs only displays (an OS, role, equipment type, script language, relationship type) syncs as plain text.
+- A new record variant (a subject type or backup kind) or a relationship to an endpoint kind RivetDocs does not model is skipped.
+- A field RivetDocs reads but Breeze no longer sends becomes empty.
+- A record that RivetDocs still cannot read (a field it uses has an unexpected type, a record type is missing, a list it reads holds more than 1,000 items, or nesting is too deep) is skipped with a `validation` gap that names the field paths (never the values). RivetDocs never truncates such a list. The other records in the page sync. The resource is reported incomplete, so no stale sweep archives data because of that record.
 
-A new `schemaVersion` still stops the sync. Breeze bumps it for removals, renames, and type changes, and those need a Weavestream update.
+A new `schemaVersion` still stops the sync. Breeze bumps it for removals, renames, and type changes, and those need a RivetDocs update.
 
 ## Run modes and scheduling
 
@@ -96,7 +96,7 @@ Scheduled writes are attributed to the user who created the integration when no 
 
 ## Retries, limits, and checkpoints
 
-Weavestream honors `Retry-After` for `429`, retries transient `5xx` and timeouts with bounded exponential backoff, and stops immediately on authentication/authorization and invalid-contract failures. Defaults are a 30-second request timeout, 5 retry attempts, and a 1-second backoff base; configure them with `INTEGRATION_HTTP_TIMEOUT_MS`, `INTEGRATION_HTTP_MAX_RETRIES`, and `INTEGRATION_HTTP_BACKOFF_MS`.
+RivetDocs honors `Retry-After` for `429`, retries transient `5xx` and timeouts with bounded exponential backoff, and stops immediately on authentication/authorization and invalid-contract failures. Defaults are a 30-second request timeout, 5 retry attempts, and a 1-second backoff base; configure them with `INTEGRATION_HTTP_TIMEOUT_MS`, `INTEGRATION_HTTP_MAX_RETRIES`, and `INTEGRATION_HTTP_BACKOFF_MS`.
 
 Operational bounds are deliberate:
 
@@ -109,7 +109,7 @@ Operational bounds are deliberate:
 | Run conflicts retained | 10,000 |
 | Native stale/archive mutation batch | 500 |
 
-Opaque Breeze cursors bind the resource, filters, mode, and snapshot and expire after 24 hours. Weavestream requires a stable `schemaVersion` and snapshot across pages, rejects cursor cycles and high-water regression, and advances completion/high-water only after a successful authoritative terminal page.
+Opaque Breeze cursors bind the resource, filters, mode, and snapshot and expire after 24 hours. RivetDocs requires a stable `schemaVersion` and snapshot across pages, rejects cursor cycles and high-water regression, and advances completion/high-water only after a successful authoritative terminal page.
 
 ## Completeness, stale records, and audits
 
@@ -119,7 +119,7 @@ The reconstruction view reports six separate states:
 |---|---|
 | Synchronized current | Current Breeze-owned native evidence exists. |
 | Manually documented | Required local evidence is supplied and manually owned. Protect it during mapping changes. |
-| Secret blocked | Breeze withheld a definition, or Weavestream rejected it because secret-like material was detected. The gap message names the side that withheld the record. Document the fact safely; never paste the rejected value into a gap. |
+| Secret blocked | Breeze withheld a definition, or RivetDocs rejected it because secret-like material was detected. The gap message names the side that withheld the record. Document the fact safely; never paste the rejected value into a gap. |
 | Missing | A required fact or dependency is absent. Restore the source endpoint/mapping or document it manually. |
 | Stale | A complete full traversal no longer saw the binding. Confirm the source deletion; last-known native/manual history is retained. |
 | Synchronization error | A transport, schema, validation, or write failure prevented current evidence. Correct the failure and rerun. |
@@ -149,9 +149,9 @@ Lifecycle audit rows use exactly `integration.target.created`, `integration.targ
 
 Ordinary company export and PDF include native assets, IPAM, readable topology, reconstruction articles, safe completeness gaps, and local source-state dates. The dossier uses local labels and contains the essential procedure text; it is not a collection of Breeze links. Raw provider payloads, provenance, provider configuration, rejected values, and secret-derived content are excluded. An operator-mapped Breeze ID field is ordinary native asset data and can therefore appear in export. Passwords remain controlled by the export's existing explicit `includePasswords` option; Breeze never changes that setting.
 
-Back up the PostgreSQL database and the deployment secret material required to decrypt integration credentials. Database state includes the integration, encrypted credential blob, explicit mappings, resource/field configuration, sync runs, bindings/provenance, checkpoints, safe gaps/summaries, native content, and audit history. Redis queue state is operational rather than the authority for committed reconstruction data. Use the normal Weavestream backup/restore process; do not copy selected integration tables independently because their company/resource/target foreign keys form one consistency boundary.
+Back up the PostgreSQL database and the deployment secret material required to decrypt integration credentials. Database state includes the integration, encrypted credential blob, explicit mappings, resource/field configuration, sync runs, bindings/provenance, checkpoints, safe gaps/summaries, native content, and audit history. Redis queue state is operational rather than the authority for committed reconstruction data. Use the normal RivetDocs backup/restore process; do not copy selected integration tables independently because their company/resource/target foreign keys form one consistency boundary.
 
-After restoring Weavestream:
+After restoring RivetDocs:
 
 1. Restore the matching `INTEGRATION_SECRET_KEY`/key ring before starting sync workers.
 2. Verify companies, mappings, native targets, run history, and checkpoint rows are present.
@@ -164,9 +164,9 @@ After restoring Weavestream:
 
 ### Credential failure or suspected compromise
 
-For overlap rotation, issue a second Breeze key, replace the encrypted key in Weavestream, test it, complete an authenticated traversal, then revoke the predecessor. Breeze's atomic **Rotate** operation revokes the old key immediately and should be used only for a coordinated cutover. If compromise is suspected, revoke the exposed key first, issue/install a replacement, review both systems' sanitized audits, and perform a full traversal. A failed credential test never clears checkpoints or marks data stale.
+For overlap rotation, issue a second Breeze key, replace the encrypted key in RivetDocs, test it, complete an authenticated traversal, then revoke the predecessor. Breeze's atomic **Rotate** operation revokes the old key immediately and should be used only for a coordinated cutover. If compromise is suspected, revoke the exposed key first, issue/install a replacement, review both systems' sanitized audits, and perform a full traversal. A failed credential test never clears checkpoints or marks data stale.
 
-If the Weavestream integration ciphertext cannot be decrypted after restore, recover the matching integration encryption key ring. If that material is unavailable, issue a new Breeze key and update the integration; Breeze cannot recover old service-principal plaintext because it stores only a digest.
+If the RivetDocs integration ciphertext cannot be decrypted after restore, recover the matching integration encryption key ring. If that material is unavailable, issue a new Breeze key and update the integration; Breeze cannot recover old service-principal plaintext because it stores only a digest.
 
 ### Schema, cursor, or malformed-page failure
 
@@ -178,6 +178,6 @@ Honor `Retry-After`, reduce schedule/concurrency pressure if needed, and wait fo
 
 ### Missing dependency or blocked definition
 
-Check that every prerequisite resource is enabled and stage-ordered, both relation endpoints are mapped to the same company, and the service principal has the exact read scope. A missing dependency creates a safe gap instead of a dangling or cross-company relation. A secret-blocked item must be rewritten at its source to contain only durable non-secret reconstruction facts, then rerun; Weavestream does not offer a bypass that stores the rejected value.
+Check that every prerequisite resource is enabled and stage-ordered, both relation endpoints are mapped to the same company, and the service principal has the exact read scope. A missing dependency creates a safe gap instead of a dangling or cross-company relation. A secret-blocked item must be rewritten at its source to contain only durable non-secret reconstruction facts, then rerun; RivetDocs does not offer a bypass that stores the rejected value.
 
-Two messages report a withheld record. "Breeze withheld a … record" means the Breeze partner API redacted the record before it left Breeze; its gap details carry the field paths Breeze reported. "Weavestream withheld a … record" means the record arrived in full and Weavestream's own inspection quarantined it because a value looked like a credential (a forbidden key name such as `password` or `token`, credential syntax in script content, or an encoded token). Weavestream withholds the complete record, so one flagged value hides every fact in that policy, script, automation, backup configuration, custom field, or custom-field value. Plain names, hostnames, package names, and URLs are not treated as credentials when they sit in a top-level schema label field: a record's name, description, category, or filter fields, a dropdown, number, boolean, or date custom field, or a free-text custom field whose name is itself a descriptor ("Hostname", "Asset tag", "Rack"). Anything inside free-form JSON — a policy feature's settings, a script's parameters, an automation's trigger, conditions, or actions, a backup configuration's notes — is inspected strictly whatever its keys are called, and so is a free-text custom field with any other name. A long hyphenated value in those positions is still withheld even when it reads like words, because a word-list passphrase and a hyphenated name cannot be told apart. Name such a field for what it holds, or shorten the value. A custom field whose name contains "passphrase" is withheld outright, like "password" or "token". The Runs tab labels both cases "secret blocked".
+Two messages report a withheld record. "Breeze withheld a … record" means the Breeze partner API redacted the record before it left Breeze; its gap details carry the field paths Breeze reported. "RivetDocs withheld a … record" means the record arrived in full and RivetDocs's own inspection quarantined it because a value looked like a credential (a forbidden key name such as `password` or `token`, credential syntax in script content, or an encoded token). RivetDocs withholds the complete record, so one flagged value hides every fact in that policy, script, automation, backup configuration, custom field, or custom-field value. Plain names, hostnames, package names, and URLs are not treated as credentials when they sit in a top-level schema label field: a record's name, description, category, or filter fields, a dropdown, number, boolean, or date custom field, or a free-text custom field whose name is itself a descriptor ("Hostname", "Asset tag", "Rack"). Anything inside free-form JSON — a policy feature's settings, a script's parameters, an automation's trigger, conditions, or actions, a backup configuration's notes — is inspected strictly whatever its keys are called, and so is a free-text custom field with any other name. A long hyphenated value in those positions is still withheld even when it reads like words, because a word-list passphrase and a hyphenated name cannot be told apart. Name such a field for what it holds, or shorten the value. A custom field whose name contains "passphrase" is withheld outright, like "password" or "token". The Runs tab labels both cases "secret blocked".

@@ -30,7 +30,7 @@ jest.mock('bullmq', () => {
   return { __esModule: true, Worker: FakeWorker, Queue: FakeQueue };
 });
 
-import { QueueNames } from '@weavestream/shared';
+import { QueueNames } from '@rivetdocs/shared';
 import { Worker } from 'bullmq';
 import { AlertsWorker } from '../alerts/alerts.processor.js';
 import { ArticleSummaryWorker } from '../article-summary/article-summary.processor.js';
@@ -54,7 +54,7 @@ const env = {
     INTEGRATION_SYNC_MAPPING_CONCURRENCY: 6,
     INTEGRATION_SYNC_ORCHESTRATOR_CONCURRENCY: 7,
     BACKUP_JOB_LOCK_MINUTES: 360,
-    BACKUP_STORAGE_DIR: '/var/lib/weavestream/backup',
+    BACKUP_STORAGE_DIR: '/var/lib/rivetdocs/backup',
     HIBP_ENABLED: true,
   },
 } as never;

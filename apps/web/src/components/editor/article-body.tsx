@@ -1,4 +1,4 @@
-import type { ArticleEditorMode } from '@weavestream/shared';
+import type { ArticleEditorMode } from '@rivetdocs/shared';
 import { MarkdownView } from './markdown-view';
 import { RichTextView } from './rich-text-view';
 

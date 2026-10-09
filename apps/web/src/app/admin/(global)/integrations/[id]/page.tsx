@@ -6,7 +6,7 @@ import type {
   IntegrationCompanyMappingDto,
   IntegrationDto,
   IntegrationSyncRunDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { requireMe } from '../../../../../lib/server-api/auth';
 import {
   serverApiFetch,

@@ -1,7 +1,7 @@
 'use client';
 
-import type { LayoutSummary } from '@weavestream/shared';
-import { FIELD_TYPE_CATALOG, canShowInTable } from '@weavestream/shared';
+import type { LayoutSummary } from '@rivetdocs/shared';
+import { FIELD_TYPE_CATALOG, canShowInTable } from '@rivetdocs/shared';
 import { lower } from '../../../../../../../lib/term';
 import { useTerm } from '../../../../../../../lib/term-context';
 import { slugifyFieldSlug as slugify } from '../../../../../../../lib/slugify';

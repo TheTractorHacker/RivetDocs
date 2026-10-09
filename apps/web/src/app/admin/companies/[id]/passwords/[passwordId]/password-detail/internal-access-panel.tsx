@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { problemMessage, roleLabel } from '@weavestream/shared';
-import type { PasswordAccessUser, PasswordDetail } from '@weavestream/shared';
+import { problemMessage, roleLabel } from '@rivetdocs/shared';
+import type { PasswordAccessUser, PasswordDetail } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../../lib/api';
 import { Btn, Dialog, Icon, Panel, Tag } from '../../../../../../../components/ui';
 import {

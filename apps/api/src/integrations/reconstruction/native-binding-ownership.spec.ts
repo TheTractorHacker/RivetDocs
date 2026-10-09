@@ -138,7 +138,7 @@ describe('hasEligibleNativeBinding persisted provenance identity', () => {
         findMany: jest.fn().mockResolvedValue([
           record({
             externalId: 'org-1:devices:forged',
-            provenance: { ...record().provenance as object, ownership: 'weavestream' },
+            provenance: { ...record().provenance as object, ownership: 'rivetdocs' },
           }),
           eligible,
         ]),
@@ -161,7 +161,7 @@ describe('hasEligibleNativeBinding persisted provenance identity', () => {
     siblingClient.integrationSyncRecord.findMany.mockResolvedValue([
       record({
         externalId: 'org-1:devices:forged',
-        provenance: { ...record().provenance as object, ownership: 'weavestream' },
+        provenance: { ...record().provenance as object, ownership: 'rivetdocs' },
       }),
     ]);
     await expect(

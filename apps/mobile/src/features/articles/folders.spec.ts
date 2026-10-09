@@ -1,4 +1,4 @@
-import type { FolderNode } from '@weavestream/shared';
+import type { FolderNode } from '@rivetdocs/shared';
 import { flattenFolderTree } from './folders';
 
 function node(over: Partial<FolderNode> & { id: string; name: string }): FolderNode {

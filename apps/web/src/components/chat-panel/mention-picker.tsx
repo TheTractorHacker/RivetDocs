@@ -9,7 +9,7 @@ import {
   type RefObject,
 } from 'react';
 import { apiFetch } from '../../lib/api';
-import type { AssetPage, MonitoredDomainDto } from '@weavestream/shared';
+import type { AssetPage, MonitoredDomainDto } from '@rivetdocs/shared';
 import type { ArticlePage } from '../../lib/server-api/articles';
 import { Icon } from '../ui';
 

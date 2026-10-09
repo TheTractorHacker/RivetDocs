@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { AssetField } from '@prisma/client';
-import type { UserRole } from '@weavestream/shared';
+import type { UserRole } from '@rivetdocs/shared';
 import type { FieldTypesRegistry } from '../field-types/field-types.registry.js';
 
 /**

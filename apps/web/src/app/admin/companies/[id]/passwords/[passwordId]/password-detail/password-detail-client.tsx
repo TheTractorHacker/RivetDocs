@@ -3,9 +3,9 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { safeExternalHref } from '@weavestream/shared';
-import type { PasswordDetail, PasswordVersionSummary } from '@weavestream/shared';
-import { copyToClipboard } from '@weavestream/shared/browser';
+import { safeExternalHref } from '@rivetdocs/shared';
+import type { PasswordDetail, PasswordVersionSummary } from '@rivetdocs/shared';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
 import {
   FormattedCalendarDate,
   FormattedDate,

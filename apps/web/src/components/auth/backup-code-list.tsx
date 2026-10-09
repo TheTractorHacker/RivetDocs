@@ -1,7 +1,7 @@
 'use client';
 
 import { Tag } from '../ui';
-import { copyToClipboard } from '@weavestream/shared/browser';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
 
 /**
  * The one-time recovery-code block, shared by first-time MFA enrollment
@@ -55,7 +55,7 @@ export function BackupCodeList({ codes }: { codes: string[] }) {
  *
  * Goes through the shared `copyToClipboard` rather than
  * `navigator.clipboard.writeText` directly: that API is undefined on a
- * non-secure origin, and Weavestream is routinely served over plain HTTP
+ * non-secure origin, and RivetDocs is routinely served over plain HTTP
  * to LAN devices. `copyToClipboard` falls back to `execCommand('copy')`,
  * which has no secure-context requirement.
  *

@@ -1,4 +1,4 @@
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { ApiError, apiFetch } from './api';
 
 /**
@@ -44,7 +44,7 @@ export type LoginOutcome =
 export function authError(err: unknown, rejected: string): string {
   if (!(err instanceof ApiError)) {
     // Transport failure: no response at all.
-    return 'Can’t reach Weavestream. Check your connection.';
+    return 'Can’t reach RivetDocs. Check your connection.';
   }
   if (err.status === 429) return 'Too many attempts. Try again later.';
   if (err.status === 401) return rejected;
@@ -61,7 +61,7 @@ export function authError(err: unknown, rejected: string): string {
   }
 
   if (err.status >= 500) {
-    return 'Weavestream is having trouble. Try again in a moment.';
+    return 'RivetDocs is having trouble. Try again in a moment.';
   }
   return 'Something went wrong. Try again.';
 }

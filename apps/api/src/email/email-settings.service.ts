@@ -3,7 +3,7 @@ import type {
   EmailSettings,
   SmtpSecurityMode,
   UpdateEmailSettingsInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';

@@ -9,8 +9,8 @@ import type {
   BulkAssetResult,
   LayoutSummary,
   PasswordSummary,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import {
   Btn,
   DataTable,

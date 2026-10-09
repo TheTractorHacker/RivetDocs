@@ -4,9 +4,9 @@ import {
   QueueNames,
   integrationSyncOrchestratorJobSchema,
   type IntegrationSyncOrchestratorJob,
-} from '@weavestream/shared';
-import { EnvService, RedisService, PrismaService } from '@weavestream/api/runtime';
-import { IntegrationSyncService } from '@weavestream/api/integrations';
+} from '@rivetdocs/shared';
+import { EnvService, RedisService, PrismaService } from '@rivetdocs/api/runtime';
+import { IntegrationSyncService } from '@rivetdocs/api/integrations';
 import {
   createManagedWorker,
   type ManagedWorker,

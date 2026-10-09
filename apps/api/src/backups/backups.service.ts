@@ -26,8 +26,8 @@ import {
   type BackupRunDto,
   type BackupRunKind,
   type BackupRunStatus,
-} from '@weavestream/shared';
-import { resolveDataDir } from '@weavestream/shared/server';
+} from '@rivetdocs/shared';
+import { resolveDataDir } from '@rivetdocs/shared/server';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
@@ -39,11 +39,11 @@ import { BackupQueueRegistrar } from './backup-queue.registrar.js';
 
 /**
  * Filenames the worker emits look like
- * `weavestream-postgres-<isoTimestamp>.dump`. We constrain reads via
+ * `rivetdocs-postgres-<isoTimestamp>.dump`. We constrain reads via
  * `BackupRun.dumpPath` (the authoritative source of truth) and only
  * use this regex as a defense-in-depth check before opening a file.
  */
-const SAFE_FILENAME = /^weavestream-postgres-[0-9TZ:\-]+\.dump$/;
+const SAFE_FILENAME = /^rivetdocs-postgres-[0-9TZ:\-]+\.dump$/;
 
 @Injectable()
 export class BackupsService {
@@ -51,7 +51,7 @@ export class BackupsService {
 
   /**
    * Resolved absolute backup directory. Compose maps this to
-   * `/var/lib/weavestream/backup` on the api container (read-only;
+   * `/var/lib/rivetdocs/backup` on the api container (read-only;
    * the worker owns the write path); dev `./data/backup` is anchored
    * to the monorepo root via `resolveDataDir` so api + worker share a
    * single path regardless of which package directory they were

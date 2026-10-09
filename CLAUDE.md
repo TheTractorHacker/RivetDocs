@@ -4,7 +4,7 @@
 
 ### All apps
 
-- **Naming.** The product is **Weavestream** — never shortened to "Weave" in UI copy, docs, or comments. The AI assistant feature is **"Ask anything"**.
+- **Naming.** The product is **RivetDocs** — never shortened to "Rivet" in UI copy, docs, or comments. The AI assistant feature is **"Ask anything"**.
 - Before adding new helpers, components, formatting logic, or utilities, search the codebase for an existing common/global function or component and reuse it when it fits.
 - Do not duplicate behavior that already exists in shared modules. Prefer extending the existing shared abstraction only when the use case is genuinely reusable.
 - Logic shared between `apps/web` and `apps/mobile` (types, Zod schemas, framework-free formatters) belongs in `packages/shared` and is imported by both. Never copy a helper across app boundaries.
@@ -26,7 +26,7 @@ The dedicated field-technician UI, served as a same-origin PWA at `/m`. See `Bui
   - **T3 — what can wait for a laptop.** Cut from mobile entirely.
 
   Default to T3. "The desktop shows it" and "it's in the Prisma model" are not arguments for T1. Reading a schema and rendering what's there is the specific way this app degrades into the dense UI it exists to replace — when a screen seems to need more, ask rather than assume.
-- **Tiering applies only to fields Weavestream defines.** Customer-defined content is shown in full: an asset detail screen renders **every field on its layout**, in `position` order, no cap and no disclosure. The MSP built that layout because they needed those fields; which of their own fields matter onsite is not ours to decide.
+- **Tiering applies only to fields RivetDocs defines.** Customer-defined content is shown in full: an asset detail screen renders **every field on its layout**, in `position` order, no cap and no disclosure. The MSP built that layout because they needed those fields; which of their own fields matter onsite is not ours to decide.
 - `AssetField.showInTable` is **not** an importance signal — it controls column density in the asset overview table. It informs the mobile *list card* (`isPrimary || showInTable`, by `position`), never the detail screen.
 - Mirror the disclosure doctrine in `apps/web/src/components/ui/show-more.tsx` (build mobile's own component, don't import it): primary content — credentials, linked items — never goes inside a disclosure, and the collapsed label carries an attention indicator when what's hidden needs review, so collapsing never buries an anomaly.
 - The table standard above does **not** apply here. Mobile uses card lists; do not import `DataTable`, `DataColumn`, or any `apps/web` component into `apps/mobile`.

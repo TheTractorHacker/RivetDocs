@@ -4,7 +4,7 @@ import {
   QueueNames,
   pwnedCheckJobSchema,
   type PwnedCheckJob,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   EnvService,
   RedisService,
@@ -12,7 +12,7 @@ import {
   AuditLogService,
   AUDIT_ACTIONS,
   safeFetch,
-} from '@weavestream/api/runtime';
+} from '@rivetdocs/api/runtime';
 import {
   createManagedWorker,
   type ManagedWorker,
@@ -124,7 +124,7 @@ export class PwnedCheckWorker implements OnModuleDestroy {
       entityId: payload.passwordId,
       companyId: payload.companyId,
       ip: '127.0.0.1',
-      userAgent: 'weavestream-worker/pwned-check',
+      userAgent: 'rivetdocs-worker/pwned-check',
       before: null,
       after: { pwnedCount: count },
     });
@@ -146,7 +146,7 @@ export class PwnedCheckWorker implements OnModuleDestroy {
     const res = await safeFetch(`${HIBP_RANGE_ENDPOINT}/${prefix}`, {
       headers: {
         'Add-Padding': 'true',
-        'User-Agent': 'weavestream-password-vault',
+        'User-Agent': 'rivetdocs-password-vault',
       },
       timeoutMs: 10_000,
       // The HIBP response is padded to a fixed size so it stays small;

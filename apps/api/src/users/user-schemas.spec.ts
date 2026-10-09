@@ -1,4 +1,4 @@
-import { createUserSchema } from '@weavestream/shared';
+import { createUserSchema } from '@rivetdocs/shared';
 
 /**
  * Phase 9b.2 schema coverage for the optional `membership` block on

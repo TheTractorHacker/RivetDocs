@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { formatDate } from '@weavestream/shared';
+import { formatDate } from '@rivetdocs/shared';
 import { Icon } from '../../components/Icon';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { ListRow, Screen } from '../../components/primitives';

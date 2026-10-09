@@ -9,7 +9,7 @@ import {
   type FileFieldEntry,
   type TagChipDraft,
   type UpdateAssetInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   extractFieldIssues,
   extractUniqueViolation,

@@ -15,7 +15,7 @@ import { EnvService } from './config/env.service.js';
 import { configureEgressGuard } from './common/egress/safe-fetch.js';
 import { AuditLogService } from './audit/audit.service.js';
 import { AUDIT_ACTIONS } from './audit/audit-actions.js';
-import { topologyWarnings } from '@weavestream/shared/server';
+import { topologyWarnings } from '@rivetdocs/shared/server';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

@@ -25,7 +25,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
-import type { SearchHit, SearchResponse, UserSearchDefaults } from '@weavestream/shared';
+import type { SearchHit, SearchResponse, UserSearchDefaults } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { Icon, Kbd } from '../ui';
 

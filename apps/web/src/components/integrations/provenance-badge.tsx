@@ -1,4 +1,4 @@
-import type { IntegrationTargetProvenance } from '@weavestream/shared';
+import type { IntegrationTargetProvenance } from '@rivetdocs/shared';
 import { Tag } from '../ui';
 import { FormattedDateTime } from '../../lib/timezone-context';
 
@@ -27,7 +27,7 @@ export function ProvenanceBadge({ provenance }: { provenance: IntegrationTargetP
     <section aria-label={`Provenance: ${state.label}`} style={{ border: '1px solid var(--line)', borderRadius: 7, padding: 10, fontSize: 12 }}>
       <div style={{ display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <Tag tone={state.tone}>{state.label}</Tag>
-        <span style={{ color: 'var(--muted)' }}>{provenance.ownership === 'breeze' ? 'Source-owned' : 'Weavestream-owned'}</span>
+        <span style={{ color: 'var(--muted)' }}>{provenance.ownership === 'breeze' ? 'Source-owned' : 'RivetDocs-owned'}</span>
       </div>
       <strong style={{ display: 'block', marginTop: 8 }}>
         {provenance.sourceLabel} · {provenance.sourceResource}

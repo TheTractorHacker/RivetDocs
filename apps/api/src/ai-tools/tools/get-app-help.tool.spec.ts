@@ -2,7 +2,7 @@ import type { AiToolExecutionContext } from '../tool-registry.js';
 import {
   getAppHelpToolInputSchema,
   getAppHelpToolOutputSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { GetAppHelpAiTool } from './get-app-help.tool.js';
 
 const ctxFor = (role: string): AiToolExecutionContext =>

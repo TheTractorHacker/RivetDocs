@@ -5,7 +5,7 @@ import type {
   TicketListDto,
   TicketListFilter,
   TicketListResponse,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { serverApiFetch } from './core';
 
 // ───────────────────────────────────────────────────────────────────

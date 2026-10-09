@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { UserRole } from '@weavestream/shared';
+import type { UserRole } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { initialsFromName, roleLabel } from '../../lib/roles';
 import type { UserListItem, UserPage } from '../../lib/server-api/admin';

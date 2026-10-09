@@ -1,5 +1,5 @@
 import { ChatToolCallService } from './chat-tool-call.service.js';
-import type { ChatToolCallDto, ChatTurnContext } from '@weavestream/shared';
+import type { ChatToolCallDto, ChatTurnContext } from '@rivetdocs/shared';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 
 const ACTOR: AuthedUser = {

@@ -11,7 +11,7 @@ import {
   type AlertRecordEntityType,
   type AlertType,
   type SecurityAlertSelector,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { CompanyPickerValue } from '../../../../components/ui';
 
 /**

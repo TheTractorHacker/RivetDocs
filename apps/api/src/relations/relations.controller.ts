@@ -19,7 +19,7 @@ import {
   relationEndpointKinds,
   type CreateRelationInput,
   type RelationEndpointKind,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   MANUAL_RELATION_TYPE,
   RELATION_ENTITY_TYPE,

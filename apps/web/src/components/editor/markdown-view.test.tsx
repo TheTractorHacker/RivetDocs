@@ -5,7 +5,7 @@ import { MarkdownView } from './markdown-view';
 
 const copyToClipboard = jest.fn();
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   copyToClipboard: (...args: unknown[]) => copyToClipboard(...args),
 }));
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import '@weavestream/api/load-env';
+import '@rivetdocs/api/load-env';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
@@ -20,7 +20,7 @@ import {
   EnvService,
   AuditLogService,
   AUDIT_ACTIONS,
-} from '@weavestream/api/runtime';
+} from '@rivetdocs/api/runtime';
 
 /**
  * apps/worker bootstrap.

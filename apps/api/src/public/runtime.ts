@@ -5,7 +5,7 @@
  *
  * `public/` means "the package surface other apps may import", not
  * unauthenticated routes. Every file in this directory is an entry point for
- * the worker, published as `@weavestream/api/<file>` through the `exports`
+ * the worker, published as `@rivetdocs/api/<file>` through the `exports`
  * map in `apps/api/package.json` — a new file needs an entry there too.
  * Nothing here may export a controller, an HTTP guard, a bootstrap entry, or
  * an API composition module (`AppModule`): those belong to the HTTP process

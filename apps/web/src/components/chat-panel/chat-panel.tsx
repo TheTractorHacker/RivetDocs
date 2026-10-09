@@ -13,7 +13,7 @@ import {
 } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { ChatTurnIntent } from '@weavestream/shared';
+import type { ChatTurnIntent } from '@rivetdocs/shared';
 import { Icon, type IconComponent } from '../ui';
 import {
   useChatPanel,
@@ -1172,7 +1172,7 @@ function Composer({ tab, disabled }: { tab: ChatTab; disabled: boolean }) {
                 (e.currentTarget as HTMLTextAreaElement).selectionStart ?? value.length,
               )
             }
-            placeholder={disabled ? 'Waiting for reply…' : 'Ask Weavestream'}
+            placeholder={disabled ? 'Waiting for reply…' : 'Ask RivetDocs'}
             disabled={disabled}
             className="chat-composer-textarea"
             style={{

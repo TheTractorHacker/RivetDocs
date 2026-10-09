@@ -7,8 +7,8 @@ import type {
   CloudflareIpListDto,
   CloudflarePushResponse,
   IntegrationDto,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../../lib/api';
 import {
   Btn,
@@ -206,7 +206,7 @@ export function ListDetailView({
   async function overwriteCloudflare(): Promise<void> {
     if (
       !window.confirm(
-        `Overwrite Cloudflare list "${list.name}" with Weavestream's ${list.entries.length} ${list.entries.length === 1 ? 'entry' : 'entries'}? Any entries that exist only in Cloudflare will be removed.`,
+        `Overwrite Cloudflare list "${list.name}" with RivetDocs's ${list.entries.length} ${list.entries.length === 1 ? 'entry' : 'entries'}? Any entries that exist only in Cloudflare will be removed.`,
       )
     ) {
       return;
@@ -252,7 +252,7 @@ export function ListDetailView({
   async function unregister(): Promise<void> {
     if (
       !window.confirm(
-        `Stop managing "${list.name}" from Weavestream? Cloudflare's current list contents stay as-is.`,
+        `Stop managing "${list.name}" from RivetDocs? Cloudflare's current list contents stay as-is.`,
       )
     ) {
       return;

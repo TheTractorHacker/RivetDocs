@@ -6,7 +6,7 @@ import { PrismaClient } from '@prisma/client';
  * database itself rejects UPDATE / DELETE against `audit_log` regardless
  * of who issues the statement.
  *
- * Opt-in via `WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1` (set in CI's test
+ * Opt-in via `RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1` (set in CI's test
  * job, which provisions Postgres + `prisma migrate deploy`) — so this
  * test is the canonical regression guard against the trigger being
  * accidentally dropped. Gating on `DATABASE_URL` alone is NOT
@@ -15,10 +15,10 @@ import { PrismaClient } from '@prisma/client';
  * would write to (and briefly disable a trigger on) the configured
  * *development* database. An explicit flag keeps mutation opt-in.
  * Run locally with:
- *   WEAVESTREAM_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @weavestream/api test
+ *   RIVETDOCS_RUN_DB_INTEGRATION_TESTS=1 pnpm --filter @rivetdocs/api test
  */
 const describeIfDb =
-  process.env.WEAVESTREAM_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
+  process.env.RIVETDOCS_RUN_DB_INTEGRATION_TESTS === '1' ? describe : describe.skip;
 
 describeIfDb('audit_log immutability (DB integration)', () => {
   const prisma = new PrismaClient();

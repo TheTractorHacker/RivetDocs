@@ -1,4 +1,4 @@
-import type { ArticleDetail, FolderNode } from '@weavestream/shared';
+import type { ArticleDetail, FolderNode } from '@rivetdocs/shared';
 
 /**
  * Full valid wire shapes (not partials) so a schema field added later

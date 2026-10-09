@@ -11,12 +11,12 @@ import {
   integrationReconstructionGapInputSchema,
   integrationTransformSchema,
   stripNul,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type {
   SafeIntegrationProvenance,
   SyncRunConflict,
   SyncRunTotals,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService, type AuditEntry } from '../audit/audit.service.js';
 import { EnvService } from '../config/env.service.js';
@@ -552,7 +552,7 @@ export class IntegrationSyncRunnerService {
                 entityId: targetId,
                 companyId: mapping.companyId,
                 ip: '0.0.0.0',
-                userAgent: 'weavestream-worker/integration-reconstruction',
+                userAgent: 'rivetdocs-worker/integration-reconstruction',
                 after: integrationTargetAuditAfter({
                   integrationId: mapping.integrationId,
                   integrationCompanyMappingId: mapping.id,

@@ -1,7 +1,7 @@
 import { useMemo, type ComponentProps } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { mermaidSourceFromPre } from '@weavestream/shared';
+import { mermaidSourceFromPre } from '@rivetdocs/shared';
 import { ProseLink } from './ProseLink';
 import { ProseImg } from './ProseImg';
 import { MermaidBlock } from './MermaidBlock';
@@ -70,7 +70,7 @@ export function MarkdownBody({
  * without reading the hast node anyway — and returning a `<figure>` from
  * it would nest flow content inside `<pre>`, which is invalid HTML.
  *
- * `mermaidSourceFromPre` is the SHARED rule (`@weavestream/shared`), not
+ * `mermaidSourceFromPre` is the SHARED rule (`@rivetdocs/shared`), not
  * a local copy: desktop, mobile and the PDF export all have to agree on
  * what counts as a diagram. It reads the hast tree react-markdown built,
  * never raw HTML, so the "never add `rehype-raw`" posture above is

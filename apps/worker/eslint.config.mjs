@@ -33,7 +33,7 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'off',
       '@typescript-eslint/no-require-imports': 'off',
       // The worker may use only the API's package exports
-      // (`@weavestream/api/<entry>`, built from `apps/api/src/public/`).
+      // (`@rivetdocs/api/<entry>`, built from `apps/api/src/public/`).
       // A relative path into API source compiles a copy of the API into
       // this app's dist, where it resolves packages against the worker's
       // node_modules instead of the API's own.
@@ -44,7 +44,7 @@ export default tseslint.config(
             {
               regex: 'api/src/',
               message:
-                'Import from @weavestream/api/<entry> instead. If the worker needs something new, export it from apps/api/src/public/ and apps/api/package.json "exports".',
+                'Import from @rivetdocs/api/<entry> instead. If the worker needs something new, export it from apps/api/src/public/ and apps/api/package.json "exports".',
             },
           ],
         },

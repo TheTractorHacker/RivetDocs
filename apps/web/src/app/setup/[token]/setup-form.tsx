@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { passwordSchema } from '@weavestream/shared';
+import { passwordSchema } from '@rivetdocs/shared';
 import { apiFetch } from '../../../lib/api';
 import { Btn, Field, Input } from '../../../components/ui';
 

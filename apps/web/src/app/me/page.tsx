@@ -4,7 +4,7 @@ import { getSettings } from '../../lib/server-api/settings';
 import { PageBody, PageHeader } from '../../components/shell/page-header';
 import { Panel } from '../../components/ui';
 import { MeTabs } from './me-tabs';
-import type { ApiKeySummary } from '@weavestream/shared';
+import type { ApiKeySummary } from '@rivetdocs/shared';
 
 type Session = {
   id: string;

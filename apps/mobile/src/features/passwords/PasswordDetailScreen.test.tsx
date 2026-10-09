@@ -9,7 +9,7 @@ import type { Me } from '../../screens/TabShell';
 import { ToastProvider } from '../../components/Toast';
 import { PasswordDetailScreen } from './PasswordDetailScreen';
 import { makePasswordDetail } from './test-fixtures';
-import type { PasswordDetail } from '@weavestream/shared';
+import type { PasswordDetail } from '@rivetdocs/shared';
 
 const CO = 'c0000000-0000-4000-8000-000000000002';
 const PW = 'a0000000-0000-4000-8000-0000000000a1';

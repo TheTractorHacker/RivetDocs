@@ -1,5 +1,5 @@
 import { UiTheme as DbUiTheme, UiAccent as DbUiAccent } from '@prisma/client';
-import type { UiTheme, UiAccent } from '@weavestream/shared';
+import type { UiTheme, UiAccent } from '@rivetdocs/shared';
 
 /**
  * Phase 9b.1 — translate between the DB's uppercase enums and the

@@ -2,12 +2,12 @@
 label: Upgrades
 icon: arrow-up
 order: 700
-description: How to safely upgrade Weavestream to a new version.
+description: How to safely upgrade RivetDocs to a new version.
 ---
 
 # Upgrades
 
-Weavestream uses semantic versioning. Check the [changelog](/overview/changelog/) before upgrading across minor versions — some releases include manual migration steps.
+RivetDocs uses semantic versioning. Check the [changelog](/overview/changelog/) before upgrading across minor versions — some releases include manual migration steps.
 
 ## Standard Upgrade (Patch Releases)
 
@@ -15,9 +15,9 @@ For patch releases (e.g. `1.1.0` → `1.1.1`) with no manual steps in the change
 
 ```bash
 # 1. Update the version pin in .env
-sed -i '' 's/^WEAVESTREAM_VERSION=.*/WEAVESTREAM_VERSION=1.1.1/' .env
+sed -i '' 's/^RIVETDOCS_VERSION=.*/RIVETDOCS_VERSION=1.1.1/' .env
 # On Linux (GNU sed):
-# sed -i 's/^WEAVESTREAM_VERSION=.*/WEAVESTREAM_VERSION=1.1.1/' .env
+# sed -i 's/^RIVETDOCS_VERSION=.*/RIVETDOCS_VERSION=1.1.1/' .env
 
 # 2. Pull new images
 docker compose pull
@@ -48,18 +48,18 @@ docker compose down
 # 2. Migrate data from named volumes to bind-mount folders
 mkdir -p ./data/postgres ./data/redis ./data/minio
 
-docker run --rm -v weavestream_pg_data:/src -v "$PWD/data/postgres":/dst \
+docker run --rm -v rivetdocs_pg_data:/src -v "$PWD/data/postgres":/dst \
   alpine sh -c 'cp -a /src/. /dst/'
-docker run --rm -v weavestream_redis_data:/src -v "$PWD/data/redis":/dst \
+docker run --rm -v rivetdocs_redis_data:/src -v "$PWD/data/redis":/dst \
   alpine sh -c 'cp -a /src/. /dst/'
-docker run --rm -v weavestream_minio_data:/src -v "$PWD/data/minio":/dst \
+docker run --rm -v rivetdocs_minio_data:/src -v "$PWD/data/minio":/dst \
   alpine sh -c 'cp -a /src/. /dst/'
 
 # 3. Remove old named volumes
-docker volume rm weavestream_pg_data weavestream_redis_data weavestream_minio_data
+docker volume rm rivetdocs_pg_data rivetdocs_redis_data rivetdocs_minio_data
 
 # 4. Update compose.yml and .env from the v1.1.0 tag
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/v1.1.0/compose.yml
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/v1.1.0/compose.yml
 
 # 5. Add new env vars
 ./scripts/keygen.sh | grep PASSWORD_ENCRYPTION_KEY >> .env
@@ -75,7 +75,7 @@ If something goes wrong after an upgrade, roll back by pinning to the previous v
 
 ```bash
 docker compose down
-# Edit .env: set WEAVESTREAM_VERSION back to the old version
+# Edit .env: set RIVETDOCS_VERSION back to the old version
 docker compose up -d
 ```
 
@@ -100,7 +100,7 @@ See [Backup & Restore](/deployment/backup/) for a complete backup strategy.
 - [ ] Take a database backup
 - [ ] Complete any manual steps from the changelog
 - [ ] Re-download `compose.yml` from the target release tag (if instructed)
-- [ ] Update `WEAVESTREAM_VERSION` in `.env`
+- [ ] Update `RIVETDOCS_VERSION` in `.env`
 - [ ] `docker compose pull`
 - [ ] `docker compose up -d`
 - [ ] Verify all containers are healthy: `docker compose ps`

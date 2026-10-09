@@ -9,7 +9,7 @@ import type { Request } from 'express';
 import {
   MFA_CHALLENGE_REQUIRED_CODE,
   MFA_ENROLLMENT_REQUIRED_CODE,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   IS_PUBLIC_KEY,
   MFA_SETUP_ALLOWED_KEY,

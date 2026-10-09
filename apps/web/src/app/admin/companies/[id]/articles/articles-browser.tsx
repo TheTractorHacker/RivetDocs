@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import type { ArticleSummary, FolderNode } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { ArticleSummary, FolderNode } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { FormattedDate } from '../../../../../lib/timezone-context';
 import {
@@ -31,7 +31,7 @@ import { articleCounts, scopeArticles } from './article-scope';
 type ArticleCounts = ReturnType<typeof articleCounts>;
 
 /** Remembers a deliberate open/close of this rail; see `useRailCollapse`. */
-const ARTICLES_RAIL_PREF_KEY = 'weavestream.articles.rail.v1';
+const ARTICLES_RAIL_PREF_KEY = 'rivetdocs.articles.rail.v1';
 
 /**
  * Two-column article browser:

@@ -16,7 +16,7 @@ import {
   type SyncRunConflict,
   type SyncRunResourceTotals,
   type SyncRunTotals,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { isUniqueConstraintError } from '../prisma/prisma-errors.js';

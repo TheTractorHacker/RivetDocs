@@ -17,7 +17,7 @@ import {
   type DomainCheckJob,
   type PwnedCheckJob,
   type QueueName,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { EnvService } from '../config/env.service.js';
 import { RedisService } from '../redis/redis.service.js';
 

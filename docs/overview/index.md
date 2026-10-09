@@ -2,20 +2,20 @@
 label: Overview
 icon: info
 order: 900
-description: Technical orientation for Weavestream's modules, deployment model, and core documentation.
+description: Technical orientation for RivetDocs's modules, deployment model, and core documentation.
 ---
 
-# What is Weavestream?
+# What is RivetDocs?
 
-Weavestream is a **self-hosted IT documentation platform** for structured infrastructure records: tenants, assets, credentials, articles, domains, files, IP ranges, users, integrations, and audit history.
+RivetDocs is a **self-hosted IT documentation platform** for structured infrastructure records: tenants, assets, credentials, articles, domains, files, IP ranges, users, integrations, and audit history.
 
 This section gives a high-level orientation before you move into installation, configuration, and feature-specific docs.
 
 ## Platform model
 
-Weavestream is organised around a few core ideas:
+RivetDocs is organised around a few core ideas:
 
-- **Workspace** — the single Weavestream deployment, including global settings and terminology.
+- **Workspace** — the single RivetDocs deployment, including global settings and terminology.
 - **Tenant** — the top-level container for customer, department, site, or environment data.
 - **Structured records** — assets, passwords, articles, domains, uploads, IP ranges, and related entities.
 - **Relationships** — links between records so assets, credentials, procedures, domains, and files can be followed in context.
@@ -42,7 +42,7 @@ See [Key Concepts](/overview/concepts/) for the full terminology reference.
 
 ## Deployment model
 
-Weavestream runs as five Docker containers orchestrated by Docker Compose:
+RivetDocs runs as five Docker containers orchestrated by Docker Compose:
 
 | Service | Role |
 |---|---|
@@ -69,5 +69,5 @@ See [Architecture](/overview/architecture/) for topology, request flow, RBAC res
 
 - [Key concepts](/overview/concepts/) — understand the core data model and terminology
 - [Architecture](/overview/architecture/) — review containers, request flow, RBAC, and data layout
-- [Getting started](/getting-started/) — deploy Weavestream with Docker Compose
+- [Getting started](/getting-started/) — deploy RivetDocs with Docker Compose
 - [Feature reference](/features/) — browse module-level documentation

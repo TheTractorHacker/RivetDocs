@@ -8,11 +8,11 @@ description: Connect Ubiquiti UniFi controllers to sync network gateways, switch
 
 **UniFi** is Ubiquiti's networking ecosystem for gateways, switches, access points, network controllers, and connected client devices.
 
-The Weavestream UniFi driver imports network hardware inventory and connected client records through the UniFi Site Manager API into tenant asset records.
+The RivetDocs UniFi driver imports network hardware inventory and connected client records through the UniFi Site Manager API into tenant asset records.
 
 ## Overview & Features
 
-- **Host-to-Company Mapping**: Map UniFi hosts or consoles to individual Weavestream companies.
+- **Host-to-Company Mapping**: Map UniFi hosts or consoles to individual RivetDocs companies.
 - **Infrastructure & Client Ingestion**: Syncs UniFi hardware nodes (gateways, switches, APs) as well as discovered client devices.
 - **Real-Time Network Telemetry**: Keeps IP address, MAC address, firmware version, and online/offline status updated.
 - **Separate Device and Client Resources**: Project managed infrastructure and connected clients into independently configured asset layouts.
@@ -41,16 +41,16 @@ The UniFi driver extracts the following network hardware and client fields:
 
 ### Step 1: Prepare Site Manager Credentials
 
-Create a dedicated UniFi Site Manager API key with access to the hosts and sites that Weavestream should inventory. Store the key securely; Weavestream encrypts it when the integration is saved.
+Create a dedicated UniFi Site Manager API key with access to the hosts and sites that RivetDocs should inventory. Store the key securely; RivetDocs encrypts it when the integration is saved.
 
-### Step 2: Configure Integration in Weavestream
+### Step 2: Configure Integration in RivetDocs
 
-1. In Weavestream, navigate to **Admin → Integrations → New Integration**.
+1. In RivetDocs, navigate to **Admin → Integrations → New Integration**.
 2. Select **UniFi Site Manager** as the provider.
 3. Enter the Site Manager **API Key**. Leave **API Base URL** at its default unless UniFi supplied a different API host.
 4. Select **Create**. New integrations start paused.
 5. On **Credentials & schedule**, select **Test connection**.
-6. Open **Organizations** and map each visible UniFi host or console to the corresponding Weavestream company.
+6. Open **Organizations** and map each visible UniFi host or console to the corresponding RivetDocs company.
 7. Configure **Devices fields** for gateways, switches, and access points (recommended upstream match value: `mac`).
 8. Configure **Clients fields** separately for connected clients (recommended upstream match value: `name`).
 9. Change **Status** to active and select **Save changes**.

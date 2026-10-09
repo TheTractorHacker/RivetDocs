@@ -1,4 +1,4 @@
-import type { BackupConfig, BackupRunDto } from '@weavestream/shared';
+import type { BackupConfig, BackupRunDto } from '@rivetdocs/shared';
 import { serverApiFetch } from './core';
 
 // ───────────────────────────────────────────────────────────────────

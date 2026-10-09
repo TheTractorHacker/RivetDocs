@@ -366,7 +366,7 @@ describe('IpamService integration system writes', () => {
     ['wrong kind', binding('subnet', { targetKind: 'article' })], ['wrong id', binding('subnet', { subnetId: ids.other })],
     ['wrong company', binding('subnet', { companyId: 'other-company' })],
     ['blocked', binding('subnet', { state: 'blocked', provenance: { integrationId: ids.integration, ownership: 'breeze', state: 'blocked' } })],
-    ['manual', binding('subnet', { provenance: { integrationId: ids.integration, ownership: 'weavestream', state: 'active' } })],
+    ['manual', binding('subnet', { provenance: { integrationId: ids.integration, ownership: 'rivetdocs', state: 'active' } })],
   ])('rejects a %s subnet binding despite a forged legacy flag', async (_label, persistedBinding) => {
     const { service, tx } = setup({ subnet: subnetRow({ name: 'Old LAN' }), binding: persistedBinding });
     await expect(service.writeSubnetFromIntegration({ ...subnetInput, existingTargetId: ids.subnet, ownershipVerified: true, name: 'LAN' } as never))
@@ -1312,7 +1312,7 @@ describe('IpamService integration system writes', () => {
     ['wrong kind', binding('ip_reservation', { targetKind: 'article' })], ['wrong id', binding('ip_reservation', { ipReservationId: ids.other })],
     ['wrong company', binding('ip_reservation', { companyId: 'other-company' })],
     ['blocked', binding('ip_reservation', { state: 'blocked', provenance: { integrationId: ids.integration, ownership: 'breeze', state: 'blocked' } })],
-    ['manual', binding('ip_reservation', { provenance: { integrationId: ids.integration, ownership: 'weavestream', state: 'active' } })],
+    ['manual', binding('ip_reservation', { provenance: { integrationId: ids.integration, ownership: 'rivetdocs', state: 'active' } })],
   ])('rejects a %s reservation binding despite a forged legacy flag', async (_label, persistedBinding) => {
     const { service, tx } = setup({ subnet: subnetRow(), reservation: reservationRow({ label: 'Old' }), binding: persistedBinding });
     await expect(service.writeReservationFromIntegration({

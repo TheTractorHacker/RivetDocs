@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateAssetLayoutSchema, problemMessage } from '@weavestream/shared';
+import { updateAssetLayoutSchema, problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import { Btn, Dialog, useToast } from '../../../../components/ui';
-import type { LayoutSummary } from '@weavestream/shared';
+import type { LayoutSummary } from '@rivetdocs/shared';
 import {
   LayoutFormFields,
   slugify,

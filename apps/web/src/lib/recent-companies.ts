@@ -20,7 +20,7 @@ export type RecentCompany = { id: string; name: string };
 // it. Safe to delete this block after a release or two.
 try {
   if (typeof window !== 'undefined') {
-    window.localStorage.removeItem('weavestream:companies:recent');
+    window.localStorage.removeItem('rivetdocs:companies:recent');
   }
 } catch {
   // Storage disabled — nothing to scrub.

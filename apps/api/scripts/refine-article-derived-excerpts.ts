@@ -3,8 +3,8 @@
  * Mobile Phase 4 — refine `articles.derived_excerpt` (run once after
  * deploying the 0067 migration; safe to re-run any time).
  *
- *   pnpm --filter @weavestream/api exec ts-node scripts/refine-article-derived-excerpts.ts --dry-run
- *   pnpm --filter @weavestream/api exec ts-node scripts/refine-article-derived-excerpts.ts
+ *   pnpm --filter @rivetdocs/api exec ts-node scripts/refine-article-derived-excerpts.ts --dry-run
+ *   pnpm --filter @rivetdocs/api exec ts-node scripts/refine-article-derived-excerpts.ts
  *
  * Migration 0067 seeded `derived_excerpt` in SQL from
  * `content_plaintext` so the projected article list never served a
@@ -25,8 +25,8 @@
  *    stored a fresher derivation) is skipped, never stomped.
  *  - Keyset-paginated batches; never loads the whole corpus.
  */
-import { PrismaClient } from '@weavestream/db';
-import { markdownExcerpt, tiptapExcerpt } from '@weavestream/shared';
+import { PrismaClient } from '@rivetdocs/db';
+import { markdownExcerpt, tiptapExcerpt } from '@rivetdocs/shared';
 
 const BATCH = 200;
 const DRY_RUN = process.argv.includes('--dry-run');

@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { CURRENT_PASSWORD_INVALID_CODE } from '@weavestream/shared';
+import { CURRENT_PASSWORD_INVALID_CODE } from '@rivetdocs/shared';
 import { PasswordForm } from './password-form';
 
 /**

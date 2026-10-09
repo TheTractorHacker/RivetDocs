@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties } from 'react';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import { Btn, Icon, useToast } from '../../../../components/ui';
 

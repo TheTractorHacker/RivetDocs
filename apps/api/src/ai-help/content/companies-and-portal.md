@@ -41,7 +41,7 @@ Do not interpret a company membership as permission to configure global areas su
 <!-- aliases: permissions | RBAC | super admin | operator | contractor | global access | capabilities | readonly user -->
 <!-- requires: membership.read -->
 
-Weavestream evaluates access in three layers:
+RivetDocs evaluates access in three layers:
 
 - **Global role**: Super admin has full platform/company access. Operator access is derived from memberships and global access. Contractor access is membership-only and time-bound. Client user is portal-only and read-only.
 - **Company membership**: Full allows company changes; Read-only allows company reads. An active explicit membership overrides an operator’s default global company access for that company.

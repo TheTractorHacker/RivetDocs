@@ -3,8 +3,8 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
-import type { MonitoredDomainDto } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { MonitoredDomainDto } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,

@@ -7,7 +7,7 @@ import {
   Tag,
   type TagTone,
 } from '../../../../components/ui';
-import type { MonitoredDomainDto } from '@weavestream/shared';
+import type { MonitoredDomainDto } from '@rivetdocs/shared';
 import { spacedRelativePast as fmtRelativePast } from '../../../../lib/relative-time';
 
 /**

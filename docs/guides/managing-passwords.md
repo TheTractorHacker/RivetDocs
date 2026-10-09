@@ -7,7 +7,7 @@ description: Set up and use the password vault for secure credential storage.
 
 # Managing Passwords
 
-This guide covers the day-to-day workflow for the Weavestream password vault — adding credentials, organising them, and retrieving them safely.
+This guide covers the day-to-day workflow for the RivetDocs password vault — adding credentials, organising them, and retrieving them safely.
 
 ## Adding a Password
 
@@ -151,7 +151,7 @@ Editing internal access requires both write access to the company **and** the me
 
 ## Linking to Articles and Assets
 
-Passwords can be linked to articles and assets using the same relations system used by the rest of Weavestream.
+Passwords can be linked to articles and assets using the same relations system used by the rest of RivetDocs.
 
 1. Open the credential's detail page
 2. Switch to the **Linked items** tab

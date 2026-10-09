@@ -28,7 +28,7 @@ export async function generateMetadata({
 
 /**
  * Phase 12+ — global admin ticket detail. Real-time fetch from the
- * upstream ticketing system; nothing is persisted in Weavestream.
+ * upstream ticketing system; nothing is persisted in RivetDocs.
  * Visiting the page auto-attaches the ticket markdown to the chat
  * panel context so the operator can immediately ask the AI to draft
  * an article — the chat panel's "Save as article" dialog handles the

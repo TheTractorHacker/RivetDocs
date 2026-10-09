@@ -4,12 +4,12 @@ import {
   CloudflareDriftSweepJobNames,
   cloudflareDriftSweepJobSchema,
   QueueNames,
-} from '@weavestream/shared';
-import { EnvService, RedisService } from '@weavestream/api/runtime';
+} from '@rivetdocs/shared';
+import { EnvService, RedisService } from '@rivetdocs/api/runtime';
 import {
   CloudflareListsService,
   CloudflareRegistrarSyncService,
-} from '@weavestream/api/integrations';
+} from '@rivetdocs/api/integrations';
 import {
   createManagedWorker,
   type ManagedWorker,

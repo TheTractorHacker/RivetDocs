@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ApiKeySummary, CreatedApiKey } from '@weavestream/shared';
+import type { ApiKeySummary, CreatedApiKey } from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { FormattedRelative } from '../../lib/timezone-context';
 import {

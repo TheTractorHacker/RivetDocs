@@ -189,7 +189,7 @@ function BackendUnavailablePanel() {
             margin: '0 0 20px',
           }}
         >
-          The web app couldn&rsquo;t reach the Weavestream API. You have
+          The web app couldn&rsquo;t reach the RivetDocs API. You have
           not been signed out. This is a server availability issue, not
           a login problem. If it persists, ask your administrator to
           check that the API service is running.

@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ArticleSummary, FolderNode } from '@weavestream/shared';
+import type { ArticleSummary, FolderNode } from '@rivetdocs/shared';
 import { Icon } from '../ui';
 
-const STORAGE_KEY_PREFIX = 'weavestream.articleSideNav.openFolders';
+const STORAGE_KEY_PREFIX = 'rivetdocs.articleSideNav.openFolders';
 const UNFILED_KEY = '__unfiled__';
 
 /**

@@ -1,4 +1,4 @@
-import { INTERNAL_TOKEN_HEADER } from '@weavestream/shared';
+import { INTERNAL_TOKEN_HEADER } from '@rivetdocs/shared';
 
 /**
  * `reportIpBlock` — the proxy-side half of web-observed IP denials.

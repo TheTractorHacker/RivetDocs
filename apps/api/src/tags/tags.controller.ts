@@ -18,7 +18,7 @@ import {
   updateTagSchema,
   type CreateTagInput,
   type UpdateTagInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { TagsService } from './tags.service.js';
 import {
   CurrentUser,

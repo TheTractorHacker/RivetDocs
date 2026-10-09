@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 function tempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'weavestream-app-help-'));
+  const root = mkdtempSync(join(tmpdir(), 'rivetdocs-app-help-'));
   tempRoots.push(root);
   return root;
 }

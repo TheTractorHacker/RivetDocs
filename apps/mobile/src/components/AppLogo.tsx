@@ -2,7 +2,7 @@ import wordmarkLight from '../assets/logo-wordmark-light.svg';
 import wordmarkDark from '../assets/logo-wordmark-dark.svg';
 
 /**
- * The Weavestream lockup — the beaver mark plus the wordmark, as one SVG.
+ * The RivetDocs lockup — the beaver mark plus the wordmark, as one SVG.
  *
  * Imported through Vite rather than referenced as `/brand/...`. Three
  * reasons, all of which bite silently otherwise:
@@ -31,7 +31,7 @@ export function AppLogo({ height = 28 }: { height?: number }) {
       <img
         className="m-logo--light"
         src={wordmarkLight}
-        alt="Weavestream"
+        alt="RivetDocs"
         draggable={false}
         style={style}
       />
@@ -42,7 +42,7 @@ export function AppLogo({ height = 28 }: { height?: number }) {
       <img
         className="m-logo--dark"
         src={wordmarkDark}
-        alt="Weavestream"
+        alt="RivetDocs"
         draggable={false}
         style={style}
       />

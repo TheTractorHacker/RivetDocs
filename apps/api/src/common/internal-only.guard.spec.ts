@@ -2,7 +2,7 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import {
   INTERNAL_TOKEN_HEADER,
   deriveInternalApiToken,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { InternalOnlyGuard } from './internal-only.guard.js';
 
 // A stand-in COOKIE_SIGNING_KEY; the exact value doesn't matter, only that

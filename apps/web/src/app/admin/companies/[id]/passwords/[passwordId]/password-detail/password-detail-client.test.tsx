@@ -5,7 +5,7 @@ import type {
   PasswordDetail,
   PasswordGeneratorDefaults,
   PasswordVersionSummary,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PasswordDetailClient } from './password-detail-client';
 import { PasswordHeaderActions } from './password-header-actions';
 
@@ -35,9 +35,9 @@ jest.mock('next/link', () => ({
 jest.mock('../../../../../../../lib/api', () => ({
   apiFetch: (...a: unknown[]) => apiFetch(...a),
 }));
-// Only the browser entry is mocked — the root `@weavestream/shared` stays
+// Only the browser entry is mocked — the root `@rivetdocs/shared` stays
 // real so the actual safeExternalHref decides safe vs rejected below.
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   copyToClipboard: (...a: unknown[]) => copyToClipboard(...a),
 }));
 

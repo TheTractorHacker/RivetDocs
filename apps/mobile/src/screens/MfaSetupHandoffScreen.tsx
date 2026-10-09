@@ -58,7 +58,7 @@ export function MfaSetupHandoffScreen({
       <Title>Finish setup on desktop</Title>
       <Subtitle>
         Your account needs two-factor authentication before you can use
-        Weavestream. Set it up on the desktop app, then come back here.
+        RivetDocs. Set it up on the desktop app, then come back here.
       </Subtitle>
 
       <div className="flex flex-col gap-3">

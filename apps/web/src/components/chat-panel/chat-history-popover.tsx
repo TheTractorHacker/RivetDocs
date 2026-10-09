@@ -10,7 +10,7 @@ import {
   type CSSProperties,
   type MouseEvent,
 } from 'react';
-import type { ChatConversationSummary } from '@weavestream/shared';
+import type { ChatConversationSummary } from '@rivetdocs/shared';
 import { Icon } from '../ui';
 import { listChatConversations } from '../../lib/chat-api';
 import { useChatPanel } from './chat-panel-provider';

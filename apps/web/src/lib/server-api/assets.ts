@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import type { AssetPage, AssetSummary } from '@weavestream/shared';
+import type { AssetPage, AssetSummary } from '@rivetdocs/shared';
 import { unwrapApiResponse } from '../api-errors';
 import { serverApiFetch } from './core';
 

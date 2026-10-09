@@ -5,7 +5,7 @@ import {
   diagramPaletteSignature,
   readDiagramPalette,
   type DiagramPalette,
-} from '@weavestream/shared/browser';
+} from '@rivetdocs/shared/browser';
 import { useDomAccent } from '../../lib/hooks/use-dom-accent';
 import { useDomTheme } from '../../lib/hooks/use-dom-theme';
 

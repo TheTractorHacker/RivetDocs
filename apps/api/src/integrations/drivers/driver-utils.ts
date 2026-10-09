@@ -1,5 +1,5 @@
-import type { SourceFieldDto } from '@weavestream/shared';
-import { fieldSlugSchema, layoutSlugSchema } from '@weavestream/shared';
+import type { SourceFieldDto } from '@rivetdocs/shared';
+import { fieldSlugSchema, layoutSlugSchema } from '@rivetdocs/shared';
 import { DriverRateLimitError } from './integration-driver.js';
 import type { RecommendedDestination } from './integration-driver.js';
 import { safeFetch } from '../../common/egress/safe-fetch.js';

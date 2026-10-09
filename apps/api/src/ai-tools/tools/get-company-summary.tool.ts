@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { GetCompanySummaryToolOutput } from '@weavestream/shared';
+import type { GetCompanySummaryToolOutput } from '@rivetdocs/shared';
 import { PermissionService } from '../../rbac/permission.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { passwordReadWhereFor } from '../../passwords/password-access-policy.js';

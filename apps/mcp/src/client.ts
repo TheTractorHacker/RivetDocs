@@ -1,25 +1,25 @@
 /**
- * Minimal Weavestream REST client. Every request carries the user's API key,
+ * Minimal RivetDocs REST client. Every request carries the user's API key,
  * so the server applies exactly the permissions, tenant scope, rate limits and
  * audit it applies to the same call from any other client. This file adds no
  * authority of its own.
  */
 
 export interface ClientConfig {
-  /** Origin of the Weavestream instance, e.g. https://weavestream.example.com */
+  /** Origin of the RivetDocs instance, e.g. https://rivetdocs.example.com */
   baseUrl: string;
   /** `ws_<keyId>_<secret>`. Never logged and never included in errors. */
   apiKey: string;
   fetchImpl?: typeof fetch;
 }
 
-export class WeavestreamApiError extends Error {
+export class RivetDocsApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
   ) {
     super(message);
-    this.name = 'WeavestreamApiError';
+    this.name = 'RivetDocsApiError';
   }
 }
 
@@ -31,26 +31,26 @@ const REQUEST_TIMEOUT_MS = 30_000;
  * so it is only ever sent over HTTPS (plain HTTP is allowed for loopback dev).
  */
 export function parseConfig(env: Record<string, string | undefined>): ClientConfig {
-  const rawUrl = env.WEAVESTREAM_URL?.trim();
-  const apiKey = env.WEAVESTREAM_API_KEY?.trim();
-  if (!rawUrl) throw new Error('WEAVESTREAM_URL is required.');
-  if (!apiKey) throw new Error('WEAVESTREAM_API_KEY is required.');
+  const rawUrl = env.RIVETDOCS_URL?.trim();
+  const apiKey = env.RIVETDOCS_API_KEY?.trim();
+  if (!rawUrl) throw new Error('RIVETDOCS_URL is required.');
+  if (!apiKey) throw new Error('RIVETDOCS_API_KEY is required.');
   if (!/^ws_[0-9a-f]+_[A-Za-z0-9_-]+$/.test(apiKey)) {
-    throw new Error('WEAVESTREAM_API_KEY does not look like a Weavestream key (ws_…).');
+    throw new Error('RIVETDOCS_API_KEY does not look like a RivetDocs key (ws_…).');
   }
   let url: URL;
   try {
     url = new URL(rawUrl);
   } catch {
-    throw new Error('WEAVESTREAM_URL is not a valid URL.');
+    throw new Error('RIVETDOCS_URL is not a valid URL.');
   }
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && LOCAL_HOSTS.has(url.hostname))) {
-    throw new Error('WEAVESTREAM_URL must use https:// (http:// only for localhost).');
+    throw new Error('RIVETDOCS_URL must use https:// (http:// only for localhost).');
   }
   return { baseUrl: url.origin, apiKey };
 }
 
-export class WeavestreamClient {
+export class RivetDocsClient {
   private readonly fetchImpl: typeof fetch;
 
   constructor(private readonly config: ClientConfig) {
@@ -88,7 +88,7 @@ export class WeavestreamClient {
         err instanceof DOMException && err.name === 'TimeoutError'
           ? `timed out after ${REQUEST_TIMEOUT_MS / 1000}s`
           : 'could not be reached';
-      throw new WeavestreamApiError(0, `Weavestream ${reason}.`);
+      throw new RivetDocsApiError(0, `RivetDocs ${reason}.`);
     }
     let json: unknown = undefined;
     if (text) {
@@ -99,7 +99,7 @@ export class WeavestreamClient {
       }
     }
     if (!res.ok) {
-      throw new WeavestreamApiError(res.status, describeProblem(res.status, json));
+      throw new RivetDocsApiError(res.status, describeProblem(res.status, json));
     }
     return json as T;
   }
@@ -133,5 +133,5 @@ function describeProblem(status: number, json: unknown): string {
       : status === 403
         ? ' The key is read-only, its owner lacks permission, or this action needs an interactive session.'
         : '';
-  return `Weavestream returned ${status}${detail ? `: ${String(detail)}` : '.'}${issues ? ` Issues: ${issues}.` : ''}${hint}`;
+  return `RivetDocs returned ${status}${detail ? `: ${String(detail)}` : '.'}${issues ? ` Issues: ${issues}.` : ''}${hint}`;
 }

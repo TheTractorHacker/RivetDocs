@@ -13,7 +13,7 @@ import type {
   PlatformCapability,
   UserRole,
   UserUiPreferences,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ApiError, apiFetch } from '../lib/api';
 import { applyServerUiPrefs } from '../lib/ui-prefs';
 import { isOrgFreeEntry } from '../lib/org-free';
@@ -147,11 +147,11 @@ function RequireSession({ children }: { children: ReactNode }) {
     const denied = error instanceof ApiError && error.status === 403;
     return (
       <BareScreen>
-        <Title>Weavestream</Title>
+        <Title>RivetDocs</Title>
         <Subtitle>
           {denied
             ? 'You don’t have access to this.'
-            : 'Couldn’t reach Weavestream. Check your connection.'}
+            : 'Couldn’t reach RivetDocs. Check your connection.'}
         </Subtitle>
         {!denied && <Button onClick={() => void refetch()}>Try again</Button>}
       </BareScreen>

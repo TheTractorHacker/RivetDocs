@@ -7,7 +7,7 @@ description: Markdown or rich-text articles with folder hierarchy for tenant kno
 
 # Documentation (Articles)
 
-Weavestream's documentation system lets you build a rich knowledge base for each tenant. Articles are authored in either a **WYSIWYG rich-text editor** (Tiptap) or **raw Markdown** — chosen per article — and organised into a searchable folder hierarchy.
+RivetDocs's documentation system lets you build a rich knowledge base for each tenant. Articles are authored in either a **WYSIWYG rich-text editor** (Tiptap) or **raw Markdown** — chosen per article — and organised into a searchable folder hierarchy.
 
 ![Rich text article editor](./assets/article-editor.png)
 

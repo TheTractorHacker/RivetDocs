@@ -2,12 +2,12 @@
 label: Changelog
 icon: versions
 order: 600
-description: Release notes for all Weavestream versions.
+description: Release notes for all RivetDocs versions.
 ---
 
 # Changelog
 
-All notable changes to Weavestream are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/).
+All notable changes to RivetDocs are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
@@ -29,8 +29,8 @@ All notable changes to Weavestream are documented here. The format follows [Keep
 
 ### Fixed
 
-- **Breeze sync failed after a Breeze upgrade.** Breeze v0.111 and later add fields within the same partner API version (`parentPolicyId` on configuration policies, memory slot and module details on device inventory), and Weavestream rejected every page that carried a field it did not recognise, which failed device inventory, site inventory, network equipment, virtual machines, configuration policies, and everything that depends on them. Weavestream now reads only the Breeze fields it uses: new fields are ignored, new values in display-only lists sync as text, unknown record variants are skipped, and one record Weavestream cannot read is reported by field path while the rest of the page syncs. Backup configurations, whose Breeze export never matched the earlier schema, now sync too. ([#47](https://github.com/Weavestream/Weavestream/issues/47))
-- **Breeze automations and other procedures were withheld as secrets by chance.** The secret inspection that runs before an article is written read Weavestream's own slug (`automations-<id>`) as an encoded credential whenever the record's UUID happened to look random enough, which withheld about a third of automations and marked the whole resource failed. UUIDs are no longer treated as credentials, and a record withheld by this inspection is now reported as "secret blocked" on that record instead of failing the resource. Credential patterns and genuinely random tokens are still withheld.
+- **Breeze sync failed after a Breeze upgrade.** Breeze v0.111 and later add fields within the same partner API version (`parentPolicyId` on configuration policies, memory slot and module details on device inventory), and RivetDocs rejected every page that carried a field it did not recognise, which failed device inventory, site inventory, network equipment, virtual machines, configuration policies, and everything that depends on them. RivetDocs now reads only the Breeze fields it uses: new fields are ignored, new values in display-only lists sync as text, unknown record variants are skipped, and one record RivetDocs cannot read is reported by field path while the rest of the page syncs. Backup configurations, whose Breeze export never matched the earlier schema, now sync too. ([#47](https://github.com/TheTractorHacker/RivetDocs/issues/47))
+- **Breeze automations and other procedures were withheld as secrets by chance.** The secret inspection that runs before an article is written read RivetDocs's own slug (`automations-<id>`) as an encoded credential whenever the record's UUID happened to look random enough, which withheld about a third of automations and marked the whole resource failed. UUIDs are no longer treated as credentials, and a record withheld by this inspection is now reported as "secret blocked" on that record instead of failing the resource. Credential patterns and genuinely random tokens are still withheld.
 - **Password notes are preserved exactly as plain text.** JSON-looking notes are no longer parsed or rewritten as structured data, so notes entered in the web and mobile apps, exports, and PDFs remain unchanged.
 - **Password details now fit on narrow screens.** Credential fields and strength indicators can shrink and stack on mobile instead of overflowing the viewport.
 - **Long values no longer overflow sticky table cells**, and top-bar content no longer triggers a false missing-key warning during navigation.
@@ -49,7 +49,7 @@ All notable changes to Weavestream are documented here. The format follows [Keep
 
 ### Fixed
 
-- **Breeze integration withheld ordinary configuration records as secrets.** The secret-material inspection that guards Breeze policies, scripts, automations, backup configurations, and custom-field values treated any 32-character run of letters, digits, and separators as an encoded credential, so policy names such as `Windows-Defender-Realtime-Protection-Policy`, hostnames, package names, and download URLs caused the whole record to be withheld. Runs that read as words (separator-delimited or camelCase pieces with English letter patterns) are now recognised as text in a record's own name, description, category, and filter fields, in non-text custom fields, and in free-text custom fields named as descriptors. Everything inside policy settings, script parameters, automation definitions, and other free-text custom fields keeps the strict rule whatever its keys are called, so a word-list passphrase there is still withheld. Encoded tokens, random letter groups, base64 material, and credential syntax are quarantined everywhere, and a custom field named "passphrase" is now treated like one named "password". Withheld records now say which side withheld them ("Breeze withheld …" or "Weavestream withheld …") and name the resource, and the Runs tab labels them "secret blocked" instead of "validation error". Reconstruction checklist gaps now say that they are documentation items rather than missing Breeze data, and list the asset field slugs, article phrases, credential entries, or relations that clear each one.
+- **Breeze integration withheld ordinary configuration records as secrets.** The secret-material inspection that guards Breeze policies, scripts, automations, backup configurations, and custom-field values treated any 32-character run of letters, digits, and separators as an encoded credential, so policy names such as `Windows-Defender-Realtime-Protection-Policy`, hostnames, package names, and download URLs caused the whole record to be withheld. Runs that read as words (separator-delimited or camelCase pieces with English letter patterns) are now recognised as text in a record's own name, description, category, and filter fields, in non-text custom fields, and in free-text custom fields named as descriptors. Everything inside policy settings, script parameters, automation definitions, and other free-text custom fields keeps the strict rule whatever its keys are called, so a word-list passphrase there is still withheld. Encoded tokens, random letter groups, base64 material, and credential syntax are quarantined everywhere, and a custom field named "passphrase" is now treated like one named "password". Withheld records now say which side withheld them ("Breeze withheld …" or "RivetDocs withheld …") and name the resource, and the Runs tab labels them "secret blocked" instead of "validation error". Reconstruction checklist gaps now say that they are documentation items rather than missing Breeze data, and list the asset field slugs, article phrases, credential entries, or relations that clear each one.
 
 ## [1.9.8] - 2026-09-10
 
@@ -139,7 +139,7 @@ All notable changes to Weavestream are documented here. The format follows [Keep
 
 ### Added
 
-- **Mobile app for field technicians.** Weavestream now ships a dedicated mobile interface at **`/m`**, served from the existing web container — no separate deployment, no app store, nothing to license, and the same accounts, sessions, permissions, and audit trail as desktop. It installs as a PWA (home-screen icon, standalone window) and opens on a **launcher** that works before any client is selected: search across every organization you can access, your pinned organizations, then the full list. Included on the phone: **passwords** (create, edit, archive, reveal with the same step-up re-authentication and reveal auditing as desktop, one-time codes with countdown, copy with automatic clipboard clearing), **articles** read-only in both rich-text and Markdown, **assets** across custom layouts including file fields with direct camera capture for serial plates and racks, **attachments** on asset, article, and password detail screens, **search**, and **Ask anything** — where article change proposals can now be previewed, applied, and rejected, with edits shown as a line diff and creates confirming organization, folder, title, and client visibility first. A **Profile** screen covers the account chores worth doing onsite: appearance and change-password. The app follows the account's theme and accent and picks up changes made on desktop. **Records are never stored on the device** — the app itself opens offline, but data requires a connection and revealed secrets clear when the app is backgrounded. Article editing, rich-text asset fields, MFA enrollment, and all administration stay on a laptop by design. See the [Mobile App guide](/features/mobile/).
+- **Mobile app for field technicians.** RivetDocs now ships a dedicated mobile interface at **`/m`**, served from the existing web container — no separate deployment, no app store, nothing to license, and the same accounts, sessions, permissions, and audit trail as desktop. It installs as a PWA (home-screen icon, standalone window) and opens on a **launcher** that works before any client is selected: search across every organization you can access, your pinned organizations, then the full list. Included on the phone: **passwords** (create, edit, archive, reveal with the same step-up re-authentication and reveal auditing as desktop, one-time codes with countdown, copy with automatic clipboard clearing), **articles** read-only in both rich-text and Markdown, **assets** across custom layouts including file fields with direct camera capture for serial plates and racks, **attachments** on asset, article, and password detail screens, **search**, and **Ask anything** — where article change proposals can now be previewed, applied, and rejected, with edits shown as a line diff and creates confirming organization, folder, title, and client visibility first. A **Profile** screen covers the account chores worth doing onsite: appearance and change-password. The app follows the account's theme and accent and picks up changes made on desktop. **Records are never stored on the device** — the app itself opens offline, but data requires a connection and revealed secrets clear when the app is backgrounded. Article editing, rich-text asset fields, MFA enrollment, and all administration stay on a laptop by design. See the [Mobile App guide](/features/mobile/).
 - **Mermaid diagrams in Markdown articles.** A ```` ```mermaid ```` fence now renders as a flowchart, sequence, class, ER, state, gantt, or git diagram — in the desktop article view, in the editor's live preview, and in the mobile reader — themed from the reader's own dark/light mode and accent. Every rendered diagram passes through a shared sanitizer before it reaches the page (see **Security**). The diagram engine loads only when an article actually contains one, and on mobile it is deliberately excluded from the offline cache, so an installed app that is offline shows the diagram source with an explanation rather than a blank space.
 - **AI article summaries (opt-in, off by default).** A new **"Use AI to create auto summaries"** setting under AI settings sends an article's title and text to your configured AI endpoint when it is created or edited, and shows the returned one-to-two-sentence summary in article lists; articles without one fall back to a plain excerpt. Existing articles are never summarized until their next edit, so enabling the setting does not ship your back catalogue anywhere. Generation runs in the background one at a time, and bulk integration imports drain through a paced sweep rather than flooding the endpoint.
 - **"Ask anything" can draft a new article from any chat.** The create-article proposal is no longer withheld from chats opened outside a company — a chat started from the mobile launcher, or from a global page, can now propose an article and let you choose its destination organization, folder, title, and client visibility in the confirmation step. Previously such a chat still wrote the draft into the transcript, just with no way to save it.
@@ -196,11 +196,11 @@ All notable changes to Weavestream are documented here. The format follows [Keep
 
 ### Added
 
-- **Breeze reconstruction sync.** A new read-only integration driver copies durable, non-secret reconstruction facts from Breeze into native Weavestream records via the Breeze Partner API. It does not install an agent, copy monitoring state, run commands, or write back to Breeze, and the resulting company data, export, and PDF stay usable when Breeze is offline. Enabled resources execute as an acyclic dependency graph — sites before devices, subnets before reservations, endpoints before relations — with cycles rejected. Runs come in three modes: **dry run** (fetch, validate, transform, report, roll back), **incremental** (from the last committed high-water checkpoint), and **full** (complete source snapshot; only a terminal authoritative full traversal may mark unseen records stale). Requires the Partner API surface introduced in the July 2026 Breeze release; older Breeze deployments return 404 for every partner request. See the [Breeze integration guide](/integrations/breeze/).
+- **Breeze reconstruction sync.** A new read-only integration driver copies durable, non-secret reconstruction facts from Breeze into native RivetDocs records via the Breeze Partner API. It does not install an agent, copy monitoring state, run commands, or write back to Breeze, and the resulting company data, export, and PDF stay usable when Breeze is offline. Enabled resources execute as an acyclic dependency graph — sites before devices, subnets before reservations, endpoints before relations — with cycles rejected. Runs come in three modes: **dry run** (fetch, validate, transform, report, roll back), **incremental** (from the last committed high-water checkpoint), and **full** (complete source snapshot; only a terminal authoritative full traversal may mark unseen records stale). Requires the Partner API surface introduced in the July 2026 Breeze release; older Breeze deployments return 404 for every partner request. See the [Breeze integration guide](/integrations/breeze/).
 - **Integrations can now write native records beyond assets.** The reconstruction layer adds typed target writers for **IPAM subnets and IP reservations**, **versioned internal articles** (configuration policies, assignments, scripts, automations, backup configurations, and custom-field definitions), and **relations** between synced records — alongside the existing asset writer. Each target carries its own Breeze-owned binding; missing or cross-company relation endpoints become safe gaps rather than dangling or cross-tenant edges.
 - **Per-resource ownership rules.** Each mapping now declares how sync interacts with operator edits: **Source wins** (always update from the provider), **Preserve manual** (accept the provider until an operator changes the value, then keep the operator's), and **Manual only** (never written by sync). Only an exact provider-owned binding for the same integration, organization mapping, resource, company, target kind, and native target may mutate that target — sync can never claim a manual or differently-owned record.
 - **Reconstruction completeness view.** A new tab on the integration detail page reports six separate states per scope — *Synchronized current*, *Manually documented*, *Secret blocked*, *Missing*, *Stale*, and *Synchronization error* — with a paginated list of active gaps filtered by organization mapping and resource. Backed by new `integration.manage`-gated `/completeness` and `/gaps` endpoints.
-- **Source provenance on record detail pages.** Assets, articles, and subnets show where their data came from — source label and resource, first seen, last seen, last synchronized, stale since, and whether the record is source-owned or Weavestream-owned. Provenance sits behind a new collapsible "show more" disclosure alongside activity history, with a coloured attention dot so a stale or blocked source record is never buried entirely.
+- **Source provenance on record detail pages.** Assets, articles, and subnets show where their data came from — source label and resource, first seen, last seen, last synchronized, stale since, and whether the record is source-owned or RivetDocs-owned. Provenance sits behind a new collapsible "show more" disclosure alongside activity history, with a coloured attention dot so a stale or blocked source record is never buried entirely.
 - **Opt-in scalar custom fields.** Custom-field definitions and values are walked through independent cursors and mapped per definition: a mapping's source field is the immutable definition ID and its target is a distinct field on the provider's asset layout. A value row writes only the field mapped to its definition; unmapped definitions write no native state, and the mutable provider field key/name stay display metadata rather than mapping identity.
 - **Sync schedule interval picker.** Integration create and credentials surfaces now offer human interval presets (every 5 minutes through every 24 hours) instead of a raw cron box, shared across all drivers. Storage remains a five-field UTC cron, so existing rows and the API contract are unchanged; a hand-entered cron that matches no preset is surfaced as a "Custom" option holding the exact value and is never silently rewritten.
 - **Manual runs can select incremental or full mode.** The trigger-sync action now takes an explicit mode instead of always deciding for the operator.
@@ -237,7 +237,7 @@ All notable changes to Weavestream are documented here. The format follows [Keep
 - **Reconstruction lifecycle audit rows carry safe payloads only.** `integration.target.created`, `.updated`, `.stale`, `.restored`, and `.blocked` record local integration/mapping/resource/target identity, target kind and state, bounded counts, and an optional safe reason category — never external IDs, raw source or provenance data, provider configuration, content, gap details, rejected values, or credentials. Resources fail closed as `missing_audit_actor` before any native writer runs when no authorised actor is available.
 - **Partner API credentials are encrypted at rest** with the kid-tagged `INTEGRATION_SECRET_KEY` envelope, sent only in the `X-API-Key` header, never refilled as plaintext in the UI, and never forwarded across redirects. Outbound requests keep the existing SSRF and DNS-rebinding guard, with each redirect hop revalidated rather than treated as an allowlist bypass.
 - **UUID redaction widened to RFC 9562.** The export redaction pattern now covers UUID versions 6–8 in addition to the previously matched versions.
-- **CI fails when PDF inspection tooling is missing.** The company-PDF-export specs shell out to Poppler and libxml2 to verify rendered credential text, AES-256 encryption, and exported XMP. They skip with an install hint on a clean contributor checkout, but CI installs both and sets `WEAVESTREAM_REQUIRE_PDF_TOOLS=1` so a broken install step fails the build instead of silently dropping that coverage.
+- **CI fails when PDF inspection tooling is missing.** The company-PDF-export specs shell out to Poppler and libxml2 to verify rendered credential text, AES-256 encryption, and exported XMP. They skip with an install hint on a clean contributor checkout, but CI installs both and sets `RIVETDOCS_REQUIRE_PDF_TOOLS=1` so a broken install step fails the build instead of silently dropping that coverage.
 
 ### Documentation
 
@@ -250,8 +250,8 @@ All notable changes to Weavestream are documented here. The format follows [Keep
 ### Added
 
 - **Patch-first AI article editing.** Focused AI edits now propose exact passage replacements instead of regenerating the complete article, reducing output size and preserving unchanged content more reliably on smaller local models. Whole-document replacement remains available for explicit rewrites. Patch previews and Apply share the same exact-match rules, and stale, missing, or ambiguous passages are refused without partial writes.
-- **Product help AI tool (`get_app_help`).** The chat assistant can now answer "how do I use Weavestream" questions — creating asset layouts, configuring integrations, mapping organizations, running syncs — from release-matched instructions bundled with the deployed application. The content is read-only and strictly separated from live tenant data: it explains the current UI and required permissions but cannot inspect real assets, mappings, or sync state, and when no help section qualifies with sufficient confidence the assistant says so rather than guessing. Deployment, Docker, environment, database, and server-administration topics are intentionally excluded. Access is scoped to non-portal roles (`CLIENT_USER` excluded), and every call is audited with the question and returned content redacted to SHA-256 hashes.
-- **Installable app (PWA).** Weavestream now ships a web app manifest and standalone icons (including a maskable variant), so it can be installed to a device home screen or dock and launched as a standalone window.
+- **Product help AI tool (`get_app_help`).** The chat assistant can now answer "how do I use RivetDocs" questions — creating asset layouts, configuring integrations, mapping organizations, running syncs — from release-matched instructions bundled with the deployed application. The content is read-only and strictly separated from live tenant data: it explains the current UI and required permissions but cannot inspect real assets, mappings, or sync state, and when no help section qualifies with sufficient confidence the assistant says so rather than guessing. Deployment, Docker, environment, database, and server-administration topics are intentionally excluded. Access is scoped to non-portal roles (`CLIENT_USER` excluded), and every call is audited with the question and returned content redacted to SHA-256 hashes.
+- **Installable app (PWA).** RivetDocs now ships a web app manifest and standalone icons (including a maskable variant), so it can be installed to a device home screen or dock and launched as a standalone window.
 - **Profile "Memberships" tab.** The profile page now lists the signed-in user's company memberships and their per-company roles alongside the existing profile, appearance, security, and sessions tabs.
 
 ### Changed
@@ -302,7 +302,7 @@ All notable changes to Weavestream are documented here. The format follows [Keep
 
 ### Fixed
 
-- **Admin tools no longer crash on self-hosted installs served over plain HTTP.** When Weavestream is opened over `http://` by IP address (for example `http://192.168.1.20:3000`), the browser treats the origin as non-secure and does not expose `crypto.randomUUID()`, which produced a `crypto.randomUUID is not a function` error in the layout builder (creating a layout from a template or dragging in a new field), integration field-mapping rows, and AI chat tabs. These browser-only temporary IDs now use a shared helper that falls back to the Web Crypto `getRandomValues` API, which remains available on non-secure origins. Serving Weavestream over HTTPS behind a TLS reverse proxy remains the recommended production configuration.
+- **Admin tools no longer crash on self-hosted installs served over plain HTTP.** When RivetDocs is opened over `http://` by IP address (for example `http://192.168.1.20:3000`), the browser treats the origin as non-secure and does not expose `crypto.randomUUID()`, which produced a `crypto.randomUUID is not a function` error in the layout builder (creating a layout from a template or dragging in a new field), integration field-mapping rows, and AI chat tabs. These browser-only temporary IDs now use a shared helper that falls back to the Web Crypto `getRandomValues` API, which remains available on non-secure origins. Serving RivetDocs over HTTPS behind a TLS reverse proxy remains the recommended production configuration.
 
 ## [1.8.12] - 2026-07-03
 
@@ -540,7 +540,7 @@ _No notable changes._ Documentation-only maintenance release (Docker troubleshoo
 
 ### Added
 
-- **NinjaOne RMM integration.** New integration driver for syncing managed devices from NinjaOne organisations into Weavestream asset records, joining the existing Action1, UniFi, and Cloudflare drivers under **Admin → Integrations**. Authentication is OAuth2 `client_credentials` with the `monitoring` scope; the regional API base URL is configurable for US / EU / CA / OC tenants. Each NinjaOne organisation maps to a single Weavestream company, with an optional per-mapping location-ID filter.
+- **NinjaOne RMM integration.** New integration driver for syncing managed devices from NinjaOne organisations into RivetDocs asset records, joining the existing Action1, UniFi, and Cloudflare drivers under **Admin → Integrations**. Authentication is OAuth2 `client_credentials` with the `monitoring` scope; the regional API base URL is configurable for US / EU / CA / OC tenants. Each NinjaOne organisation maps to a single RivetDocs company, with an optional per-mapping location-ID filter.
 - **Rich NinjaOne field catalogue.** The driver flattens the `/v2/devices-detailed` payload — `os`, `system`, `memory`, `processors[0]`, `volumes[0]`, `references.*` (organisation, location, role, policy, role-policy, warranty, assigned owner) and `maintenance` subtrees — onto roughly seventy mappable top-level fields covering identity, OS, make / model / serial / BIOS, processor, memory, volumes, network, warranty, owner, role, policy, location, lifecycle, and maintenance state.
 - **Human-readable variants for byte and clock-speed fields.** `memoryCapacityHuman`, `systemTotalPhysicalMemoryHuman`, `firstVolumeCapacityHuman`, `firstVolumeFreeSpaceHuman`, `processorClockSpeedHuman`, `processorMaxClockSpeedHuman` render alongside the raw numeric fields, formatted like `127.5 GB` / `4.4 TB` / `2.10 GHz` for direct mapping onto TEXT and rich-text AssetFields.
 - **Multi-line `volumesSummary`.** TEXTAREA-typed field that renders every volume on the device as one line each — `<name>[ <label>] — <capacity> total, <freeSpace> free (<filesystem>)` — for asset layouts with a single storage textarea slot.
@@ -554,7 +554,7 @@ _No notable changes._ Documentation-only maintenance release (Docker troubleshoo
 
 ### Added
 
-- **Cloudflare integration.** New integration driver for updating Cloudflare Zero Trust IP lists. Manage Cloudflare Zero Trust IP lists directly from Weavestream via API token authentication. Managed under **Admin → Integrations** alongside existing Action1 and UniFi connectors.
+- **Cloudflare integration.** New integration driver for updating Cloudflare Zero Trust IP lists. Manage Cloudflare Zero Trust IP lists directly from RivetDocs via API token authentication. Managed under **Admin → Integrations** alongside existing Action1 and UniFi connectors.
 
 ---
 
@@ -594,7 +594,7 @@ _No notable changes._ Documentation-only maintenance release (Docker troubleshoo
 
 ### Changed
 
-- **MinIO replaced with native local filesystem storage.** The `minio` container is gone. The api and worker now share a host-bind-mounted directory (`${DATA_DIR}/files`, surfaced inside the containers as `${FILE_STORAGE_DIR}`, default `/var/lib/weavestream/files`) and write atomically via tmp+rename. Per-tenant isolation is by directory (`${FILE_STORAGE_DIR}/<companyId>/...`); browsers continue to read every file through the API's same-origin streaming endpoints, so there is still no public file surface. The AWS S3 SDK is no longer a runtime dependency.
+- **MinIO replaced with native local filesystem storage.** The `minio` container is gone. The api and worker now share a host-bind-mounted directory (`${DATA_DIR}/files`, surfaced inside the containers as `${FILE_STORAGE_DIR}`, default `/var/lib/rivetdocs/files`) and write atomically via tmp+rename. Per-tenant isolation is by directory (`${FILE_STORAGE_DIR}/<companyId>/...`); browsers continue to read every file through the API's same-origin streaming endpoints, so there is still no public file surface. The AWS S3 SDK is no longer a runtime dependency.
 
 ### Removed
 
@@ -797,7 +797,7 @@ _No notable changes._ Documentation-only maintenance release (Docker troubleshoo
 ### Fixed
 
 - Sharp (libvips) native module on `linux/amd64` musl.
-- Docker `web` image now builds `@weavestream/shared` before the Next.js build step.
+- Docker `web` image now builds `@rivetdocs/shared` before the Next.js build step.
 
 ### Upgrading from 1.0.0
 
@@ -824,7 +824,7 @@ Initial public release.
 - Full-text search across articles, assets, and uploads.
 - Configurable workspace branding and tenant terminology from the admin UI.
 - Mobile-responsive admin shell and client portal.
-- Multi-arch container images (`linux/amd64`, `linux/arm64`) at `ghcr.io/weavestream/weavestream-*`.
+- Multi-arch container images (`linux/amd64`, `linux/arm64`) at `ghcr.io/thetractorhacker/rivetdocs-*`.
 
 ### Known limitations
 
@@ -834,54 +834,54 @@ Initial public release.
 
 ---
 
-[Unreleased]: https://github.com/Weavestream/Weavestream/compare/v1.9.10...HEAD
-[1.9.10]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.10
-[1.9.9]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.9
-[1.9.8]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.8
-[1.9.7]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.7
-[1.9.6]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.6
-[1.9.5]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.5
-[1.9.4]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.4
-[1.9.3]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.3
-[1.9.2]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.2
-[1.9.1]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.1
-[1.9.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.9.0
-[1.8.15]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.15
-[1.8.14]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.14
-[1.8.13]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.13
-[1.8.12]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.12
-[1.8.11]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.11
-[1.8.10]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.10
-[1.8.9]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.9
-[1.8.8]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.8
-[1.8.7]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.7
-[1.8.6]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.6
-[1.8.5]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.5
-[1.8.4]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.4
-[1.8.3]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.3
-[1.8.1]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.1
-[1.8.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.8.0
-[1.7.1]: https://github.com/Weavestream/Weavestream/releases/tag/v1.7.1
-[1.7.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.7.0
-[1.6.4]: https://github.com/Weavestream/Weavestream/releases/tag/v1.6.4
-[1.6.3]: https://github.com/Weavestream/Weavestream/releases/tag/v1.6.3
-[1.6.2]: https://github.com/Weavestream/Weavestream/releases/tag/v1.6.2
-[1.6.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.6.0
-[1.5.6]: https://github.com/Weavestream/Weavestream/releases/tag/v1.5.6
-[1.5.5]: https://github.com/Weavestream/Weavestream/releases/tag/v1.5.5
-[1.5.4]: https://github.com/Weavestream/Weavestream/releases/tag/v1.5.4
-[1.5.3]: https://github.com/Weavestream/Weavestream/releases/tag/v1.5.3
-[1.5.2]: https://github.com/Weavestream/Weavestream/releases/tag/v1.5.2
-[1.5.1]: https://github.com/Weavestream/Weavestream/releases/tag/v1.5.1
-[1.5.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.5.0
-[1.4.1]: https://github.com/Weavestream/Weavestream/releases/tag/v1.4.1
-[1.4.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.4.0
-[1.3.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.3.0
-[1.2.1]: https://github.com/Weavestream/Weavestream/releases/tag/v1.2.1
-[1.2.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.2.0
-[1.1.5]: https://github.com/Weavestream/Weavestream/releases/tag/v1.1.5
-[1.1.4]: https://github.com/Weavestream/Weavestream/releases/tag/v1.1.4
-[1.1.3]: https://github.com/Weavestream/Weavestream/releases/tag/v1.1.3
-[1.1.1]: https://github.com/Weavestream/Weavestream/releases/tag/v1.1.1
-[1.1.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.1.0
-[1.0.0]: https://github.com/Weavestream/Weavestream/releases/tag/v1.0.0
+[Unreleased]: https://github.com/TheTractorHacker/RivetDocs/compare/v1.9.10...HEAD
+[1.9.10]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.10
+[1.9.9]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.9
+[1.9.8]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.8
+[1.9.7]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.7
+[1.9.6]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.6
+[1.9.5]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.5
+[1.9.4]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.4
+[1.9.3]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.3
+[1.9.2]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.2
+[1.9.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.1
+[1.9.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.0
+[1.8.15]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.15
+[1.8.14]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.14
+[1.8.13]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.13
+[1.8.12]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.12
+[1.8.11]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.11
+[1.8.10]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.10
+[1.8.9]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.9
+[1.8.8]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.8
+[1.8.7]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.7
+[1.8.6]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.6
+[1.8.5]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.5
+[1.8.4]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.4
+[1.8.3]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.3
+[1.8.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.1
+[1.8.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.8.0
+[1.7.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.7.1
+[1.7.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.7.0
+[1.6.4]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.6.4
+[1.6.3]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.6.3
+[1.6.2]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.6.2
+[1.6.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.6.0
+[1.5.6]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.5.6
+[1.5.5]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.5.5
+[1.5.4]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.5.4
+[1.5.3]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.5.3
+[1.5.2]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.5.2
+[1.5.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.5.1
+[1.5.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.5.0
+[1.4.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.4.1
+[1.4.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.4.0
+[1.3.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.3.0
+[1.2.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.2.1
+[1.2.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.2.0
+[1.1.5]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.1.5
+[1.1.4]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.1.4
+[1.1.3]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.1.3
+[1.1.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.1.1
+[1.1.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.1.0
+[1.0.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.0.0

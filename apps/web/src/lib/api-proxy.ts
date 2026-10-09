@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { INTERNAL_TOKEN_HEADER } from '@weavestream/shared';
+import { INTERNAL_TOKEN_HEADER } from '@rivetdocs/shared';
 // Import the proxy/edge-safe config module directly rather than anything
 // under `server-api/`, so this module stays free of `next/headers` and
 // friends (keeps it unit-testable and light).
@@ -69,7 +69,7 @@ const HOP_BY_HOP_HEADERS = new Set([
 // URL, so `http://api:4000/...` is never disclosed to the client.
 function internalOnlyNotFound(req: NextRequest): Response {
   const body = JSON.stringify({
-    type: 'https://weavestream.app/problems/404',
+    type: 'https://rivetdocs.app/problems/404',
     title: 'Not Found',
     status: 404,
     instance: `${req.nextUrl.pathname}${req.nextUrl.search ?? ''}`,

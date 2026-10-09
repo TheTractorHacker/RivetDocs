@@ -291,7 +291,7 @@ export type ChatContextDomain = z.infer<typeof chatContextDomainSchema>;
 /**
  * Per-ticket markdown snapshot the client attaches to a turn.
  *
- * Tickets are NEVER persisted in Weavestream — the markdown blob the
+ * Tickets are NEVER persisted in RivetDocs — the markdown blob the
  * client sends is whatever the upstream system returned at fetch time,
  * already normalised by the provider driver. The server treats this
  * as opaque read-only grounding for the LLM and never proposes a tool
@@ -299,7 +299,7 @@ export type ChatContextDomain = z.infer<typeof chatContextDomainSchema>;
  * envelope is generous because ticket activity timelines can be long;
  * the API request limiter is the outer backstop.
  *
- * `id` is the provider-side ticket id (not a Weavestream UUID — this
+ * `id` is the provider-side ticket id (not a RivetDocs UUID — this
  * field is intentionally NOT typed as `z.string().uuid()`).
  */
 export const chatContextTicketSchema = z.object({

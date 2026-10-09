@@ -3,7 +3,7 @@ import {
   HTTP_URL_VALIDATION_MESSAGE,
   type CreateAssetInput,
   type UpdateAssetInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { FieldBlock } from '../../components/FieldBlock';
 import type { AssetFieldMeta, AssetRecord, LayoutFieldRecord } from './api';
 import { AssetFieldValue } from './FieldValueDisplay';

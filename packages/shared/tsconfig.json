@@ -8,7 +8,7 @@
     // next to this config file, which means `rm -rf dist` leaves the
     // incremental state behind — tsc then reports "up to date", emits
     // NOTHING, and exits 0. Consumers fail much later with an
-    // unresolvable `@weavestream/shared`, which is a confusing way to
+    // unresolvable `@rivetdocs/shared`, which is a confusing way to
     // learn that a clean step half-worked. Sharing a directory makes
     // deleting the output invalidate the state that describes it.
     "tsBuildInfoFile": "./dist/.tsbuildinfo"

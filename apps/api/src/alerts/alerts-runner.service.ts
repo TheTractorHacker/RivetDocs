@@ -5,7 +5,7 @@ import {
   type AlertsSendJob,
   type AlertExpirationKind,
   type AlertType,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueuesService } from '../queues/queues.service.js';
 
@@ -120,7 +120,7 @@ export class AlertsRunnerService {
 
     await this.enqueueSend(config, {
       triggerKey,
-      subject: `[Weavestream] ${items.length} expiration(s) within ${config.triggerDays ?? 0} day(s)`,
+      subject: `[RivetDocs] ${items.length} expiration(s) within ${config.triggerDays ?? 0} day(s)`,
       text: renderExpirationListText(config.name, items, config.triggerDays ?? 0),
     });
     return 1;
@@ -159,13 +159,13 @@ export class AlertsRunnerService {
 
       await this.enqueueSend(config, {
         triggerKey,
-        subject: `[Weavestream] Website appears down — ${d.hostname}`,
+        subject: `[RivetDocs] Website appears down — ${d.hostname}`,
         text: [
           `Hostname:     ${d.hostname}`,
           `HTTP status:  ${d.latestHttpStatus ?? 'unreachable'}`,
           `Down since:   ${since}`,
           '',
-          'Manage your alert configurations in the Weavestream admin under Alerts.',
+          'Manage your alert configurations in the RivetDocs admin under Alerts.',
         ].join('\n'),
       });
       enqueued += 1;
@@ -447,14 +447,14 @@ function singleSubject(item: ExpirationItem): string {
   // subject so the inbox preview matches what the operator should do.
   if (item.kind === 'password' && item.source === 'rotation') {
     if (item.daysUntil < 0) {
-      return `[Weavestream] Rotation overdue by ${Math.abs(item.daysUntil)} day(s) — ${item.label}`;
+      return `[RivetDocs] Rotation overdue by ${Math.abs(item.daysUntil)} day(s) — ${item.label}`;
     }
-    return `[Weavestream] Rotation due in ${item.daysUntil} day(s) — ${item.label}`;
+    return `[RivetDocs] Rotation due in ${item.daysUntil} day(s) — ${item.label}`;
   }
   if (item.daysUntil < 0) {
-    return `[Weavestream] Expired ${Math.abs(item.daysUntil)} day(s) ago — ${item.label}`;
+    return `[RivetDocs] Expired ${Math.abs(item.daysUntil)} day(s) ago — ${item.label}`;
   }
-  return `[Weavestream] Expiring in ${item.daysUntil} day(s) — ${item.label}`;
+  return `[RivetDocs] Expiring in ${item.daysUntil} day(s) — ${item.label}`;
 }
 
 function renderSingleExpirationText(
@@ -475,7 +475,7 @@ function renderSingleExpirationText(
     `Status: ${status} (${item.daysUntil} day(s))`,
     `When:  ${item.expiresAt}`,
     '',
-    'Manage your alert configurations in the Weavestream admin under Alerts.',
+    'Manage your alert configurations in the RivetDocs admin under Alerts.',
   ].join('\n');
 }
 
@@ -495,7 +495,7 @@ function renderExpirationListText(
   }
   lines.push(
     '',
-    'Manage your alert configurations in the Weavestream admin under Alerts.',
+    'Manage your alert configurations in the RivetDocs admin under Alerts.',
   );
   return lines.join('\n');
 }

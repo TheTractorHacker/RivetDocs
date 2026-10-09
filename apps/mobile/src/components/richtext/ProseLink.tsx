@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef, MouseEvent, ReactNode } from 'react';
-import { safeProseHref } from '@weavestream/shared';
+import { safeProseHref } from '@rivetdocs/shared';
 import {
   desktopRecordLink,
   type DesktopRecordLink,

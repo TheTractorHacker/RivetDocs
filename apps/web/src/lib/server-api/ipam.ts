@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import type { SubnetDetail, SubnetRow } from '@weavestream/shared';
+import type { SubnetDetail, SubnetRow } from '@rivetdocs/shared';
 import { unwrapApiResponse } from '../api-errors';
 import { serverApiFetch } from './core';
 

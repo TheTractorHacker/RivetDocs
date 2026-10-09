@@ -1,4 +1,4 @@
-import type { DomainCheckDto, MonitoredDomainDto } from '@weavestream/shared';
+import type { DomainCheckDto, MonitoredDomainDto } from '@rivetdocs/shared';
 
 /**
  * Project a `MonitoredDomainDto` (and optionally its most recent

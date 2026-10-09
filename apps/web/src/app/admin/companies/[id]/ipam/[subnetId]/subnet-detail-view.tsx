@@ -7,8 +7,8 @@ import type {
   IpReservationDto,
   SubnetDetail,
   SubnetOccupant,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../lib/api';
 import {
   Btn,

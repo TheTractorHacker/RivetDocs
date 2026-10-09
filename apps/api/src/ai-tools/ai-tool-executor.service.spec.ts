@@ -1,5 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import type { TenantContext } from '@weavestream/shared';
+import type { TenantContext } from '@rivetdocs/shared';
 import {
   AI_TOOL_BUDGET_MESSAGE,
   AI_TOOL_INVALID_ARGS_MESSAGE,

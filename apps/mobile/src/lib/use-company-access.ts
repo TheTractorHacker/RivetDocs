@@ -1,4 +1,4 @@
-import { effectiveCompanyAccess, type CompanyAccess } from '@weavestream/shared';
+import { effectiveCompanyAccess, type CompanyAccess } from '@rivetdocs/shared';
 import { useMe } from '../screens/TabShell';
 import { useOrgScope } from './org-scope';
 

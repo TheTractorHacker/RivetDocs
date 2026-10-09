@@ -1,4 +1,4 @@
-import type { SearchHit } from '@weavestream/shared';
+import type { SearchHit } from '@rivetdocs/shared';
 import { groupHits } from './grouping';
 
 function hit(kind: SearchHit['kind'], id: string): SearchHit {

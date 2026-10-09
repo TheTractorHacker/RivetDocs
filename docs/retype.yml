@@ -1,6 +1,6 @@
-name: Weavestream
+name: RivetDocs
 description: Self-hosted IT documentation platform for teams, MSPs, and homelabs.
-url: https://docs.weavestream.io
+url: https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/
 output: ./dist # or any path you prefer
 favicon: static/favicon.ico
 
@@ -12,7 +12,7 @@ branding:
 
 links:
   - text: Website
-    link: https://weavestream.io
+    link: https://github.com/TheTractorHacker/RivetDocs
     icon: home
   - text: What's New
     icon: pulse
@@ -21,10 +21,10 @@ links:
         link: /overview/changelog/
         icon: versions
       - text: Releases
-        link: https://github.com/Weavestream/Weavestream/releases
+        link: https://github.com/TheTractorHacker/RivetDocs/releases
         icon: tag
   - text: GitHub
-    link: https://github.com/Weavestream/Weavestream
+    link: https://github.com/TheTractorHacker/RivetDocs
     icon: mark-github
 
 integrations:
@@ -32,10 +32,10 @@ integrations:
     id: G-YBX3J82S1X
 
 footer:
-  copyright: '© 2026 Weavestream. [AGPL-3.0-or-later](https://github.com/Weavestream/Weavestream/blob/main/LICENSE).'
+  copyright: '© 2026 RivetDocs. [AGPL-3.0-or-later](https://github.com/TheTractorHacker/RivetDocs/blob/main/LICENSE).'
   links:
     - text: Website
-      link: https://weavestream.io
+      link: https://github.com/TheTractorHacker/RivetDocs
     - text: Changelog
       link: /overview/changelog/
     - text: Security

@@ -7,7 +7,7 @@ import {
   BackupJobNames,
   QueueNames,
   type BackupJob,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueuesService } from '../queues/queues.service.js';
 import {

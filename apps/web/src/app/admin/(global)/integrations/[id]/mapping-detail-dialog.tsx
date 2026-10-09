@@ -4,8 +4,8 @@ import { useState } from 'react';
 import type {
   IntegrationCompanyMappingDto,
   IntegrationDto,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { FormattedDateTime } from '../../../../../lib/timezone-context';
 import {
@@ -67,7 +67,7 @@ export function MappingDetailDialog({
   async function destroy() {
     if (
       !window.confirm(
-        `Delete this mapping?\n\nLinked assets will be released — they remain in Weavestream but lose their integration link, and future syncs into this company will skip until the mapping is recreated.`,
+        `Delete this mapping?\n\nLinked assets will be released — they remain in RivetDocs but lose their integration link, and future syncs into this company will skip until the mapping is recreated.`,
       )
     ) {
       return;

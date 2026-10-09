@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import type { LayoutStats, LayoutSummary } from '@weavestream/shared';
+import type { LayoutStats, LayoutSummary } from '@rivetdocs/shared';
 import { unwrapApiResponse } from '../api-errors';
 import { serverApiFetch } from './core';
 

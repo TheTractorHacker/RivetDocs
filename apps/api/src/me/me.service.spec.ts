@@ -1,5 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { CURRENT_PASSWORD_INVALID_CODE } from '@weavestream/shared';
+import { CURRENT_PASSWORD_INVALID_CODE } from '@rivetdocs/shared';
 import { MeService } from './me.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 

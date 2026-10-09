@@ -1,38 +1,40 @@
 <div align="center">
 
-<img src="apps/web/public/brand/logo-mark.svg" alt="Weavestream" height="72" />
+<img src="apps/web/public/brand/logo-mark.svg" alt="RivetDocs" height="72" />
 
 </div>
 
-# Weavestream
+# RivetDocs
 
 **Open-source, self-hosted IT documentation and relationship management platform.**
 _Manage assets, credentials, domains, networks, vendors, procedures, and the relationships between them — all under your control._
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
-[![CI](https://github.com/Weavestream/Weavestream/actions/workflows/ci.yml/badge.svg)](https://github.com/Weavestream/Weavestream/actions/workflows/ci.yml)
-[![Release](https://github.com/Weavestream/Weavestream/actions/workflows/release.yml/badge.svg)](https://github.com/Weavestream/Weavestream/actions/workflows/release.yml)
-[![Website](https://img.shields.io/badge/Website-weavestream.io-blue)](https://weavestream.io)
+[![CI](https://github.com/TheTractorHacker/RivetDocs/actions/workflows/ci.yml/badge.svg)](https://github.com/TheTractorHacker/RivetDocs/actions/workflows/ci.yml)
+[![Release](https://github.com/TheTractorHacker/RivetDocs/actions/workflows/release.yml/badge.svg)](https://github.com/TheTractorHacker/RivetDocs/actions/workflows/release.yml)
+[![Website](https://img.shields.io/badge/Website-github.com/TheTractorHacker/RivetDocs-blue)](https://github.com/TheTractorHacker/RivetDocs)
 
 
 
 ---
 
-→ **Full feature docs and guides at [docs.weavestream.io](https://docs.weavestream.io)**
+> RivetDocs is a fork of [Weavestream](https://github.com/Weavestream/Weavestream) (AGPL-3.0-or-later); see [NOTICE](NOTICE). It is the companion documentation platform for **RivetIT** and **RivetMSP** and syncs clients, contacts and assets from either edition.
 
-Weavestream is a self-hosted platform for managing IT operations knowledge.
+→ **Full feature docs and guides at [RivetDocs docs](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/)**
+
+RivetDocs is a self-hosted platform for managing IT operations knowledge.
 
 Assets, passwords, domains, IP networks, vendors, contacts, procedures, and documentation live in a connected system instead of isolated records.
 
-Built for MSPs, internal IT teams, and homelabs, Weavestream helps you understand not just what you have, but how everything relates.
+Built for MSPs, internal IT teams, and homelabs, RivetDocs helps you understand not just what you have, but how everything relates.
 
-![Weavestream Tenant Dashboard](./weavestream-company-dashboard.png)
+![RivetDocs Tenant Dashboard](./rivetdocs-company-dashboard.png)
 
 ## Documentation with Context
 
 Most documentation systems store information as pages.
 
-Weavestream stores relationships.
+RivetDocs stores relationships.
 
 A firewall can be linked to:
 - its credentials
@@ -46,7 +48,7 @@ A firewall can be linked to:
 
 The result is documentation that behaves like a connected system instead of a collection of notes.
 
-## Why Weavestream?
+## Why RivetDocs?
 
 - **Connected documentation.** Assets, credentials, domains, vendors, contacts, and procedures are linked together so context is never lost.
 - **Built for IT operations.** Designed for MSPs, internal IT teams, and homelabs—not generic note-taking.
@@ -83,19 +85,19 @@ The result is documentation that behaves like a connected system instead of a co
 - **Docker-first.** Three containers (`api`, `web`, `worker`) plus
   Postgres and Redis. Pulled, not built.
 
-See the [architecture docs](https://docs.weavestream.io/overview/architecture/) for the topology,
+See the [architecture docs](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/overview/architecture/) for the topology,
 RBAC model, storage layout, terminology system, and repo layout.
 
 ## Quickstart
 
 ```bash
 # Grab the compose file and env template
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/main/compose.yml
-curl -O https://raw.githubusercontent.com/Weavestream/Weavestream/main/.env.example
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/compose.yml
+curl -O https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/.env.example
 mv .env.example .env
 
 # Generate random keys (macOS/Linux/WSL)
-curl https://raw.githubusercontent.com/Weavestream/Weavestream/main/scripts/keygen.sh | bash >> .env
+curl https://raw.githubusercontent.com/TheTractorHacker/RivetDocs/main/scripts/keygen.sh | bash >> .env
 
 # Start everything
 docker compose up -d
@@ -108,36 +110,36 @@ Open <http://localhost:3000/login> and sign in. On Windows, use
 [`scripts/keygen.ps1`](scripts/keygen.ps1) instead.
 
 Full deployment walkthrough — pinning a version, upgrades, reverse-proxy/TLS,
-backups — in the [deployment docs](https://docs.weavestream.io/deployment/).
+backups — in the [deployment docs](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/deployment/).
 
-Full guided walkthrough on the docs site: [docs.weavestream.io/getting-started](https://docs.weavestream.io/getting-started/)
+Full guided walkthrough on the docs site: [RivetDocs docs/getting-started](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/getting-started/)
 
 ## Documentation
 
 | Guide                                         | Audience          |
 | --------------------------------------------- | ----------------- |
-| [Quickstart](https://docs.weavestream.io/getting-started/quickstart/) | Operators         |
-| [Deployment docs](https://docs.weavestream.io/deployment/) | Operators         |
-| [Configuration docs](https://docs.weavestream.io/configuration/) | Operators         |
-| [Architecture docs](https://docs.weavestream.io/overview/architecture/) | Operators + devs  |
-| [Development setup](https://docs.weavestream.io/development/) | Contributors      |
-| [Releasing docs](https://docs.weavestream.io/development/releasing/) | Maintainers       |
-| [Changelog](https://docs.weavestream.io/overview/changelog/) | Everyone          |
-| [docs.weavestream.io/getting-started](https://docs.weavestream.io/getting-started/) | New operators |
-| [docs.weavestream.io/features/assets](https://docs.weavestream.io/features/assets/) | Everyone |
-| [docs.weavestream.io/features/passwords](https://docs.weavestream.io/features/passwords/) | Everyone |
-| [docs.weavestream.io/features/articles](https://docs.weavestream.io/features/articles/) | Everyone |
-| [docs.weavestream.io/features/ipam](https://docs.weavestream.io/features/ipam/) | Everyone |
-| [docs.weavestream.io/integrations](https://docs.weavestream.io/integrations/) | Everyone |
-| [docs.weavestream.io/guides/security-center](https://docs.weavestream.io/guides/security-center/) | Everyone |
+| [Quickstart](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/getting-started/quickstart/) | Operators         |
+| [Deployment docs](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/deployment/) | Operators         |
+| [Configuration docs](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/configuration/) | Operators         |
+| [Architecture docs](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/overview/architecture/) | Operators + devs  |
+| [Development setup](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/development/) | Contributors      |
+| [Releasing docs](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/development/releasing/) | Maintainers       |
+| [Changelog](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/overview/changelog/) | Everyone          |
+| [RivetDocs docs/getting-started](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/getting-started/) | New operators |
+| [RivetDocs docs/features/assets](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/features/assets/) | Everyone |
+| [RivetDocs docs/features/passwords](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/features/passwords/) | Everyone |
+| [RivetDocs docs/features/articles](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/features/articles/) | Everyone |
+| [RivetDocs docs/features/ipam](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/features/ipam/) | Everyone |
+| [RivetDocs docs/integrations](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/integrations/) | Everyone |
+| [RivetDocs docs/guides/security-center](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/guides/security-center/) | Everyone |
 
 ## Project status
 
 Use `:latest` to try the newest release quickly. For production, pin
-`WEAVESTREAM_VERSION` in your `.env` so upgrades are deliberate and
+`RIVETDOCS_VERSION` in your `.env` so upgrades are deliberate and
 repeatable. See the
-[releases page](https://github.com/Weavestream/Weavestream/releases) and
-[changelog](https://docs.weavestream.io/overview/changelog/) for published
+[releases page](https://github.com/TheTractorHacker/RivetDocs/releases) and
+[changelog](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/overview/changelog/) for published
 images, upgrade notes, and release history.
 
 ## Contributing
@@ -149,11 +151,11 @@ contributions are accepted under the project's AGPL-3.0 license.
 Security issues go through [SECURITY.md](SECURITY.md), not the public
 issue tracker.
 
-See also [docs.weavestream.io/security/disclosure](https://docs.weavestream.io/security/disclosure/).
+See also [RivetDocs docs/security/disclosure](https://github.com/TheTractorHacker/RivetDocs/tree/main/docs/security/disclosure/).
 
 ## License
 
-Weavestream is distributed under the **GNU AGPL-3.0-or-later** license
-— see [LICENSE](LICENSE). If you run a modified Weavestream as a
+RivetDocs is distributed under the **GNU AGPL-3.0-or-later** license
+— see [LICENSE](LICENSE). If you run a modified RivetDocs as a
 network-accessible service, AGPL §13 requires you to offer the modified
 source to its users.

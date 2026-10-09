@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
   VERSION_NEUTRAL,
 } from '@nestjs/common';
-import { QueueNames } from '@weavestream/shared';
+import { QueueNames } from '@rivetdocs/shared';
 import { Public, SkipCsrf } from '../common/public.decorator.js';
 import { AuthedOnly, RequirePermission } from '../rbac/require-permission.decorator.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -61,7 +61,7 @@ export class HealthController {
     ]);
     const body = {
       status: pg && rd ? ('ok' as const) : ('degraded' as const),
-      version: process.env.WEAVESTREAM_VERSION ?? 'dev',
+      version: process.env.RIVETDOCS_VERSION ?? 'dev',
       postgres: pg ? ('ok' as const) : ('down' as const),
       redis: rd ? ('ok' as const) : ('down' as const),
     };

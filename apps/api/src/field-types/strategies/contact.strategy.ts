@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
-import { httpUrlSchema } from '@weavestream/shared';
+import { httpUrlSchema } from '@rivetdocs/shared';
 import type { FieldTypeStrategy } from '../field-type-strategy.js';
 
 const optionsSchema = z.object({}).strict();

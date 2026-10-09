@@ -22,7 +22,7 @@ import {
   triggerSyncSchema,
   updateIntegrationCompanyMappingSchema,
   updateIntegrationSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Phase 11 — schema-shape regression tests.

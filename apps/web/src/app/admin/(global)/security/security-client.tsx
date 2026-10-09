@@ -17,7 +17,7 @@ import {
 import { apiFetch } from '../../../../lib/api';
 import { FormattedDateTime } from '../../../../lib/timezone-context';
 import { ApiKeyAccessTags } from '../../../me/api-keys-list';
-import { ADMIN_API_KEY_PAGE_SIZES } from '@weavestream/shared';
+import { ADMIN_API_KEY_PAGE_SIZES } from '@rivetdocs/shared';
 import type {
   AdminApiKeyPage,
   AdminApiKeyRow,
@@ -28,7 +28,7 @@ import type {
   LoginActivity,
   SecuritySessionRow,
   ThrottleBlockEntry,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 type TabId =
   | 'logins'
@@ -261,7 +261,7 @@ function DiagnosticsPane() {
         }}
       >
         <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-          How Weavestream attributed this request. Used to verify client-IP
+          How RivetDocs attributed this request. Used to verify client-IP
           resolution behind your proxy topology.
         </p>
         <Btn

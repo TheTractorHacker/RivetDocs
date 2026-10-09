@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { stripTrailingSlashes } from '@weavestream/shared';
-import type { TestAiSettingsInput } from '@weavestream/shared';
+import { stripTrailingSlashes } from '@rivetdocs/shared';
+import type { TestAiSettingsInput } from '@rivetdocs/shared';
 import {
   AiNotConfiguredError,
   AiSettingsService,

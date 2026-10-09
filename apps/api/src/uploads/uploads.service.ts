@@ -30,13 +30,13 @@ async function fileTypeFromBuffer(
   const mod = await import('file-type');
   return mod.fileTypeFromBuffer(buffer);
 }
-import { MAX_IMAGE_DECODE_PIXELS } from '@weavestream/shared';
+import { MAX_IMAGE_DECODE_PIXELS } from '@rivetdocs/shared';
 import type {
   ConfirmUploadInput,
   FileFieldEntry,
   InitUploadInput,
   UploadAttachmentType,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';

@@ -1,12 +1,12 @@
 {
-  "name": "@weavestream/mcp",
+  "name": "@rivetdocs/mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "Model Context Protocol server for Weavestream. Acts as you through the REST API with an API key.",
+  "description": "Model Context Protocol server for RivetDocs. Acts as you through the REST API with an API key.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "bin": {
-    "weavestream-mcp": "dist/index.js"
+    "rivetdocs-mcp": "dist/index.js"
   },
   "files": ["dist"],
   "scripts": {

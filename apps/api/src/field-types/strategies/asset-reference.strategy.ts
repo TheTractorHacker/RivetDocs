@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
-import { assetReferenceOptionsSchema } from '@weavestream/shared';
+import { assetReferenceOptionsSchema } from '@rivetdocs/shared';
 import type {
   FieldRelateCtx,
   FieldTypeStrategy,

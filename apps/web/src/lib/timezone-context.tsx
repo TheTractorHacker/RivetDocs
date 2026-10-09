@@ -14,14 +14,14 @@ import {
   formatRelative,
   formatShortDateTime,
   type DateInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * React context carrying the viewer's effective IANA timezone (their saved
  * `User.timezone`, or `'UTC'`). Seeded on the server by `<TimezoneProvider>`
  * in the shell layouts so client components format timestamps in the SAME zone
  * on the SSR and hydration renders. The shared formatters
- * (`@weavestream/shared`) are already deterministic across ICU versions; the
+ * (`@rivetdocs/shared`) are already deterministic across ICU versions; the
  * timezone is the one request-specific input they need.
  *
  * Kept in its own `'use client'` module (mirroring `term-context`) so server

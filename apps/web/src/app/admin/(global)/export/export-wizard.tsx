@@ -65,7 +65,7 @@ const POLL_INTERVAL_MS = 2000;
  * unrecoverable.
  */
 const RECORD_TTL_MS = 24 * 60 * 60 * 1000;
-const STORAGE_KEY = 'weavestream:exports:recent';
+const STORAGE_KEY = 'rivetdocs:exports:recent';
 const MAX_RECORDS = 25;
 
 // ---------------------------------------------------------------------------

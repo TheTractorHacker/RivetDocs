@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HTTP_URL_VALIDATION_MESSAGE } from '@weavestream/shared';
+import { HTTP_URL_VALIDATION_MESSAGE } from '@rivetdocs/shared';
 import { FieldBlock } from '../../components/FieldBlock';
 import { FormScreenChrome } from '../../components/FormScreenChrome';
 import { Input } from '../../components/primitives';

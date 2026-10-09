@@ -1,4 +1,4 @@
-import type { SearchHit } from '@weavestream/shared';
+import type { SearchHit } from '@rivetdocs/shared';
 import type { IconName } from '../../components/Icon';
 
 /**

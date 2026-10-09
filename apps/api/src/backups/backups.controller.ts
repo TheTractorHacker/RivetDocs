@@ -25,7 +25,7 @@ import {
   type BackupRunDto,
   backupConfigInputSchema,
   backupConfigPatchSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { BackupsService } from './backups.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { contentDispositionFor } from '../common/content-disposition.js';

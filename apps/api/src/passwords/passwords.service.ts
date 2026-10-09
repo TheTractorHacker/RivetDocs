@@ -14,7 +14,7 @@ import type {
   TotpConfigInput,
   UpdatePasswordFolderInput,
   UpdatePasswordInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { randomUUID } from 'node:crypto';
 import { authenticator } from 'otplib';
 import { computeHibpRangeHash } from './hibp-range-hash.js';

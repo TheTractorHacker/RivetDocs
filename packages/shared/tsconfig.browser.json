@@ -1,5 +1,5 @@
 {
-  // Third compilation unit for `@weavestream/shared`, alongside the
+  // Third compilation unit for `@rivetdocs/shared`, alongside the
   // client-safe barrel (`tsconfig.json` → `.`) and the Node-only one
   // (`server.ts` → `./server`).
   //

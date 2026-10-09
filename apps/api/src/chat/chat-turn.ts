@@ -5,7 +5,7 @@
  * {@link ChatStreamService} so the prompt-assembly and routing decisions
  * are unit-testable in isolation (no SSE, no DB, no network).
  */
-import type { ChatRequestContext, ChatToolCallDto, ChatTurnContext } from '@weavestream/shared';
+import type { ChatRequestContext, ChatToolCallDto, ChatTurnContext } from '@rivetdocs/shared';
 import {
   isReadToolName,
   readToolDefs,

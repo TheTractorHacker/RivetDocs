@@ -8,7 +8,7 @@
  * interchangeable, and picking the wrong one silently changes what a column
  * reads. The table in each docstring is the whole specification.
  *
- * Not to be confused with `formatRelative` in `@weavestream/shared`, which
+ * Not to be confused with `formatRelative` in `@rivetdocs/shared`, which
  * falls back to an absolute, timezone-aware date past a week and takes a
  * required `nowMs` because it is rendered through `<FormattedRelative>`. These
  * are the plain client-side ladders; `nowMs` is a parameter so specs can pin

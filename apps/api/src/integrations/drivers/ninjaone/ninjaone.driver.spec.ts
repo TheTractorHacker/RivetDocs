@@ -766,7 +766,7 @@ describe('NinjaOneDriver.fetchRecords', () => {
   it('drops devices whose organizationId does not match the mapping (defensive cross-org backstop)', async () => {
     // Belt-and-suspenders: even if NinjaOne's `df=org=` filter were
     // ever silently ignored upstream, devices from other orgs MUST
-    // NOT land in the mapped Weavestream company. The driver filters
+    // NOT land in the mapped RivetDocs company. The driver filters
     // them out client-side; records missing `organizationId` are
     // kept (the upstream filter is the source of truth and we trust
     // it for records that don't carry the field).

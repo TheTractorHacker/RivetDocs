@@ -13,8 +13,8 @@ import type {
   PasswordFolderSchema,
   PasswordGeneratorDefaults,
   PasswordSummary,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,
@@ -70,7 +70,7 @@ type PasswordColumnPrefs = {
   showStrength: boolean;
 };
 
-const PASSWORD_COLUMN_PREFS_KEY = 'weavestream.passwords.columns.v1';
+const PASSWORD_COLUMN_PREFS_KEY = 'rivetdocs.passwords.columns.v1';
 const DEFAULT_COLUMN_PREFS: PasswordColumnPrefs = {
   showPortalVisibility: false,
   showStrength: true,
@@ -82,7 +82,7 @@ const DEFAULT_COLUMN_PREFS: PasswordColumnPrefs = {
  * around the column set, and bumping it to add a rail flag would drop
  * every user's column choices for a cosmetic feature.
  */
-const RAIL_PREF_KEY = 'weavestream.passwords.rail.v1';
+const RAIL_PREF_KEY = 'rivetdocs.passwords.rail.v1';
 
 /** How many tags the rail lists before the rest go behind "+N more". */
 const TAG_PREVIEW_COUNT = 5;

@@ -20,7 +20,7 @@ description: Login flow, MFA enforcement, session management, and account lockou
 
 ## TOTP MFA
 
-**MFA is mandatory on every account.** There is no way to create a Weavestream account without enrolling an authenticator app.
+**MFA is mandatory on every account.** There is no way to create a RivetDocs account without enrolling an authenticator app.
 
 During account setup (via the one-time setup URL), the user:
 

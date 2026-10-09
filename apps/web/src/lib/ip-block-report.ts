@@ -2,7 +2,7 @@ import {
   INTERNAL_TOKEN_HEADER,
   deriveInternalApiToken,
   type IpRuleBlockedReport,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { API_INTERNAL_URL, COOKIE_SIGNING_KEY } from './api-config';
 
 /**

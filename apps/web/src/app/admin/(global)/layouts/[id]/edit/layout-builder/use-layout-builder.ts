@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { getLayoutTemplate, type LayoutSummary, problemMessage } from '@weavestream/shared';
+import { getLayoutTemplate, type LayoutSummary, problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../../lib/api';
 import { useToast } from '../../../../../../../components/ui';
 import { slugifyFieldSlug as slugify } from '../../../../../../../lib/slugify';

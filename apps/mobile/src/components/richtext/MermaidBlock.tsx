@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { diagramPaletteSignature } from '@weavestream/shared/browser';
+import { diagramPaletteSignature } from '@rivetdocs/shared/browser';
 import { useDiagramPalette } from '../../lib/use-diagram-palette';
 
 /**

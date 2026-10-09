@@ -8,15 +8,15 @@ description: Connect NinjaOne RMM to sync workstations, servers, network gear, a
 
 **NinjaOne** is a unified remote monitoring and management (RMM) platform for workstations, servers, network hardware, and virtual machines.
 
-The Weavestream NinjaOne driver imports detailed device records from your NinjaOne organisations into asset records in mapped tenants. Designed for Managed Service Providers (MSPs) and multi-tenant IT teams, a single NinjaOne integration account can fan out across multiple Weavestream companies while maintaining strict multi-tenant data isolation.
+The RivetDocs NinjaOne driver imports detailed device records from your NinjaOne organisations into asset records in mapped tenants. Designed for Managed Service Providers (MSPs) and multi-tenant IT teams, a single NinjaOne integration account can fan out across multiple RivetDocs companies while maintaining strict multi-tenant data isolation.
 
 ## Key Capabilities
 
 - **Dual-Resource Architecture**: Supports separate resource configurations for agented endpoints and agentless/network devices.
-- **Multi-Tenant Fan-Out**: Map individual NinjaOne organisations to distinct Weavestream companies, with optional location-based filtering.
+- **Multi-Tenant Fan-Out**: Map individual NinjaOne organisations to distinct RivetDocs companies, with optional location-based filtering.
 - **Dynamic Custom Field Discovery**: Automatically discovers and exposes custom fields configured in your NinjaOne tenant alongside the standard field catalogue.
 - **Stable GUID Matching**: Recommended `uid` match key ensures stable asset tracking even when hostnames, IP addresses, or MAC addresses change.
-- **Real-Time AI Ticket Integration**: Integrates NinjaOne ticket bodies and internal notes into Weavestream's AI Chat workspace assistant.
+- **Real-Time AI Ticket Integration**: Integrates NinjaOne ticket bodies and internal notes into RivetDocs's AI Chat workspace assistant.
 
 ## Dual-Resource Model
 
@@ -67,8 +67,8 @@ When configuring resource mappings, choose a **Match Key** that uniquely identif
 4. Select the **Monitoring** scope.
 5. Save the client and securely record the **Client ID** and **Client Secret**.
 
-### Step 2: Add the Integration in Weavestream
-1. In Weavestream, navigate to **Admin → Integrations → New Integration**.
+### Step 2: Add the Integration in RivetDocs
+1. In RivetDocs, navigate to **Admin → Integrations → New Integration**.
 2. Select **NinjaOne RMM** as the provider.
 3. Enter your **Client ID** and **Client Secret**.
 4. Set the **API Base URL** according to your NinjaOne regional instance:
@@ -80,7 +80,7 @@ When configuring resource mappings, choose a **Match Key** that uniquely identif
 
 ### Step 3: Map Organisations & Configure Resources
 1. Click the **Orgs** tab.
-2. Select a NinjaOne organisation and map it to its corresponding **Weavestream Company**.
+2. Select a NinjaOne organisation and map it to its corresponding **RivetDocs Company**.
 3. *(Optional)* Filter by Location ID if you only want to ingest devices from specific sites.
 4. Switch to the **Agent Devices** resource tab:
    - Pick the target asset layout (e.g., `Computers`).
@@ -91,4 +91,4 @@ When configuring resource mappings, choose a **Match Key** that uniquely identif
 
 ## AI & Ticket Integration
 
-If configured alongside ticketing, Weavestream's **AI Chat** can retrieve live ticket details and internal notes from NinjaOne when answering user queries about tenant devices or maintenance history.
+If configured alongside ticketing, RivetDocs's **AI Chat** can retrieve live ticket details and internal notes from NinjaOne when answering user queries about tenant devices or maintenance history.

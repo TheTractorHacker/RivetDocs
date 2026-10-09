@@ -7,7 +7,7 @@ description: Invite-only user management, forced MFA, and three-axis role-based 
 
 # Users & Role-Based Access Control
 
-Weavestream uses an invite-only registration flow, mandatory TOTP MFA, and a three-axis RBAC model: global role, default tenant access, and per-tenant memberships. Platform-admin tasks are capability-gated.
+RivetDocs uses an invite-only registration flow, mandatory TOTP MFA, and a three-axis RBAC model: global role, default tenant access, and per-tenant memberships. Platform-admin tasks are capability-gated.
 
 ## Global Roles
 

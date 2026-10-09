@@ -4,7 +4,7 @@ import {
   normalizeCidrV4,
   usableHostCount,
   ipInCidr,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 describe('normalizeCidrV4', () => {
   it('normalises host bits to the network address', () => {

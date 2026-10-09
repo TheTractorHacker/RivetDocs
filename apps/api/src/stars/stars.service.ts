@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { StarredItem } from '@weavestream/shared';
+import type { StarredItem } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { allowedCompanyIds } from '../rbac/permission.service.js';

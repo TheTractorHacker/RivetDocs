@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { NextRequest } from 'next/server';
-import { UI_COOKIE_NAME, parseUiCookie } from '@weavestream/shared';
+import { UI_COOKIE_NAME, parseUiCookie } from '@rivetdocs/shared';
 import { looksLikeStaticAsset } from '../../../lib/mobile-shell-paths';
 import {
   FALLBACK_SHELL_KEY,
@@ -135,7 +135,7 @@ async function handler(req: NextRequest): Promise<Response> {
     // unreachable — it is here for local dev before a first build.
     console.error(
       `[mobile] no shell variants found in ${SHELL_DIR}. ` +
-        'Run `pnpm --filter @weavestream/mobile build`.',
+        'Run `pnpm --filter @rivetdocs/mobile build`.',
     );
     return new Response('Mobile app is unavailable.', {
       status: 503,

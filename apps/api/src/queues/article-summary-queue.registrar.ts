@@ -7,7 +7,7 @@ import {
   ARTICLE_SUMMARY_SWEEP_JOB_ID,
   ArticleSummaryJobNames,
   QueueNames,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { QueuesService } from './queues.service.js';
 import { registerRepeatableCron } from './repeatable-registration.js';
 

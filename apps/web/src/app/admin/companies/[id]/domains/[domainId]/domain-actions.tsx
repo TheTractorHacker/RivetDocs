@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { apiFetch } from '../../../../../../lib/api';
 import { Icon } from '../../../../../../components/ui';
-import type { MonitoredDomainDto } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { MonitoredDomainDto } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 
 /**
  * Detail-page action bar. Lives in its own client component so the

@@ -51,7 +51,7 @@ Open the AI chat panel from the chat icon in the company sidebar. The panel can 
 
 The assistant has two different read sources:
 
-- **Product help**: release-matched instructions about Weavestream UI and required permissions. It cannot inspect or change your live setup.
+- **Product help**: release-matched instructions about RivetDocs UI and required permissions. It cannot inspect or change your live setup.
 - **Permission-scoped company data**: accessible records and selected context. A chat answer about a record is limited by the signed-in user’s permissions.
 
 When viewing an asset or article, opening chat automatically attaches that item. Type `@` in the message box to attach accessible assets or articles in the current company; remove any item from the context strip before sending if it is not relevant. Chat may search/read permitted records, but it does not replace normal authorization checks or execute product configuration steps merely because it described them.
@@ -60,7 +60,7 @@ When viewing an asset or article, opening chat automatically attaches that item.
 <!-- aliases: AI privacy | AI data sharing | AI provider | chat sensitive data | AI endpoint | self hosted model -->
 <!-- requires: settings.manage -->
 
-AI chat sends the conversation history and attached context to the configured OpenAI-compatible provider. Depending on what is attached, this can include full article content, visible asset fields, domain details, ticket bodies/notes, and user/company context. Choose a provider you are authorized to send that data to; Weavestream does not anonymize the attached material before sending it.
+AI chat sends the conversation history and attached context to the configured OpenAI-compatible provider. Depending on what is attached, this can include full article content, visible asset fields, domain details, ticket bodies/notes, and user/company context. Choose a provider you are authorized to send that data to; RivetDocs does not anonymize the attached material before sending it.
 
 Authorized administrators configure the provider in **Admin → Settings → AI** with the provider base URL, model, and API credential. Private-network AI endpoints require an explicit private-network opt-in. Product help intentionally excludes deployment and secret-management instructions; use your organization’s approved operational runbooks for those tasks.
 

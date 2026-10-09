@@ -7,7 +7,7 @@ import type {
   UserRole,
   UserSearchDefaults,
   UserUiPreferences,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { unwrapMeResponse } from '../api-errors';
 import { forMetadata, serverApiFetch } from './core';
 

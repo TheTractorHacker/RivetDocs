@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FILE_MULTI_CAP } from '@weavestream/shared';
-import { matchesAccept } from '@weavestream/shared/browser';
-import { humanSize } from '@weavestream/shared';
+import { FILE_MULTI_CAP } from '@rivetdocs/shared';
+import { matchesAccept } from '@rivetdocs/shared/browser';
+import { humanSize } from '@rivetdocs/shared';
 import { Icon, Tag } from '../ui';
 import {
   describeUploadError,

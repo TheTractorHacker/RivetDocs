@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { DomainCheckDto, MonitoredDomainDto } from '@weavestream/shared';
+import type { DomainCheckDto, MonitoredDomainDto } from '@rivetdocs/shared';
 import { domainToMarkdown } from '../../lib/domain-format';
 import { useChatDomainPageContext } from './use-chat-page-context';
 

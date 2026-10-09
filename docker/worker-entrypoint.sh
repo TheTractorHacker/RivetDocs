@@ -29,7 +29,7 @@ ensure_writable() {
   fi
 }
 
-ensure_writable "${FILE_STORAGE_DIR:-/var/lib/weavestream/files}"
-ensure_writable "${BACKUP_STORAGE_DIR:-/var/lib/weavestream/backup}"
+ensure_writable "${FILE_STORAGE_DIR:-/var/lib/rivetdocs/files}"
+ensure_writable "${BACKUP_STORAGE_DIR:-/var/lib/rivetdocs/backup}"
 
 exec /sbin/tini -- su-exec app "$@"

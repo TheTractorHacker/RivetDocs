@@ -17,7 +17,7 @@ export function AppLogo({
   variant = 'wordmark',
   size = 18,
   muted = false,
-  title = 'Weavestream',
+  title = 'RivetDocs',
 }: {
   variant?: 'wordmark' | 'mark';
   size?: number;

@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { getTenantContext } from '@weavestream/shared/server';
+import { getTenantContext } from '@rivetdocs/shared/server';
 import { assertTenantScope } from './tenant-scoped-models.js';
 
 @Injectable()

@@ -17,12 +17,12 @@ import {
   requestStepUp,
 } from './step-up';
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   ensureCsrf: jest.fn().mockResolvedValue('csrf-token'),
 }));
 
 const STEP_UP_BODY = {
-  type: 'https://weavestream.app/problems/403',
+  type: 'https://rivetdocs.app/problems/403',
   title: 'Forbidden',
   status: 403,
   detail: 'Step-up authentication required',

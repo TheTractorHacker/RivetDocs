@@ -29,7 +29,7 @@ import {
   acceptInviteSchema,
   setupTokenSchema,
   type AcceptInviteInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ZodBody, ZodParam } from '../common/zod-validation.pipe.js';
 import { EnvService } from '../config/env.service.js';
 import {

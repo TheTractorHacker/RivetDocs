@@ -33,7 +33,7 @@ import {
   type UpdateIntegrationResourceInput,
   type IntegrationCompletenessQuery,
   type IntegrationGapsQuery,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ZodBody } from '../common/zod-validation.pipe.js';
 import {
   CurrentUser,

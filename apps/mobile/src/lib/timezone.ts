@@ -1,4 +1,4 @@
-import { normalizeTimeZone } from '@weavestream/shared';
+import { normalizeTimeZone } from '@rivetdocs/shared';
 
 /**
  * The timezone every date on this app formats in.

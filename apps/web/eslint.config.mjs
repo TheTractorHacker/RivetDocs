@@ -55,7 +55,7 @@ export default [
       'react-hooks/immutability': 'warn',
       // Dates: bare toLocale* mismatches on SSR hydration (server tz/ICU
       // vs the browser's). Use the shared formatters from
-      // `@weavestream/shared` with `useTimezone()` (or the `<Formatted*>`
+      // `@rivetdocs/shared` with `useTimezone()` (or the `<Formatted*>`
       // components in `lib/timezone-context`). Warn-level to match the
       // v1.0.0 posture; this also flags the not-yet-migrated server
       // components (a correctness backlog, not a hydration bug). The
@@ -66,7 +66,7 @@ export default [
           selector:
             "CallExpression[callee.property.name=/^(toLocaleString|toLocaleDateString|toLocaleTimeString)$/]",
           message:
-            'Do not format dates with toLocaleString/toLocaleDateString/toLocaleTimeString — they hydration-mismatch across timezones and ICU versions. Use formatDateTime/formatDate/formatCalendarDate/formatRelative from @weavestream/shared with useTimezone(), or the <Formatted*> components in lib/timezone-context.',
+            'Do not format dates with toLocaleString/toLocaleDateString/toLocaleTimeString — they hydration-mismatch across timezones and ICU versions. Use formatDateTime/formatDate/formatCalendarDate/formatRelative from @rivetdocs/shared with useTimezone(), or the <Formatted*> components in lib/timezone-context.',
         },
       ],
     },

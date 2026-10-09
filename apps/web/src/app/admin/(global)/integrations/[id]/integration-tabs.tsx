@@ -8,7 +8,7 @@ import type {
   IntegrationCompanyMappingDto,
   IntegrationDto,
   IntegrationSyncRunDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { CredentialsTab } from './credentials-tab';
 import { FieldMappingsTab } from './field-mappings-tab';
 import { OrgsTab } from './orgs-tab';
@@ -44,7 +44,7 @@ const STATIC_TABS_HEAD: TabDescriptor[] = [
   {
     id: 'orgs',
     label: 'Organizations',
-    help: 'Map each upstream organization to a Weavestream company.',
+    help: 'Map each upstream organization to a RivetDocs company.',
     kind: 'static',
   },
 ];

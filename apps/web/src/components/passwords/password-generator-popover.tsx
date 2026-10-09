@@ -8,10 +8,10 @@ import {
   type PasswordGeneratorDefaults,
   type PasswordGeneratorPreset,
   type PasswordGeneratorSeparator,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Btn, Icon, useToast } from '../ui';
-import { copyToClipboard } from '@weavestream/shared/browser';
-import { generatePassword } from '@weavestream/shared/browser';
+import { copyToClipboard } from '@rivetdocs/shared/browser';
+import { generatePassword } from '@rivetdocs/shared/browser';
 
 /**
  * Passphrase-generator popover anchored inside `SecretInput`.

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
-import { dateOptionsSchema, datetimeOptionsSchema } from '@weavestream/shared';
+import { dateOptionsSchema, datetimeOptionsSchema } from '@rivetdocs/shared';
 import type { FieldTypeStrategy } from '../field-type-strategy.js';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;

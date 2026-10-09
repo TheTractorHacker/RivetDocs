@@ -33,7 +33,7 @@ describe('ProvenanceBadge', () => {
     render(<ProvenanceBadge provenance={{
       integrationId: crypto.randomUUID(), integrationName: 'Breeze',
       integrationCompanyMappingId: crypto.randomUUID(), resourceId: crypto.randomUUID(),
-      sourceLabel: 'Breeze', sourceResource: 'scripts', ownership: 'weavestream', state,
+      sourceLabel: 'Breeze', sourceResource: 'scripts', ownership: 'rivetdocs', state,
       firstSeenAt: '2026-07-10T00:00:00.000Z', lastSeenAt: '2026-07-13T00:00:00.000Z',
       lastSyncedAt: null, staleSince: null,
       target: { targetKind: 'article', targetId: crypto.randomUUID(), targetLabel: 'Script', targetHref: null },

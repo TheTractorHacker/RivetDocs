@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PasswordTotpResponse } from '@weavestream/shared';
+import type { PasswordTotpResponse } from '@rivetdocs/shared';
 import { ApiError } from '../../lib/api';
 import { redirectToLogin } from '../../lib/navigate';
 import { fetchTotpCode } from './api';

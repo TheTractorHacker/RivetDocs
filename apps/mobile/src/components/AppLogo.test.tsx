@@ -22,7 +22,7 @@ describe('AppLogo', () => {
   it('names both variants — display:none removes the hidden one from the a11y tree', () => {
     const { container } = render(<AppLogo />);
     for (const img of Array.from(container.querySelectorAll('img'))) {
-      expect(img).toHaveAttribute('alt', 'Weavestream');
+      expect(img).toHaveAttribute('alt', 'RivetDocs');
     }
   });
 

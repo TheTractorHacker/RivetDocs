@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import type { AssetSummary } from '@weavestream/shared';
+import type { AssetSummary } from '@rivetdocs/shared';
 import { AssetFieldValue, type AssetFieldContext } from './asset-field-value';
 
 // Tiptap does not render in jsdom; the stub surfaces the routing props so

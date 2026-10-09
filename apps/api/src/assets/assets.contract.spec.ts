@@ -1,4 +1,4 @@
-import type { AssetSummary } from '@weavestream/shared';
+import type { AssetSummary } from '@rivetdocs/shared';
 import type { SameShape, WireJson } from '../common/wire-contract.js';
 import type { SerializedAsset } from './assets.service.js';
 

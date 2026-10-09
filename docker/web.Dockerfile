@@ -36,37 +36,37 @@ COPY apps/mobile ./apps/mobile
 COPY apps/web ./apps/web
 # NEXT_PUBLIC_* is baked at build time, so the version must flow into
 # this stage — not just the runner.
-ARG WEAVESTREAM_VERSION=dev
+ARG RIVETDOCS_VERSION=dev
 ENV NEXT_TELEMETRY_DISABLED=1 \
-    WEAVESTREAM_VERSION=${WEAVESTREAM_VERSION} \
-    NEXT_PUBLIC_APP_VERSION=${WEAVESTREAM_VERSION}
-# @weavestream/shared is a workspace dep whose package.json points to
+    RIVETDOCS_VERSION=${RIVETDOCS_VERSION} \
+    NEXT_PUBLIC_APP_VERSION=${RIVETDOCS_VERSION}
+# @rivetdocs/shared is a workspace dep whose package.json points to
 # `dist/index.js`, so it must be compiled before `next build` can
 # resolve its exports.
 #
-# @weavestream/mobile must build BEFORE the web app: its postbuild
+# @rivetdocs/mobile must build BEFORE the web app: its postbuild
 # publishes the PWA bundle into `apps/web/public/m` and the per-accent
 # HTML shells into `apps/web/mobile-shell`, both of which `next build`
 # then validates (via apps/web's prebuild guard) and ships. A host-built
 # bundle cannot be substituted — `.dockerignore` excludes `**/dist`, so
 # it has to be produced inside this stage.
-RUN pnpm --filter @weavestream/shared build \
- && pnpm --filter @weavestream/mobile build \
- && pnpm --filter @weavestream/web build
+RUN pnpm --filter @rivetdocs/shared build \
+ && pnpm --filter @rivetdocs/mobile build \
+ && pnpm --filter @rivetdocs/web build
 
 # ───── runner ─────
 FROM node:24-alpine AS runner
 RUN apk add --no-cache tini curl \
  && addgroup -S app && adduser -S app -G app
 
-ARG WEAVESTREAM_VERSION=dev
+ARG RIVETDOCS_VERSION=dev
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    WEAVESTREAM_VERSION=${WEAVESTREAM_VERSION} \
-    NEXT_PUBLIC_APP_VERSION=${WEAVESTREAM_VERSION}
-LABEL org.opencontainers.image.source="https://github.com/Weavestream/Weavestream" \
+    RIVETDOCS_VERSION=${RIVETDOCS_VERSION} \
+    NEXT_PUBLIC_APP_VERSION=${RIVETDOCS_VERSION}
+LABEL org.opencontainers.image.source="https://github.com/TheTractorHacker/RivetDocs" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \
-      org.opencontainers.image.version="${WEAVESTREAM_VERSION}"
+      org.opencontainers.image.version="${RIVETDOCS_VERSION}"
 WORKDIR /app
 # Preserve pnpm's workspace layout — the apps/web/node_modules symlinks
 # reach into /app/node_modules/.pnpm at the repo root.

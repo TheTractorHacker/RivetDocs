@@ -1,4 +1,4 @@
-import type { FolderNode } from '@weavestream/shared';
+import type { FolderNode } from '@rivetdocs/shared';
 
 export interface FlatFolder {
   id: string;

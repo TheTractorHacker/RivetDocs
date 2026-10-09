@@ -5,7 +5,7 @@ import type {
   CloudflareDomainSyncResult,
   CloudflareDomainSyncRunDto as DomainSyncRun,
   IntegrationDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../lib/api';
 import { FormattedDateTime } from '../../../../../../lib/timezone-context';
 import { Btn, Icon, Tag, useToast } from '../../../../../../components/ui';

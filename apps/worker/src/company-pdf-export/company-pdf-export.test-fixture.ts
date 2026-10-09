@@ -1,4 +1,4 @@
-import type { CompanyExportData } from '@weavestream/api/exports';
+import type { CompanyExportData } from '@rivetdocs/api/exports';
 
 export const FIXTURE_BLOCKED_SECRET = 'ghp_pdfBlockedSecretValue1234567890';
 

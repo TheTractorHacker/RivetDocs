@@ -3,7 +3,7 @@ import {
   tiptapExcerpt,
   stringToTiptapDoc,
   isValidTiptapDoc,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 describe('tiptapToPlaintext', () => {
   it('returns empty string for null/undefined/non-object input', () => {

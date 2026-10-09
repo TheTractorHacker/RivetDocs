@@ -2,12 +2,12 @@
 label: Threat Model
 icon: shield-check
 order: 900
-description: Trust boundaries, attack surfaces, and mitigations in Weavestream's security design.
+description: Trust boundaries, attack surfaces, and mitigations in RivetDocs's security design.
 ---
 
 # Threat Model
 
-Weavestream is designed for self-hosted deployment behind a reverse proxy. This page documents the trust boundaries and how each threat actor is mitigated.
+RivetDocs is designed for self-hosted deployment behind a reverse proxy. This page documents the trust boundaries and how each threat actor is mitigated.
 
 ## Deployment Boundary
 
@@ -21,7 +21,7 @@ Internet → TLS (reverse proxy) → web (Next.js) → api (NestJS)
                                            uploaded content)
 ```
 
-- The reverse proxy terminates TLS. Weavestream does not.
+- The reverse proxy terminates TLS. RivetDocs does not.
 - Postgres and Redis are **not exposed** to the host network in the default `compose.yml`.
 - Uploaded files live on a host-bind-mounted directory shared by `api` and `worker`. The directory has no network surface — browsers always go through the API's streaming endpoints.
 - The `api` and `worker` are the only services with database credentials.
@@ -103,7 +103,7 @@ An application-layer bug allowing cross-tenant file access.
 - The storage layer rejects keys that contain `..`, leading slashes, or null bytes, and re-asserts that every resolved path stays inside the tenant directory before opening a file. A code-level IDOR that forgets to scope by `companyId` would be caught by this defense-in-depth check.
 - Browsers never read the directory directly — every access streams through the API, which authorizes the request against the requested tenant before opening the file.
 
-## What Weavestream Does Not Protect Against
+## What RivetDocs Does Not Protect Against
 
 - **Physical host compromise** — if an attacker has host-level access, all database content and encryption keys are exposed. Use full-disk encryption on the host.
 - **Postgres superuser access** — a Postgres superuser can read all data and rewrite the audit log. Protect the Postgres password and restrict superuser access.

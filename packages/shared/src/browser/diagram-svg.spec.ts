@@ -383,7 +383,7 @@ describe('must survive — over-sanitizing fails silently', () => {
 });
 
 describe('corpus — real Mermaid output survives the allowlist', () => {
-  // Regenerate with `pnpm --filter @weavestream/web mermaid:corpus`; see
+  // Regenerate with `pnpm --filter @rivetdocs/web mermaid:corpus`; see
   // the fixture README. These are the diagrams a customer actually
   // authors, and the failure mode this guards is silent: an element
   // missing from the allowlist renders a flatter, emptier diagram with

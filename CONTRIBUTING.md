@@ -1,17 +1,17 @@
-# Contributing to Weavestream
+# Contributing to RivetDocs
 
-Thanks for your interest in improving Weavestream. This guide covers the
+Thanks for your interest in improving RivetDocs. This guide covers the
 fastest path from a clean clone to a reviewed PR.
 
 ## Licensing
 
-Weavestream is released under the [GNU AGPL-3.0](LICENSE). By submitting
+RivetDocs is released under the [GNU AGPL-3.0](LICENSE). By submitting
 a pull request, you agree that your contributions are licensed under the
 same terms.
 
-Note: AGPL §13 means that anyone who runs a **modified** Weavestream as a
+Note: AGPL §13 means that anyone who runs a **modified** RivetDocs as a
 network-accessible service must offer their modified source to the users
-of that service. If you fork Weavestream and deploy it publicly, plan
+of that service. If you fork RivetDocs and deploy it publicly, plan
 accordingly.
 
 ## Code of conduct
@@ -83,6 +83,6 @@ tag → GitHub Actions → GHCR multi-arch image — is documented in
 
 ## Questions
 
-Open a [GitHub Discussion](https://github.com/Weavestream/Weavestream/discussions)
-for design questions or a [Bug report](https://github.com/Weavestream/Weavestream/issues/new/choose)
+Open a [GitHub Discussion](https://github.com/TheTractorHacker/RivetDocs/discussions)
+for design questions or a [Bug report](https://github.com/TheTractorHacker/RivetDocs/issues/new/choose)
 for anything reproducible. Security issues go through [SECURITY.md](SECURITY.md).

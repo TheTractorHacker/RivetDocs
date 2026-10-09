@@ -6,8 +6,8 @@ import type {
   CloudflareExternalListDto,
   CloudflareIpListDto,
   IntegrationDto,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../../lib/api';
 import {
   Btn,
@@ -23,7 +23,7 @@ import { weekCappedRelative as relative } from '../../../../../../lib/relative-t
 /**
  * Lists tab for a Cloudflare integration. Mirrors the asset-import
  * Organizations tab but works against `CloudflareIpList` rows: each row
- * is a Cloudflare list Weavestream is now managing. Clicking a row
+ * is a Cloudflare list RivetDocs is now managing. Clicking a row
  * drops into the per-list detail page where the operator edits entries.
  */
 export function RegisteredListsTab({
@@ -123,10 +123,10 @@ export function RegisteredListsTab({
         }}
       >
         <p style={{ margin: 0, fontSize: 12.5, color: 'var(--muted)', maxWidth: 640 }}>
-          Pick which Cloudflare IP lists Weavestream manages. Once registered,
+          Pick which Cloudflare IP lists RivetDocs manages. Once registered,
           edits made here are pushed to Cloudflare; the periodic drift sweep
           auto-heals any out-of-band edits made directly in the Cloudflare
-          dashboard by re-pushing Weavestream's view.
+          dashboard by re-pushing RivetDocs's view.
         </p>
         <Btn
           kind="primary"
@@ -236,7 +236,7 @@ function RegisterListDialog({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <p style={{ margin: 0, fontSize: 12.5, color: 'var(--muted)' }}>
           Pick a list from your Cloudflare account. Existing items are imported
-          on first registration; future edits flow Weavestream → Cloudflare.
+          on first registration; future edits flow RivetDocs → Cloudflare.
         </p>
         {loading && <span style={{ color: 'var(--muted)' }}>Loading…</span>}
         {!loading && external && external.length === 0 && (

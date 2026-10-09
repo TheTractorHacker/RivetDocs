@@ -9,7 +9,7 @@ import { PasswordService } from './auth/password.service.js';
 import { AuditLogService } from './audit/audit.service.js';
 import { SearchIndexService } from './search/search-index.service.js';
 import { QueuesService } from './queues/queues.service.js';
-import { DomainCheckJobNames, QueueNames } from '@weavestream/shared';
+import { DomainCheckJobNames, QueueNames } from '@rivetdocs/shared';
 import {
   SecretEncryptionService,
   passwordVaultAad,
@@ -62,7 +62,7 @@ async function bootstrap() {
 function printUsage(): void {
   // eslint-disable-next-line no-console
   console.log(`
-Weavestream CLI
+RivetDocs CLI
 
 Commands:
   create-admin [--force]         Create the initial SUPER_ADMIN user

@@ -6,8 +6,8 @@ import type {
   BackupConfigInput,
   BackupRunDto,
   BackupRunStatus,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import { FormattedDateTime } from '../../../../lib/timezone-context';
 import { downloadWithStepUp } from '../../../../lib/step-up';

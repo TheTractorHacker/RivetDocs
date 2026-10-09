@@ -1,4 +1,4 @@
-import type { TenantContext } from '@weavestream/shared';
+import type { TenantContext } from '@rivetdocs/shared';
 import {
   EntityScopeService,
   hasGlobalReadScope,

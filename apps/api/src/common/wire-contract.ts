@@ -1,6 +1,6 @@
 /**
  * Type-only helpers for checking a service's `Serialized*` interface against
- * the shared wire contract in `@weavestream/shared`.
+ * the shared wire contract in `@rivetdocs/shared`.
  *
  * Services keep `Date`-typed serializer interfaces because that is what they
  * build; the HTTP layer turns them into JSON. A contract spec asserts

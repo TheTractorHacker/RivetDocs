@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import type { ExpirationRow } from '@weavestream/shared';
+import type { ExpirationRow } from '@rivetdocs/shared';
 import {
   DataTable,
   Icon,

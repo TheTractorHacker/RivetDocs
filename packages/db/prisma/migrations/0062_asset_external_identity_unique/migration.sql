@@ -199,7 +199,7 @@ BEGIN
     EXECUTE 'DROP TABLE "migration_0062_asset_identity_retarget"';
   ELSE
     RAISE WARNING
-      'weavestream 0062: % released duplicate asset(s) still have sync records bound; kept migration_0062_asset_identity_retarget — the api/worker background drain retargets them after boot (affected runs report blocked until then)',
+      'rivetdocs 0062: % released duplicate asset(s) still have sync records bound; kept migration_0062_asset_identity_retarget — the api/worker background drain retargets them after boot (affected runs report blocked until then)',
       pending;
   END IF;
 END $$;

@@ -7,8 +7,8 @@ import type {
   LayoutSummary,
   PasswordSummary,
   UpdateAssetInput,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { ApiError, apiFetch } from '../../lib/api';
 
 /**
@@ -36,7 +36,7 @@ import { ApiError, apiFetch } from '../../lib/api';
 export const PAGE_LIMIT = 50;
 
 /**
- * The asset and layout wire contracts live in `@weavestream/shared`. This
+ * The asset and layout wire contracts live in `@rivetdocs/shared`. This
  * app widens one field: `fieldType` is `string`, not `FieldType`. The enum
  * grows, and a PWA cached on a phone can meet a newer API, so an unknown
  * field type must render as a fallback instead of crashing.

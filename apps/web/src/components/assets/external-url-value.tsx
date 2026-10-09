@@ -1,4 +1,4 @@
-import { safeExternalHref } from '@weavestream/shared';
+import { safeExternalHref } from '@rivetdocs/shared';
 import { Icon } from '../ui';
 
 /**

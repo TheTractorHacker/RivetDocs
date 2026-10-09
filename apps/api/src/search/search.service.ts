@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { requireTenantContext } from '@weavestream/shared/server';
+import { requireTenantContext } from '@rivetdocs/shared/server';
 import {
   searchEntityKinds,
   type SearchEntityKind,
   type SearchHit,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 import { entityHrefFor } from './entity-href.js';

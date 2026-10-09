@@ -8,7 +8,7 @@
 2. Confirm credentials are configured and **Test connection** succeeds.
 3. Open **Organizations** and select **Add mapping**.
 4. Choose the **Upstream organization** supplied by the driver.
-5. Choose the destination **Weavestream company**.
+5. Choose the destination **RivetDocs company**.
 6. Select **Create mapping**.
 
 An upstream organization can be mapped only once within the integration. Resource layout and field settings are global to the integration and automatically apply to every enabled company mapping.

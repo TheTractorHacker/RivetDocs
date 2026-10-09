@@ -4,7 +4,7 @@ import {
   QueueNames,
   UploadReaperJobNames,
   uploadReaperJobSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   EnvService,
   RedisService,
@@ -12,8 +12,8 @@ import {
   AuditLogService,
   AUDIT_ACTIONS,
   LocalStorageService,
-} from '@weavestream/api/runtime';
-import { pendingKey } from '@weavestream/api/uploads';
+} from '@rivetdocs/api/runtime';
+import { pendingKey } from '@rivetdocs/api/uploads';
 import {
   createManagedWorker,
   type ManagedWorker,
@@ -26,13 +26,13 @@ import {
  * even if a misconfigured BullMQ schedule double-fires.
  */
 const ADVISORY_LOCK_KEY_SQL =
-  "SELECT pg_try_advisory_lock(hashtext('weavestream:upload-reaper')) AS got";
+  "SELECT pg_try_advisory_lock(hashtext('rivetdocs:upload-reaper')) AS got";
 const ADVISORY_UNLOCK_SQL =
-  "SELECT pg_advisory_unlock(hashtext('weavestream:upload-reaper'))";
+  "SELECT pg_advisory_unlock(hashtext('rivetdocs:upload-reaper'))";
 
 const SYSTEM_META = {
   ip: '127.0.0.1',
-  userAgent: 'weavestream-worker/upload-reaper',
+  userAgent: 'rivetdocs-worker/upload-reaper',
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;

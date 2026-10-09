@@ -5,7 +5,7 @@ import {
   updateEmailSettingsSchema,
   type TestEmailSettingsInput,
   type UpdateEmailSettingsInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { EmailSettingsService } from './email-settings.service.js';
 import { EmailService } from './email.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';

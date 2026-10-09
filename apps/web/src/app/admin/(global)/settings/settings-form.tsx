@@ -11,7 +11,7 @@ import {
   type PasswordGeneratorPreset,
   type PasswordGeneratorSeparator,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import {
   Btn,
@@ -30,7 +30,7 @@ import {
   type TermPresetId,
 } from '../../../../lib/term';
 import type { Settings } from '../../../../lib/server-api/settings';
-import { generatePassword } from '@weavestream/shared/browser';
+import { generatePassword } from '@rivetdocs/shared/browser';
 
 /**
  * Settings form — one source of truth for `system_settings`. The preset

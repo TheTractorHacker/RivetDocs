@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { FILE_MULTI_CAP } from '@weavestream/shared';
+import { FILE_MULTI_CAP } from '@rivetdocs/shared';
 import {
   describeUploadError,
   fieldAcceptsImages,
   matchesAccept,
   preflightFile,
-} from '@weavestream/shared/browser';
+} from '@rivetdocs/shared/browser';
 import { Icon } from '../../components/Icon';
 import { Hint } from '../../components/FieldBlock';
 import { FileTile, FileTileGrid } from '../../components/FileTile';

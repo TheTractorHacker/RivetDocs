@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { integrationProvenanceSchema } from '@weavestream/shared';
+import { integrationProvenanceSchema } from '@rivetdocs/shared';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { upsertReconstructionGap } from './integration-provenance.service.js';
 
@@ -43,8 +43,8 @@ export interface CompletenessScope {
   evaluatedAt: Date;
 }
 
-const MANAGED_START = '<!-- weavestream:breeze:managed:start -->';
-const MANAGED_END = '<!-- weavestream:breeze:managed:end -->';
+const MANAGED_START = '<!-- rivetdocs:breeze:managed:start -->';
+const MANAGED_END = '<!-- rivetdocs:breeze:managed:end -->';
 const EVIDENCE_PAGE_SIZE = 1_000;
 const TARGET_ID_BATCH_SIZE = 500;
 // The runner accepts at most 10,000 source records per resource traversal.

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { SearchToolInput, SearchToolOutput } from '@weavestream/shared';
+import type { SearchToolInput, SearchToolOutput } from '@rivetdocs/shared';
 import { SearchService } from '../../search/search.service.js';
 import { AI_TOOL_SPECS } from '../tool-specs.js';
 import type { AiReadTool, AiToolExecutionContext } from '../tool-registry.js';

@@ -4,8 +4,8 @@ import type {
   ChatConversationDetail,
   ChatConversationSummary,
   ChatToolCallDto,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from './api';
 
 /**

@@ -2,7 +2,7 @@
 label: Development
 icon: code
 order: 200
-description: Local development setup for contributors working on Weavestream.
+description: Local development setup for contributors working on RivetDocs.
 ---
 
 # Development Setup
@@ -27,8 +27,8 @@ brew install poppler                                  # macOS — xmllint ships 
 ## 1. Clone And Install
 
 ```bash
-git clone https://github.com/Weavestream/Weavestream.git
-cd Weavestream
+git clone https://github.com/TheTractorHacker/RivetDocs.git
+cd RivetDocs
 pnpm install
 ```
 
@@ -46,7 +46,7 @@ Then edit `.env`:
 - For local `pnpm dev`, point URLs at the host-mapped ports from `compose.build.yml`:
 
 ```env
-DATABASE_URL=postgresql://weavestream:<pw>@localhost:5434/weavestream
+DATABASE_URL=postgresql://rivetdocs:<pw>@localhost:5434/rivetdocs
 REDIS_URL=redis://:<pw>@localhost:6381/0
 ```
 
@@ -61,7 +61,7 @@ docker compose -f compose.yml -f compose.build.yml up -d postgres redis
 pnpm prisma:migrate
 ```
 
-`compose.build.yml` adds the host port bindings needed for local development and build overrides for the Weavestream services.
+`compose.build.yml` adds the host port bindings needed for local development and build overrides for the RivetDocs services.
 
 ## 4. Run The Dev Servers
 
@@ -71,7 +71,7 @@ pnpm dev
 
 This runs `apps/web`, `apps/api`, and `apps/worker` in watch mode.
 
-The worker loads API code from the API's build output (`@weavestream/api/<entry>` → `apps/api/dist/public/`). Under `pnpm dev`, the API's watch build writes that output, and the worker restarts when it changes. The API's watch build overwrites `apps/api/dist` in place instead of deleting it first (`deleteOutDir: false` in `apps/api/nest-cli.json`), so the worker can start from the previous build while the API compiles; only `pnpm --filter @weavestream/api build` starts from an empty `dist`. On a fresh clone, or to run the worker on its own, run that build first.
+The worker loads API code from the API's build output (`@rivetdocs/api/<entry>` → `apps/api/dist/public/`). Under `pnpm dev`, the API's watch build writes that output, and the worker restarts when it changes. The API's watch build overwrites `apps/api/dist` in place instead of deleting it first (`deleteOutDir: false` in `apps/api/nest-cli.json`), so the worker can start from the previous build while the API compiles; only `pnpm --filter @rivetdocs/api build` starts from an empty `dist`. On a fresh clone, or to run the worker on its own, run that build first.
 
 | Service | Local URL |
 |---|---|
@@ -93,7 +93,7 @@ Without it, Next.js blocks dev resources (HMR, `/_next/static`) for non-localhos
 In a second terminal:
 
 ```bash
-pnpm --filter @weavestream/api cli create-admin
+pnpm --filter @rivetdocs/api cli create-admin
 ```
 
 ## Common Tasks
@@ -105,7 +105,7 @@ pnpm typecheck          # tsc --noEmit everywhere (builds apps/api first;
 pnpm test               # Jest plus package-level test scripts (builds
                         # apps/api first; the worker specs load its output)
                         # PDF inspection specs skip without poppler-utils/
-                        # libxml2-utils; set WEAVESTREAM_REQUIRE_PDF_TOOLS=1
+                        # libxml2-utils; set RIVETDOCS_REQUIRE_PDF_TOOLS=1
                         # to make a missing binary a failure (CI does).
 pnpm audit              # prod-only, high-severity audit
 
@@ -121,14 +121,14 @@ docker compose -f compose.yml -f compose.build.yml build
 docker compose -f compose.yml -f compose.build.yml up -d
 ```
 
-This exercises the same Dockerfiles used by release builds. Tag collisions with published images are avoided because the override uses `image: weavestream-<svc>:dev`.
+This exercises the same Dockerfiles used by release builds. Tag collisions with published images are avoided because the override uses `image: rivetdocs-<svc>:dev`.
 
 ## Submitting A Change
 
 1. Branch off `main`.
 2. Make your changes. Add tests when behaviour has a clear contract.
 3. Run `pnpm lint && pnpm typecheck && pnpm test`.
-4. Add an entry to the `## Unreleased` section of [CHANGELOG.md](https://github.com/Weavestream/Weavestream/blob/main/CHANGELOG.md).
+4. Add an entry to the `## Unreleased` section of [CHANGELOG.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/CHANGELOG.md).
 5. Open a PR. CI runs the same checks plus Docker builds for all three images.
 
-See [CONTRIBUTING.md](https://github.com/Weavestream/Weavestream/blob/main/CONTRIBUTING.md) for licensing notes and review expectations.
+See [CONTRIBUTING.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/CONTRIBUTING.md) for licensing notes and review expectations.

@@ -8,14 +8,14 @@ description: Connect Action1 endpoint management RMM to sync Windows workstation
 
 **Action1** is an endpoint management platform for remote monitoring and management (RMM) of Windows workstations and servers. 
 
-The Weavestream Action1 driver imports endpoint records from your Action1 organisation directly into tenant asset records. It automates inventory tracking, tracks online/offline agent status, and keeps hardware telemetry up-to-date across your mapped companies.
+The RivetDocs Action1 driver imports endpoint records from your Action1 organisation directly into tenant asset records. It automates inventory tracking, tracks online/offline agent status, and keeps hardware telemetry up-to-date across your mapped companies.
 
 ## Overview & Capabilities
 
-- **Account Mapping**: Map your Action1 organisation to one or more Weavestream companies.
+- **Account Mapping**: Map your Action1 organisation to one or more RivetDocs companies.
 - **Automated Ingestion**: Ingests Windows build details, agent status, and hardware components (CPU, RAM, storage).
-- **Scheduled & On-Demand Sync**: Runs automatically on a background cron schedule or manually on demand from the Weavestream console.
-- **Stale Record Tracking**: Endpoint records removed from Action1 are flagged as stale in Weavestream, keeping historical documentation intact.
+- **Scheduled & On-Demand Sync**: Runs automatically on a background cron schedule or manually on demand from the RivetDocs console.
+- **Stale Record Tracking**: Endpoint records removed from Action1 are flagged as stale in RivetDocs, keeping historical documentation intact.
 
 ## Synced Data Reference
 
@@ -43,15 +43,15 @@ The Action1 driver maps third-party endpoint telemetry onto fields in your chose
 3. Create OAuth2 API credentials with access to endpoint inventory.
 4. Securely record the generated **Client ID** and **Client Secret**.
 
-### Step 2: Configure the Integration in Weavestream
+### Step 2: Configure the Integration in RivetDocs
 
-1. In Weavestream, navigate to **Admin → Integrations → New Integration**.
+1. In RivetDocs, navigate to **Admin → Integrations → New Integration**.
 2. Select **Action1 RMM** as the integration provider.
 3. Enter a descriptive label (e.g. `Action1 Production RMM`).
 4. Enter the OAuth2 **Client ID** and **Client Secret**. Leave **API Base URL** at its default unless Action1 supplied a custom region.
 5. Select **Create**. New integrations start paused.
 6. On **Credentials & schedule**, select **Test connection**.
-7. Open **Organizations** and map each Action1 organization to its target Weavestream company.
+7. Open **Organizations** and map each Action1 organization to its target RivetDocs company.
 8. Configure **Endpoints fields** with a target asset layout, match keys (recommended upstream value: `MAC`), and field projections.
 9. Change **Status** to active and select **Save changes**.
 10. Run a **Dry run**, review its result in **Run history**, then select **Run sync now** for the initial import.
@@ -60,4 +60,4 @@ The Action1 driver maps third-party endpoint telemetry onto fields in your chose
 
 - **Initial Sync**: The first run fetches all active Action1 endpoints and creates corresponding asset records in the mapped company.
 - **Background Sync**: Subsequent syncs run automatically based on your tenant's default cron interval (`INTEGRATION_SYNC_DEFAULT_CRON`, defaulting to every 15 minutes) or custom schedule setting.
-- **Audit Logging**: Every sync execution and individual field modification is recorded in the Weavestream Audit Trail.
+- **Audit Logging**: Every sync execution and individual field modification is recorded in the RivetDocs Audit Trail.

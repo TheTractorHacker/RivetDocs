@@ -1,4 +1,4 @@
-import type { PasswordVersionSummary } from '@weavestream/shared';
+import type { PasswordVersionSummary } from '@rivetdocs/shared';
 import { sortVersionsNewestFirst, visibleVersions } from './version-history-order';
 
 const v = (version: number) => ({ version }) as PasswordVersionSummary;

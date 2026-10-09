@@ -1,6 +1,6 @@
 -- Cloudflare Rules Lists integration — security-kind integration that
 -- manages Cloudflare IP allow-lists. One row per registered Cloudflare
--- list; entries are stored as a JSON array (Weavestream is the source
+-- list; entries are stored as a JSON array (RivetDocs is the source
 -- of truth; the worker pushes them to Cloudflare via atomic bulk PUT
 -- replace).
 --

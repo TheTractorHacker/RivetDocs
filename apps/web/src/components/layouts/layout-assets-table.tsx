@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { safeExternalHref } from '@weavestream/shared';
+import { safeExternalHref } from '@rivetdocs/shared';
 import type {
   AssetSummary,
   FieldType,
   LayoutFieldSummary,
   LayoutSummary,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { vaultLinkLabel } from '../../lib/vault-link';
 import {
   FormattedCalendarDate,

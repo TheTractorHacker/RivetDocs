@@ -7,8 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { StepUpFactor } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { StepUpFactor } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { Btn, Dialog, Field, Input } from '../ui';
 import { apiFetch } from '../../lib/api';
 import { registerStepUpOpener } from '../../lib/step-up';

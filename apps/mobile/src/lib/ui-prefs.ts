@@ -3,11 +3,11 @@ import {
   UI_COOKIE_NAME,
   type UiPreferences,
   type UiTheme,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   readBrowserCookie,
   writeUiBrowserCookie,
-} from '@weavestream/shared/browser';
+} from '@rivetdocs/shared/browser';
 
 /**
  * Theme + accent plumbing for the mobile app (grew out of Phase 0's

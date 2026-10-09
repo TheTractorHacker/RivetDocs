@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { parseIpEntry, type CloudflareIpEntryDto } from '@weavestream/shared';
+import { parseIpEntry, type CloudflareIpEntryDto } from '@rivetdocs/shared';
 import { Btn, Dialog, Field, Input, Tag, Textarea } from '../../../../../../components/ui';
 
 /**
@@ -82,7 +82,7 @@ export function EntryFormDialog({
         <Field
           label="Description"
           htmlFor="cf-entry-desc"
-          help="Stored in Weavestream only — Cloudflare's per-item comment is left empty."
+          help="Stored in RivetDocs only — Cloudflare's per-item comment is left empty."
         >
           <Textarea
             id="cf-entry-desc"

@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Cloudflare Rules Lists integration — DTOs and validators.
  *
- * The integration manages Cloudflare IP allow-lists. Weavestream is the
+ * The integration manages Cloudflare IP allow-lists. RivetDocs is the
  * authoritative source: every UI mutation pushes the full list to
  * Cloudflare via atomic bulk PUT replace, and a periodic worker reads
  * Cloudflare's view back to detect drift. Rich local metadata (a free-
@@ -93,7 +93,7 @@ export interface IpEntryParseResult {
 /**
  * Parse and canonicalise an IPv4/IPv6 entry, with or without a CIDR
  * prefix. Returns NULL if the input is not a valid Cloudflare list
- * entry. The result's `canonical` is the form Weavestream stores and
+ * entry. The result's `canonical` is the form RivetDocs stores and
  * sends to Cloudflare.
  */
 export function parseIpEntry(input: string): IpEntryParseResult | null {
@@ -175,7 +175,7 @@ export const cloudflareExternalListDtoSchema = z.object({
    * out so the operator can see why they aren't available.
    */
   kind: z.string(),
-  /** True when Weavestream is already managing this list. */
+  /** True when RivetDocs is already managing this list. */
   alreadyRegistered: z.boolean(),
 });
 
@@ -206,9 +206,9 @@ export type CloudflareIpEntryDto = z.infer<typeof cloudflareIpEntryDtoSchema>;
 
 export const cloudflareDriftDetailsSchema = z
   .object({
-    /** Entries Weavestream has but Cloudflare doesn't. */
+    /** Entries RivetDocs has but Cloudflare doesn't. */
     missingOnCf: z.array(z.string()).default([]),
-    /** Entries Cloudflare has but Weavestream doesn't. */
+    /** Entries Cloudflare has but RivetDocs doesn't. */
     extraOnCf: z
       .array(z.object({ ip: z.string(), comment: z.string().nullable() }))
       .default([]),
@@ -216,8 +216,8 @@ export const cloudflareDriftDetailsSchema = z
     lastError: z.string().nullable().optional(),
     /**
      * Set when the last drift sweep auto-recovered a discrepancy by re-pushing
-     * the Weavestream view to Cloudflare. Surfaced in the UI so an operator
-     * can see when their Cloudflare-side hand-edit was undone (Weavestream is
+     * the RivetDocs view to Cloudflare. Surfaced in the UI so an operator
+     * can see when their Cloudflare-side hand-edit was undone (RivetDocs is
      * the source of truth).
      */
     lastSelfHeal: z

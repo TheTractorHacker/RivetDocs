@@ -3,7 +3,7 @@ import {
   CloudflareDriftSweepJobNames,
   IntegrationSyncOrchestratorJobNames,
   QueueNames,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { Queue } from 'bullmq';
 import { EnvService } from '../config/env.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';

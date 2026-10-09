@@ -7,7 +7,7 @@ import type {
   CloudflareIpListDto,
   DriverDescriptor,
   IntegrationDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { CredentialsTab } from '../credentials-tab';
 import { RegisteredListsTab } from './registered-lists-tab';
 import { DomainsSyncTab } from './domains-sync-tab';

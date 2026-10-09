@@ -17,7 +17,7 @@ import {
   updateMembershipSchema,
   type MembershipRole,
   type UpdateMembershipInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { MembershipsService } from './memberships.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
 import { AuthedOnly } from '../rbac/require-permission.decorator.js';

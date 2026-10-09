@@ -6,8 +6,8 @@ import {
   isRestrictedError,
 } from './api';
 
-jest.mock('@weavestream/shared/browser', () => ({ ensureCsrf: jest.fn() }));
-const { ensureCsrf } = jest.requireMock('@weavestream/shared/browser') as {
+jest.mock('@rivetdocs/shared/browser', () => ({ ensureCsrf: jest.fn() }));
+const { ensureCsrf } = jest.requireMock('@rivetdocs/shared/browser') as {
   ensureCsrf: jest.Mock;
 };
 
@@ -51,7 +51,7 @@ describe('apiFetch CSRF acquisition (5a parity pin)', () => {
 });
 
 /**
- * The extraction itself is `@weavestream/shared`'s and is tested there.
+ * The extraction itself is `@rivetdocs/shared`'s and is tested there.
  * What is mobile-only — and what these cases pin — is the `ApiError`
  * unwrap: the shared helper takes `unknown`, so handing it `err` instead
  * of `err.problem` typechecks cleanly and then returns the fallback for

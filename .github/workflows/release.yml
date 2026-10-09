@@ -51,7 +51,7 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = "push" ]; then
             # Strip the leading "v" from the tag (v1.0.0 → 1.0.0) for
-            # the WEAVESTREAM_VERSION build-arg.
+            # the RIVETDOCS_VERSION build-arg.
             echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           else
             echo "value=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
@@ -67,10 +67,10 @@ jobs:
           push: true
           provenance: false
           build-args: |
-            WEAVESTREAM_VERSION=${{ steps.version.outputs.value }}
+            RIVETDOCS_VERSION=${{ steps.version.outputs.value }}
           # Push by digest only; the `manifest` job below stitches the
           # per-arch digests into a single multi-arch tag.
-          outputs: type=image,name=ghcr.io/weavestream/weavestream-${{ matrix.image }},push-by-digest=true,name-canonical=true
+          outputs: type=image,name=ghcr.io/thetractorhacker/rivetdocs-${{ matrix.image }},push-by-digest=true,name-canonical=true
           cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.platform.arch }}
           cache-to:   type=gha,scope=${{ matrix.image }}-${{ matrix.platform.arch }},mode=max
 
@@ -120,7 +120,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/weavestream/weavestream-${{ matrix.image }}
+          images: ghcr.io/thetractorhacker/rivetdocs-${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -132,13 +132,13 @@ jobs:
         working-directory: /tmp/digests
         run: |
           TAGS=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
-          SOURCES=$(printf 'ghcr.io/weavestream/weavestream-${{ matrix.image }}@sha256:%s ' *)
+          SOURCES=$(printf 'ghcr.io/thetractorhacker/rivetdocs-${{ matrix.image }}@sha256:%s ' *)
           docker buildx imagetools create $TAGS $SOURCES
 
       - name: Inspect manifest
         run: |
           VERSION=$(jq -r '.labels["org.opencontainers.image.version"] // empty' <<< "$DOCKER_METADATA_OUTPUT_JSON")
-          docker buildx imagetools inspect ghcr.io/weavestream/weavestream-${{ matrix.image }}:${VERSION:-latest}
+          docker buildx imagetools inspect ghcr.io/thetractorhacker/rivetdocs-${{ matrix.image }}:${VERSION:-latest}
 
   release-notes:
     name: Publish GitHub Release
@@ -162,15 +162,15 @@ jobs:
             Pull this release with:
 
             ```bash
-            WEAVESTREAM_VERSION=${{ github.ref_name }}
+            RIVETDOCS_VERSION=${{ github.ref_name }}
             docker compose pull
             docker compose up -d
             ```
 
-            - `ghcr.io/weavestream/weavestream-api:${{ github.ref_name }}`
-            - `ghcr.io/weavestream/weavestream-web:${{ github.ref_name }}`
-            - `ghcr.io/weavestream/weavestream-worker:${{ github.ref_name }}`
+            - `ghcr.io/thetractorhacker/rivetdocs-api:${{ github.ref_name }}`
+            - `ghcr.io/thetractorhacker/rivetdocs-web:${{ github.ref_name }}`
+            - `ghcr.io/thetractorhacker/rivetdocs-worker:${{ github.ref_name }}`
 
-            See [CHANGELOG.md](https://github.com/Weavestream/Weavestream/blob/main/CHANGELOG.md)
-            and [docs/INSTALL.md](https://github.com/Weavestream/Weavestream/blob/main/docs/INSTALL.md)
+            See [CHANGELOG.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/CHANGELOG.md)
+            and [docs/INSTALL.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/docs/INSTALL.md)
             for upgrade notes.

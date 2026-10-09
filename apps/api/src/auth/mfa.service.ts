@@ -17,7 +17,7 @@ export class MfaService {
   }
 
   otpauthUrl(email: string, secret: string): string {
-    return authenticator.keyuri(email, 'Weavestream', secret);
+    return authenticator.keyuri(email, 'RivetDocs', secret);
   }
 
   /**

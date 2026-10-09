@@ -11,13 +11,13 @@ import type {
   ChatRole,
   ChatToolCallDto,
   ChatTurnContext,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   chatToolCallErrorCodeSchema,
   chatToolCallNameSchema,
   chatToolCallSchema,
   chatToolCallStatusSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { z } from 'zod';
 import { ChatRole as PrismaChatRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';

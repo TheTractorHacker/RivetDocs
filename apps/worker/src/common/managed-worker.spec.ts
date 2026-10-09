@@ -148,7 +148,7 @@ describe('createManagedWorker — readiness', () => {
     const { managed, logger, worker } = build({
       queue: 'backup',
       options: { connection: {} as never, concurrency: 3 },
-      readyDetail: 'dir=/var/lib/weavestream/backup, lock=360min',
+      readyDetail: 'dir=/var/lib/rivetdocs/backup, lock=360min',
     });
 
     await managed.ready();
@@ -156,7 +156,7 @@ describe('createManagedWorker — readiness', () => {
     expect(worker.waitUntilReady).toHaveBeenCalledTimes(1);
     expect(logger.log).toHaveBeenCalledTimes(1);
     expect(logger.log).toHaveBeenCalledWith(
-      '[backup] worker ready (concurrency=3, dir=/var/lib/weavestream/backup, lock=360min)',
+      '[backup] worker ready (concurrency=3, dir=/var/lib/rivetdocs/backup, lock=360min)',
     );
   });
 

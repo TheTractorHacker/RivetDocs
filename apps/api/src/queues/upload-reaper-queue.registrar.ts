@@ -3,7 +3,7 @@ import {
   Logger,
   OnApplicationBootstrap,
 } from '@nestjs/common';
-import { QueueNames, UploadReaperJobNames } from '@weavestream/shared';
+import { QueueNames, UploadReaperJobNames } from '@rivetdocs/shared';
 import { EnvService } from '../config/env.service.js';
 import { QueuesService } from './queues.service.js';
 import { registerRepeatableCron } from './repeatable-registration.js';

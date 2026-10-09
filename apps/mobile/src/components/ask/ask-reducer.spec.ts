@@ -1,4 +1,4 @@
-import type { ChatToolCallDto } from '@weavestream/shared';
+import type { ChatToolCallDto } from '@rivetdocs/shared';
 import {
   askReducer,
   initialAskState,

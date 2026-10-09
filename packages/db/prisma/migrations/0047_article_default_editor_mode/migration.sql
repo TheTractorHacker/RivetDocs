@@ -7,7 +7,7 @@
 -- Constrained to the same set the article body discriminator accepts
 -- (`tiptap` | `markdown`) so a malformed string in the singleton row
 -- can never poison the form. CHECK constraint mirrors what
--- `articleEditorModeSchema` allows in @weavestream/shared.
+-- `articleEditorModeSchema` allows in @rivetdocs/shared.
 
 ALTER TABLE "system_settings"
 ADD COLUMN "article_default_editor_mode" TEXT NOT NULL DEFAULT 'tiptap';

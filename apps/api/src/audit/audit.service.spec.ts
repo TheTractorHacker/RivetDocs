@@ -1,4 +1,4 @@
-import { runWithTenantContext } from '@weavestream/shared/server';
+import { runWithTenantContext } from '@rivetdocs/shared/server';
 import { AuditLogService } from './audit.service.js';
 
 function makePrisma() {

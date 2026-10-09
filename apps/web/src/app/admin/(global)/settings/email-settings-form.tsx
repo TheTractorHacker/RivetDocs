@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { EmailSettings, SmtpSecurityMode } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { EmailSettings, SmtpSecurityMode } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../lib/api';
 import { Btn, Field, Input, Select, Tag, useToast } from '../../../../components/ui';
 
@@ -216,7 +216,7 @@ export function EmailSettingsForm({
             id="smtp-from-name"
             value={fromName}
             onChange={(e) => setFromName(e.target.value)}
-            placeholder="Weavestream"
+            placeholder="RivetDocs"
             maxLength={120}
           />
         </Field>

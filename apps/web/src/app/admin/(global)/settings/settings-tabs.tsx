@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { AiSettings, EmailSettings } from '@weavestream/shared';
+import type { AiSettings, EmailSettings } from '@rivetdocs/shared';
 import type { Settings } from '../../../../lib/server-api/settings';
 import {
   ArticleSettingsForm,

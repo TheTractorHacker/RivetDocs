@@ -7,7 +7,7 @@ description: Per-tenant file uploads with image galleries and local storage.
 
 # Files & Photos
 
-Weavestream stores uploaded files on the local filesystem with one directory per tenant for storage-layer isolation. Images receive automatic thumbnail generation. A photo gallery view is available per tenant.
+RivetDocs stores uploaded files on the local filesystem with one directory per tenant for storage-layer isolation. Images receive automatic thumbnail generation. A photo gallery view is available per tenant.
 
 ## Supported File Types
 

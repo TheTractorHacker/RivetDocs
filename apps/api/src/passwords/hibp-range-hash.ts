@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
  * Compute the uppercase SHA-1 hex digest used by the HIBP (Have I Been Pwned)
  * Pwned Passwords *range* API.
  *
- * SECURITY NOTE — This is **not** a password hash. WeaveStream never stores
+ * SECURITY NOTE — This is **not** a password hash. RivetDocs never stores
  * passwords as SHA-1. The SHA-1 algorithm is mandated by the public HIBP
  * range protocol, which performs k-anonymity lookups by the first 5
  * characters of `SHA1(secret)` and returns matching suffixes for local

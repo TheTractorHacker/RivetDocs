@@ -32,7 +32,7 @@ import {
  * target company at save time.
  *
  * Differences vs the legacy per-company browser:
- *   - Adds a **Company** column (resolved Weavestream name with a
+ *   - Adds a **Company** column (resolved RivetDocs name with a
  *     link to that company's detail page, or a muted "(unmapped
  *     client …)" label when the upstream client id has no mapping).
  *   - Drops the **Assignee** and **Requester** columns — NinjaOne

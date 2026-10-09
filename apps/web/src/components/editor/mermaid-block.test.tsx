@@ -32,7 +32,7 @@ jest.mock('./use-diagram-palette', () => ({
   useDiagramPalette: () => PALETTE,
 }));
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   diagramPaletteSignature: () => 'sig',
 }));
 

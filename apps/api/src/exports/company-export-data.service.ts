@@ -9,7 +9,7 @@ import {
   type IntegrationTargetKind,
   type ReconstructionCompletenessCounts,
   type ReconstructionGapKind,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   SecretEncryptionService,
@@ -206,7 +206,7 @@ export interface ExportSafeReconstructionGap {
 export interface ExportSourceProvenance {
   sourceLabel: string;
   sourceResource: string;
-  ownership: 'breeze' | 'weavestream';
+  ownership: 'breeze' | 'rivetdocs';
   state: IntegrationSyncState;
   firstSeenAt: Date;
   lastSeenAt: Date;
@@ -264,7 +264,7 @@ interface SafeSyncBinding {
   driver: string;
   sourceLabel: string;
   resourceKey: string;
-  ownership: 'breeze' | 'weavestream';
+  ownership: 'breeze' | 'rivetdocs';
   firstSeenAt: Date;
   lastSeenAt: Date;
   lastSyncedAt: Date | null;
@@ -1765,7 +1765,7 @@ function safeSynchronizedArticle(
   let inSourceProvenance = false;
   for (const rawLine of source.split(/\r?\n/)) {
     const line = rawLine.trimEnd();
-    if (/<!--\s*weavestream:breeze:managed:(?:start|end)\s*-->/i.test(line)) continue;
+    if (/<!--\s*rivetdocs:breeze:managed:(?:start|end)\s*-->/i.test(line)) continue;
     if (/^##\s+Source provenance\s*$/i.test(line)) {
       inSourceProvenance = true;
       continue;

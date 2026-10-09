@@ -4,7 +4,7 @@ import {
   ADMIN_API_KEY_DEFAULT_PAGE_SIZE,
   ADMIN_API_KEY_PAGE_SIZES,
   describeCatchAllFamilyGap,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { requireMe } from '../../../../lib/server-api/auth';
 import {
   getSecurityApiKeys,

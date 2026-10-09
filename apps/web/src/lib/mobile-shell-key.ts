@@ -4,7 +4,7 @@ import {
   uiAccentValues,
   uiThemeValues,
   type UiPreferences,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Map cookie preferences onto a mobile shell variant filename stem.

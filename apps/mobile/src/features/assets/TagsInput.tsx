@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { TagChipDraft } from '@weavestream/shared';
+import type { TagChipDraft } from '@rivetdocs/shared';
 import { Icon } from '../../components/Icon';
 import { Input } from '../../components/primitives';
 import { apiFetch } from '../../lib/api';

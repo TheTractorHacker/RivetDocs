@@ -14,7 +14,7 @@
     "types": ["node", "jest", "@testing-library/jest-dom"],
     // `moduleResolution: Node` (required for ts-jest's CommonJS emit)
     // predates package `exports` maps, so it cannot follow
-    // `@weavestream/shared/browser` to its declarations — eight files
+    // `@rivetdocs/shared/browser` to its declarations — eight files
     // were reporting TS2307 here before this was added, surviving only
     // because every one of their specs `jest.mock()`s the module. Point
     // at the declarations directly, the same workaround
@@ -23,8 +23,8 @@
     // purely to satisfy tsc.
     "paths": {
       "@/*": ["src/*"],
-      "@weavestream/shared": ["../../packages/shared/dist/index.d.ts"],
-      "@weavestream/shared/browser": [
+      "@rivetdocs/shared": ["../../packages/shared/dist/index.d.ts"],
+      "@rivetdocs/shared/browser": [
         "../../packages/shared/dist/browser/index.d.ts"
       ],
       // Same `exports`-map limitation, different package: `@tiptap/react`

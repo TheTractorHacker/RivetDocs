@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, type MonitoredDomain } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { domainHostnameSchema } from '@weavestream/shared';
+import { domainHostnameSchema } from '@rivetdocs/shared';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditLogService } from '../../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../../audit/audit-actions.js';
@@ -20,7 +20,7 @@ import {
   QueueNames,
   type CloudflareDomainSyncResult,
   type CloudflareDomainSyncRunDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { IntegrationsService } from '../integrations.service.js';
 import { IntegrationDriverRegistry } from '../drivers/integration-driver.registry.js';
 import { cloudflareConfigSchema } from '../drivers/cloudflare/cloudflare.driver.js';
@@ -85,14 +85,14 @@ export function operatorMessage(err: unknown, correlationId: string): string {
 }
 
 
-/** Counts from one run; see CloudflareDomainSyncResult in @weavestream/shared. */
+/** Counts from one run; see CloudflareDomainSyncResult in @rivetdocs/shared. */
 export type RegistrarSyncResult = CloudflareDomainSyncResult;
 
 /**
  * Cloudflare registrar → MonitoredDomain sync.
  *
  * Cloudflare is the source of truth for registrar facts (registrar, expiry,
- * auto-renew, lock, nameservers); Weavestream owns everything else on the row
+ * auto-renew, lock, nameservers); RivetDocs owns everything else on the row
  * — which company it belongs to, the monitoring toggles, client visibility.
  * So a domain moved to a client company stays there, and the sync only ever
  * rewrites the registrar columns.
@@ -496,7 +496,7 @@ export class CloudflareRegistrarSyncService {
       // and both create the domain: the unique index is per company only.
       const outcome: WriteOutcome = await this.prisma
         .$transaction(async (tx): Promise<WriteOutcome> => {
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('weavestream:cf-registrar-hostname'), hashtext(${hostname}))`;
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('rivetdocs:cf-registrar-hostname'), hashtext(${hostname}))`;
           // Archived rows included: an archive is an operator's decision and
           // must not be undone by recreating the domain next to it.
           const candidates = await tx.monitoredDomain.findMany({ where: { hostname } });

@@ -1,4 +1,4 @@
-// Weavestream — schema.
+// RivetDocs — schema.
 // Phase 1 auth models + Phase 2 RBAC/invite additions + Phase 3 asset layout
 // and asset data plane + Phase 4 documentation plane (Article, Folder,
 // Upload) + Phase 5 SystemSetting singleton (workspace branding + tenant
@@ -312,7 +312,7 @@ model Company {
   passwords                          Password[]
   passwordFolders                    PasswordFolder[]
   // Phase 11: per-tenant org-to-company mappings owned by a global
-  // integration (Action1 organisation → Weavestream company).
+  // integration (Action1 organisation → RivetDocs company).
   // Cascade delete clears mappings if a company is hard-deleted, but
   // we never archive assets in that path — see `IntegrationCompanyMapping`.
   integrationMappings                IntegrationCompanyMapping[]
@@ -1327,7 +1327,7 @@ model PasswordFolder {
 // Phase 11 — universal integration framework. Top-level `Integration`
 // rows are GLOBAL (no companyId): one row per configured connection
 // to an external system (e.g. one Action1 tenant). Sync fans out into
-// many Weavestream companies via `IntegrationCompanyMapping`. Only
+// many RivetDocs companies via `IntegrationCompanyMapping`. Only
 // SUPER_ADMIN may create / edit / delete an Integration.
 //
 // `driver` keys into the in-memory `IntegrationDriverRegistry`
@@ -1463,7 +1463,7 @@ model IntegrationSecret {
 }
 
 // Phase 11 — tenant-scoped row that ties a single external organisation
-// (Action1 `org_id`) to a Weavestream company. Layout + match-key
+// (Action1 `org_id`) to a RivetDocs company. Layout + match-key
 // fields + field mappings are all GLOBAL on the parent `Integration`
 // — this row only carries the per-tenant fan-out info (which company,
 // which upstream org, optional driver filter, enabled flag).
@@ -1501,7 +1501,7 @@ model IntegrationCompanyMapping {
 }
 
 // Phase 11 — describes how a single source field is projected onto a
-// Weavestream `AssetField`. GLOBAL: one row per (integration, sourceField),
+// RivetDocs `AssetField`. GLOBAL: one row per (integration, sourceField),
 // shared across every per-company mapping. The `transform` blob is
 // reserved for the driver's transform DSL (e.g. `lowercase`,
 // `coerce_date`). `syncDirection` controls how the worker resolves
@@ -1615,7 +1615,7 @@ model IntegrationSyncRunCompanyResult {
 }
 
 // Phase 11 — durable link between an external record and a
-// Weavestream `Asset`. One row per (companyMapping, externalId).
+// RivetDocs `Asset`. One row per (companyMapping, externalId).
 // `lastSyncedFieldChecksums` is a `{ assetFieldId: sha256 }` map
 // recorded on every successful field write; the next sync uses it
 // to detect manual edits when `syncDirection=preserve_manual`.
@@ -1763,13 +1763,13 @@ model IntegrationReconstructionGap {
 }
 
 // Cloudflare Zero Trust Gateway Lists integration — a registered
-// IP-typed Gateway list managed by Weavestream. The parent `Integration`
+// IP-typed Gateway list managed by RivetDocs. The parent `Integration`
 // row holds the API token (in IntegrationSecret) and the CF account id
 // (in config). One CloudflareIpList row per registered Gateway list.
 //
 // Unlike the asset-import drivers, this is a SECURITY-kind integration:
 // global, super-admin only, no `IntegrationCompanyMapping` rows. Entries
-// are stored as a JSON array — Weavestream is the source of truth and
+// are stored as a JSON array — RivetDocs is the source of truth and
 // PATCHes Cloudflare's view (append/remove diff) to bring it in line.
 //
 // `entries`: `[{ ip: string, description: string }, ...]`. Gateway items
@@ -1993,7 +1993,7 @@ model IpReservation {
 // schedule; the API-side `BackupQueueRegistrar` asserts one BullMQ
 // repeatable per enabled row, and every fire produces a `BackupRun`.
 // Dumps land on the host via a bind mount at
-// `${DATA_DIR}/backup:/var/lib/weavestream/backup`, accompanied by a
+// `${DATA_DIR}/backup:/var/lib/rivetdocs/backup`, accompanied by a
 // `*.manifest.json` sidecar. Operators are responsible for including
 // both `${DATA_DIR}/backup` and `${DATA_DIR}/files` in their external
 // backup routine — the runbook makes this explicit.

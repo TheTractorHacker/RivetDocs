@@ -2,7 +2,7 @@
 label: Key Concepts
 icon: book
 order: 800
-description: The core data model and terminology used throughout Weavestream.
+description: The core data model and terminology used throughout RivetDocs.
 ---
 
 # Key Concepts
@@ -11,7 +11,7 @@ Understanding a handful of terms makes the rest of the documentation click into 
 
 ## Workspace
 
-The **Workspace** is the singleton instance of Weavestream. There is one workspace per deployment. A `SUPER_ADMIN` configures it from **Admin → Settings**, setting:
+The **Workspace** is the singleton instance of RivetDocs. There is one workspace per deployment. A `SUPER_ADMIN` configures it from **Admin → Settings**, setting:
 
 - The workspace name and subtitle (shown in the sidebar)
 - The **tenant terminology** — the word used everywhere for "tenant" (see below)
@@ -21,7 +21,7 @@ The workspace has no bearing on data isolation; it is purely cosmetic configurat
 
 ## Tenant (Company)
 
-A **Tenant** is the primary unit of data organisation in Weavestream. Everything — articles, assets, passwords, domains, uploads — belongs to exactly one tenant.
+A **Tenant** is the primary unit of data organisation in RivetDocs. Everything — articles, assets, passwords, domains, uploads — belongs to exactly one tenant.
 
 Tenants are represented in the database as `Company` records. The word shown in the UI is configurable by the operator (see [Workspace Settings](/configuration/workspace-settings/)). Common choices:
 
@@ -58,7 +58,7 @@ Assets support:
 
 ## Asset Field
 
-A **Field** is one attribute on an Asset Layout. Weavestream supports 14 field types:
+A **Field** is one attribute on an Asset Layout. RivetDocs supports 14 field types:
 
 | Type | Description |
 |---|---|
@@ -104,7 +104,7 @@ Passwords maintain a full **version history** — every change is stored as an i
 
 ## Monitored Domain
 
-A **Monitored Domain** is a hostname registered for health tracking. Weavestream checks three things per domain:
+A **Monitored Domain** is a hostname registered for health tracking. RivetDocs checks three things per domain:
 
 - **WHOIS** — domain registration expiry
 - **DNS** — resolution validity

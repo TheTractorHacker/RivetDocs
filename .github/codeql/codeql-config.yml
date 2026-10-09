@@ -1,4 +1,4 @@
-name: WeaveStream CodeQL config
+name: RivetDocs CodeQL config
 
 # Use the security-extended pack so we keep the alerts default setup
 # would have given us (CWE-89, CWE-79, CWE-22, etc.).

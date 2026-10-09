@@ -5,8 +5,8 @@ import type {
   DriverDescriptor,
   IntegrationCompanyMappingDto,
   SourceOrgDto,
-} from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,
@@ -24,7 +24,7 @@ import {
  *
  * Two coupled selections:
  *   1. Upstream organization (driver-supplied list, when supported).
- *   2. Weavestream company (typeahead).
+ *   2. RivetDocs company (typeahead).
  *
  * Asset layout, match-keys, and field mappings are now configured
  * GLOBALLY on the integration (see the "Field mappings" tab) and
@@ -191,7 +191,7 @@ export function CreateMappingDialog({
         )}
 
         <Field
-          label="Weavestream company"
+          label="RivetDocs company"
           help="Synced records will be inserted into this tenant."
         >
           <CompanyPicker value={company} onChange={setCompany} />

@@ -10,7 +10,7 @@ const push = jest.fn();
 
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: jest.fn() }) }));
 jest.mock('../../../lib/api', () => ({ apiFetch: (...a: unknown[]) => apiFetch(...a) }));
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   copyToClipboard: (...a: unknown[]) => copyToClipboard(...a),
 }));
 jest.mock('../../../components/ui', () => ({
@@ -48,7 +48,7 @@ jest.mock('../../../components/ui', () => ({
 
 const ENROLL = {
   secret: 'JBSWY3DPEHPK3PXP',
-  otpauthUrl: 'otpauth://totp/Weavestream:a@b.c?secret=JBSWY3DPEHPK3PXP',
+  otpauthUrl: 'otpauth://totp/RivetDocs:a@b.c?secret=JBSWY3DPEHPK3PXP',
   qr: { size: 31, path: 'M1 1h7v1h-7zM24 1h7v1h-7z' },
 };
 // `as const` so indexing stays a literal under `noUncheckedIndexedAccess`.

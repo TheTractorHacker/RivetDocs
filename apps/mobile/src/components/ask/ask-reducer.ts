@@ -1,4 +1,4 @@
-import type { ChatToolCallDto } from '@weavestream/shared';
+import type { ChatToolCallDto } from '@rivetdocs/shared';
 
 /**
  * Ask anything's transcript state machine. Pure — the provider owns the

@@ -16,10 +16,10 @@ import {
   UI_COOKIE_NAME,
   parseUiCookie,
   resolveSsrTheme,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 export const metadata: Metadata = {
-  title: 'Weavestream',
+  title: 'RivetDocs',
   description: 'IT documentation',
   robots: { index: false, follow: false },
   // The favicon remains generated from the brand mark. iOS receives a

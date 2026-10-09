@@ -7,7 +7,7 @@ description: Customisable asset layouts and structured infrastructure tracking.
 
 # Asset Management
 
-Weavestream's asset system lets you build structured records for any kind of infrastructure. You define the fields, and every tenant's assets conform to that schema.
+RivetDocs's asset system lets you build structured records for any kind of infrastructure. You define the fields, and every tenant's assets conform to that schema.
 
 ![Asset Layout Editor](./assets/asset-layout-editor.png)
 

@@ -12,12 +12,12 @@ import {
   EmailModule,
   QueuesProducerModule,
   RbacModule,
-} from '@weavestream/api/runtime';
-import { DomainsModule } from '@weavestream/api/domains';
-import { IntegrationsCoreModule } from '@weavestream/api/integrations';
-import { AlertsModule } from '@weavestream/api/alerts';
-import { ExportDataModule } from '@weavestream/api/exports';
-import { AiModule } from '@weavestream/api/ai';
+} from '@rivetdocs/api/runtime';
+import { DomainsModule } from '@rivetdocs/api/domains';
+import { IntegrationsCoreModule } from '@rivetdocs/api/integrations';
+import { AlertsModule } from '@rivetdocs/api/alerts';
+import { ExportDataModule } from '@rivetdocs/api/exports';
+import { AiModule } from '@rivetdocs/api/ai';
 import { DomainChecksWorker } from './domain-checks/domain-checks.processor.js';
 import { PwnedCheckWorker } from './pwned-check/pwned-check.processor.js';
 import { CompanyPdfExportWorker } from './company-pdf-export/company-pdf-export.processor.js';

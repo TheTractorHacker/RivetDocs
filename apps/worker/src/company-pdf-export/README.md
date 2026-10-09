@@ -7,15 +7,15 @@ sudo apt-get install -y poppler-utils libxml2-utils   # Debian/Ubuntu/WSL
 brew install poppler                                  # macOS — xmllint ships with the OS
 ```
 
-Without them the inspection specs skip with an install hint; set `WEAVESTREAM_REQUIRE_PDF_TOOLS=1` (as CI does) to turn a missing binary into a failure instead.
+Without them the inspection specs skip with an install hint; set `RIVETDOCS_REQUIRE_PDF_TOOLS=1` (as CI does) to turn a missing binary into a failure instead.
 
 The PDF builder spec contains a deterministic, non-secret company reconstruction fixture. From the repository root, generate it and render every page with Poppler:
 
 ```bash
 mkdir -p tmp/pdfs
 PATH="$HOME/.nvm/versions/node/v24.18.0/bin:$PATH" \
-  WEAVESTREAM_PDF_FIXTURE_OUTPUT=tmp/pdfs/task-10-reconstruction-fixture.pdf \
-  pnpm --filter @weavestream/worker test -- --runInBand \
+  RIVETDOCS_PDF_FIXTURE_OUTPUT=tmp/pdfs/task-10-reconstruction-fixture.pdf \
+  pnpm --filter @rivetdocs/worker test -- --runInBand \
   src/company-pdf-export/pdf-builder.spec.ts \
   -t 'builds a deterministic inspection fixture'
 pdfinfo tmp/pdfs/task-10-reconstruction-fixture.pdf

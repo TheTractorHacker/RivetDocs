@@ -3,12 +3,12 @@ label: Screenshots
 icon: device-desktop
 order: 950
 meta:
-    description: A full visual walkthrough of the Weavestream interface, from the operator dashboard and company management to assets, domains, passwords, IPAM, and administration.
+    description: A full visual walkthrough of the RivetDocs interface, from the operator dashboard and company management to assets, domains, passwords, IPAM, and administration.
 ---
 
-# Weavestream Screenshots
+# RivetDocs Screenshots
 
-A visual tour of Weavestream — the operator control plane for managing companies, assets, domains, passwords, and more.
+A visual tour of RivetDocs — the operator control plane for managing companies, assets, domains, passwords, and more.
 
 ---
 
@@ -136,7 +136,7 @@ The **Security center** provides a live view of authentication failures, account
 
 ## Integrations
 
-The **NinjaOne RMM** integration syncs managed devices from NinjaOne organisations into Weavestream asset layouts on a configurable CRON schedule, with dry-run support.
+The **NinjaOne RMM** integration syncs managed devices from NinjaOne organisations into RivetDocs asset layouts on a configurable CRON schedule, with dry-run support.
 
 ![NinjaOne Integration](assets/ninjaone-integration.png)
 

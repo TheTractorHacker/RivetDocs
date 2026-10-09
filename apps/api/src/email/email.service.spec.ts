@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import nodemailer from 'nodemailer';
-import { MAX_ALERT_RECIPIENTS } from '@weavestream/shared';
+import { MAX_ALERT_RECIPIENTS } from '@rivetdocs/shared';
 import { EmailService, capRecipients } from './email.service.js';
 import { EmailNotConfiguredError } from './email-settings.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
@@ -160,7 +160,7 @@ function makeSettings() {
       secureMode: 'STARTTLS',
       username: 'smtp-user',
       password: 'smtp-pass',
-      fromName: 'Weavestream',
+      fromName: 'RivetDocs',
       fromEmail: 'noreply@example.com',
       replyTo: 'reply@example.com',
     }),

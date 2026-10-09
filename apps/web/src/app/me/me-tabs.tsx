@@ -10,7 +10,7 @@ import { ProfileForm } from './profile-form';
 import { PasswordForm } from './password-form';
 import { SessionsList } from './sessions-list';
 import { ApiKeysList } from './api-keys-list';
-import type { ApiKeySummary } from '@weavestream/shared';
+import type { ApiKeySummary } from '@rivetdocs/shared';
 import { AppearanceForm } from './appearance-form';
 import { MfaBackupCodes } from './mfa-backup-codes';
 
@@ -221,7 +221,7 @@ export function MeTabs({
                 maxWidth: 560,
               }}
             >
-              Personalize how Weavestream looks on this account. Changes sync across every browser you sign in on.
+              Personalize how RivetDocs looks on this account. Changes sync across every browser you sign in on.
             </p>
             <AppearanceForm initial={me.preferences} />
           </Panel>

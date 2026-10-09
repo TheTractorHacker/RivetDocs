@@ -5,7 +5,7 @@ import {
   fileFieldEntrySchema,
   fileOptionsSchema,
   tagsFieldInputSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type {
   FieldPreResolveCtx,
   FieldTypeStrategy,
@@ -14,7 +14,7 @@ import type {
 /**
  * FILE storage shape: an array of `fileFieldEntrySchema` entries
  * (`{ uploadId, filename, mimeType, sizeBytes, isImage? }`). The schema
- * is defined once in `@weavestream/shared` so the web dropzone, the
+ * is defined once in `@rivetdocs/shared` so the web dropzone, the
  * upload-confirm response, and this strategy all agree on the field
  * names — previously this file maintained a divergent copy that used
  * `mime` where everything else used `mimeType`, which caused every save

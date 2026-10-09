@@ -2,12 +2,12 @@
 label: TLS & Reverse Proxy
 icon: shield-lock
 order: 800
-description: Configure HTTPS with Nginx, Caddy, Traefik, or Cloudflare in front of Weavestream.
+description: Configure HTTPS with Nginx, Caddy, Traefik, or Cloudflare in front of RivetDocs.
 ---
 
 # TLS & Reverse Proxy
 
-Weavestream does not terminate TLS. Place a reverse proxy in front of the `web` container (port 3000) to handle HTTPS.
+RivetDocs does not terminate TLS. Place a reverse proxy in front of the `web` container (port 3000) to handle HTTPS.
 
 :::warning
 Running `web` directly internet-facing (no reverse proxy) forces `TRUST_PROXY_HOPS=0`, which disables meaningful per-IP rate limiting, lockout, audit attribution, and IP allow/deny rules. See [Client IP Attribution](/configuration/security/#client-ip-attribution) for the trade-off. For any production deployment, run a trusted TLS proxy in front of `web`.
@@ -50,9 +50,9 @@ Restart the stack after changing these: `docker compose up -d`
 
 ## Client IP Headers
 
-Weavestream records client IPs for audit entries, rate limiting, lockouts, and Security Center views. Your reverse proxy must set `X-Forwarded-Proto: https` and must control the `X-Forwarded-For` chain.
+RivetDocs records client IPs for audit entries, rate limiting, lockouts, and Security Center views. Your reverse proxy must set `X-Forwarded-Proto: https` and must control the `X-Forwarded-For` chain.
 
-Weavestream reads only `X-Forwarded-For`; `X-Real-IP` is ignored. Next.js fills a missing `X-Forwarded-For` with the address of the connection before Weavestream sees the request, so a proxy that sends only `X-Real-IP` is recorded as its own address.
+RivetDocs reads only `X-Forwarded-For`; `X-Real-IP` is ignored. Next.js fills a missing `X-Forwarded-For` with the address of the connection before RivetDocs sees the request, so a proxy that sends only `X-Real-IP` is recorded as its own address.
 
 Set `TRUST_PROXY_HOPS` to the number of trusted reverse-proxy hops **between the internet and the `web` container** — i.e. the edge tier you run in front of compose. The default `1` matches a single operator-managed proxy (Caddy, Nginx, Traefik, …) or a Cloudflare Tunnel that connects straight to `web`. A CDN or tunnel in front of your own proxy adds a hop **only if that proxy trusts it and appends to `X-Forwarded-For`**. A proxy that replaces the header discards every entry in front of it, including the client, and no `TRUST_PROXY_HOPS` value can bring that entry back. See [Cloudflare](#cloudflare) for the common layered setups.
 
@@ -79,7 +79,7 @@ Read the value from a real request rather than from a diagram of your network:
 The **TRUST_PROXY_HOPS** row shows the value the web tier applied to your request next to the value in the API container's environment. The web value is the one in effect, because the web tier resolves the client IP. If the two differ, only one container was recreated after the last `.env` change.
 
 !!!warning Never set a value higher than the real hop count
-Entries to the left of your real address are written by the client. Cloudflare keeps an `X-Forwarded-For` header that the client sent and appends the real address after it, so a client can send `X-Forwarded-For: 1.2.3.4` and reach `web` with the chain `1.2.3.4, 198.51.100.7`. With the correct `TRUST_PROXY_HOPS=1`, Weavestream records `198.51.100.7`. With `TRUST_PROXY_HOPS=2`, it records `1.2.3.4` — the client has chosen the IP that audit logs, per-IP lockout, rate limiting, and IP allow/deny rules see.
+Entries to the left of your real address are written by the client. Cloudflare keeps an `X-Forwarded-For` header that the client sent and appends the real address after it, so a client can send `X-Forwarded-For: 1.2.3.4` and reach `web` with the chain `1.2.3.4, 198.51.100.7`. With the correct `TRUST_PROXY_HOPS=1`, RivetDocs records `198.51.100.7`. With `TRUST_PROXY_HOPS=2`, it records `1.2.3.4` — the client has chosen the IP that audit logs, per-IP lockout, rate limiting, and IP allow/deny rules see.
 !!!
 
 ## Nginx
@@ -144,10 +144,10 @@ services:
   web:
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.weavestream.rule=Host(`your-domain.com`)"
-      - "traefik.http.routers.weavestream.entrypoints=websecure"
-      - "traefik.http.routers.weavestream.tls.certresolver=letsencrypt"
-      - "traefik.http.services.weavestream.loadbalancer.server.port=3000"
+      - "traefik.http.routers.rivetdocs.rule=Host(`your-domain.com`)"
+      - "traefik.http.routers.rivetdocs.entrypoints=websecure"
+      - "traefik.http.routers.rivetdocs.tls.certresolver=letsencrypt"
+      - "traefik.http.services.rivetdocs.loadbalancer.server.port=3000"
 ```
 
 ## Cloudflare
@@ -184,7 +184,7 @@ your-domain.com {
 
 **Caddy behind `cloudflared`.** In the same global `servers` block, trust only the Docker network that `cloudflared` connects from, for example `trusted_proxies static 172.18.0.0/16` (read the subnet with `docker network inspect <network>`). Avoid `private_ranges` unless nothing else on your LAN can reach Caddy: every address Caddy trusts can write its own `X-Forwarded-For`.
 
-**Nginx behind Cloudflare.** The Nginx example above uses `$proxy_add_x_forwarded_for`, which appends the connecting address to any `X-Forwarded-For` the client sent. With `TRUST_PROXY_HOPS=1` that is safe, because Weavestream reads the rightmost entry, which Nginx wrote. With `TRUST_PROXY_HOPS=2`, a client that connects to Nginx directly controls the entry Weavestream reads. Accept connections to Nginx only from Cloudflare's IP ranges, or only from `cloudflared`.
+**Nginx behind Cloudflare.** The Nginx example above uses `$proxy_add_x_forwarded_for`, which appends the connecting address to any `X-Forwarded-For` the client sent. With `TRUST_PROXY_HOPS=1` that is safe, because RivetDocs reads the rightmost entry, which Nginx wrote. With `TRUST_PROXY_HOPS=2`, a client that connects to Nginx directly controls the entry RivetDocs reads. Accept connections to Nginx only from Cloudflare's IP ranges, or only from `cloudflared`.
 
 **`cloudflared` straight to `web`.** Point the tunnel's public hostname at `http://web:3000` when `cloudflared` joins the compose network, or at `http://localhost:3000` when it runs on the host. Keep `TRUST_PROXY_HOPS=1`. A request that reaches `web` without the tunnel can choose its own `X-Forwarded-For`, so remove the published `web` port or bind it to loopback (see the next section).
 
@@ -203,7 +203,7 @@ Then point the proxy at `127.0.0.1:3000` (the examples above already do). The de
 
 ## Verify forged `X-Forwarded-For` is ignored
 
-After your proxy is in place, confirm that a client cannot choose their own audit IP. From a machine **outside** your network, drive a failed login through the proxy with a forged header, then check what Weavestream recorded. The login endpoint is CSRF-protected, so fetch a token first and replay it with the spoofed request:
+After your proxy is in place, confirm that a client cannot choose their own audit IP. From a machine **outside** your network, drive a failed login through the proxy with a forged header, then check what RivetDocs recorded. The login endpoint is CSRF-protected, so fetch a token first and replay it with the spoofed request:
 
 ```bash
 # 1. Get a CSRF token + cookie into a jar.
@@ -224,7 +224,7 @@ If you instead see `1.2.3.4`, `TRUST_PROXY_HOPS` is higher than the number of pr
 
 ### Connection diagnostics endpoint
 
-For a faster check that does not require reading the audit log, an admin with the **View Security Center** (`SECURITY_READ`) capability can call the diagnostics endpoint, which reports how Weavestream attributed **that exact request**:
+For a faster check that does not require reading the audit log, an admin with the **View Security Center** (`SECURITY_READ`) capability can call the diagnostics endpoint, which reports how RivetDocs attributed **that exact request**:
 
 ```bash
 # Reuse the CSRF token + cookie jar from the login test above, and a

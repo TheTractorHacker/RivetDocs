@@ -254,7 +254,7 @@ export const getAppHelpToolInputSchema = z
       .min(3)
       .max(400)
       .describe(
-        'Question about how to use the Weavestream application. Do not use for live tenant state, deployment, Docker, environment variables, or server administration.',
+        'Question about how to use the RivetDocs application. Do not use for live tenant state, deployment, Docker, environment variables, or server administration.',
       ),
   })
   .strict();

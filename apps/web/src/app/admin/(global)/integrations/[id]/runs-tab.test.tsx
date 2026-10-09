@@ -55,13 +55,13 @@ it('labels a withheld secret as secret blocked rather than a validation error', 
       companyName: 'Acme', status: 'succeeded', totals: null, error: null,
       conflicts: [{
         kind: 'secret_blocked', externalId: 'raw-upstream-id',
-        message: 'Weavestream withheld a scripts record because its definition contains secret-like material.',
+        message: 'RivetDocs withheld a scripts record because its definition contains secret-like material.',
       }],
     }],
   }});
   render(<RunsTab integration={{ id: 'integration-1', resources: [] } as never} mappings={[]} runs={[run] as never} />);
   fireEvent.click(screen.getByRole('button'));
-  expect(await screen.findByText(/Weavestream withheld a scripts record/)).toBeInTheDocument();
+  expect(await screen.findByText(/RivetDocs withheld a scripts record/)).toBeInTheDocument();
   expect(screen.getByText('secret blocked')).toBeInTheDocument();
   expect(screen.queryByText('validation error')).not.toBeInTheDocument();
 });

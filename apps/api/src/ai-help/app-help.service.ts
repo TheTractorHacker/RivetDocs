@@ -6,7 +6,7 @@ import {
 } from 'node:fs';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { Injectable } from '@nestjs/common';
-import type { AppHelpMatch, GetAppHelpToolOutput } from '@weavestream/shared';
+import type { AppHelpMatch, GetAppHelpToolOutput } from '@rivetdocs/shared';
 import { ActionValues } from '../rbac/permissions.js';
 
 const MAX_FILES = 100;
@@ -88,13 +88,13 @@ export class AppHelpService {
 
   search(question: string): GetAppHelpToolOutput {
     // `??` only substitutes null/undefined — an empty or whitespace-only
-    // WEAVESTREAM_VERSION (unset compose interpolation, empty build-arg)
+    // RIVETDOCS_VERSION (unset compose interpolation, empty build-arg)
     // would otherwise yield version: '' and fail the output schema's
     // .min(1), silently disabling get_app_help. Guard on emptiness.
     return searchAppHelpIndex(
       this.index,
       question,
-      process.env.WEAVESTREAM_VERSION?.trim() || 'dev',
+      process.env.RIVETDOCS_VERSION?.trim() || 'dev',
     );
   }
 }

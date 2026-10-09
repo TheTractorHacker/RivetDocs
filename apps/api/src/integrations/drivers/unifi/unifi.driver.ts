@@ -4,7 +4,7 @@ import type {
   DriverDescriptor,
   SourceFieldDto,
   SourceOrgDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   DriverAuthError,
   type LegacyDriverFetchPage,
@@ -159,7 +159,7 @@ export class UniFiSiteManagerDriver implements IntegrationDriver {
     key: 'unifi',
     label: 'UniFi Site Manager',
     description:
-      'Sync UniFi Site Manager devices and Network clients into Weavestream asset layouts.',
+      'Sync UniFi Site Manager devices and Network clients into RivetDocs asset layouts.',
     iconKey: null,
     configFields: [
       {

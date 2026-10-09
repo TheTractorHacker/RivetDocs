@@ -7,7 +7,7 @@ description: WHOIS, DNS, and TLS certificate expiry monitoring for any hostname.
 
 # Domain & SSL Monitoring
 
-Weavestream monitors the health and expiry of any hostname you add. Checks run automatically in the background via the worker and results are aggregated in expiration dashboards.
+RivetDocs monitors the health and expiry of any hostname you add. Checks run automatically in the background via the worker and results are aggregated in expiration dashboards.
 
 ![Domain & SSL Monitor](./assets/domain-monitor.png)
 

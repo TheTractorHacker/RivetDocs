@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { IntegrationTargetKind } from '@weavestream/shared';
+import type { IntegrationTargetKind } from '@rivetdocs/shared';
 import type {
   ReconstructionInput,
   ReconstructionWriter,

@@ -2,7 +2,7 @@
 --
 -- Adds a global integration registry plus tenant-scoped fan-out tables.
 -- One global `Integration` row drives many `IntegrationCompanyMapping`
--- rows (one per Weavestream company / external organisation pair). The
+-- rows (one per RivetDocs company / external organisation pair). The
 -- worker uses `IntegrationSyncRecord` for durable external↔asset linking
 -- and `IntegrationFieldMapping` to project remote fields onto AssetField
 -- targets. Run history lives in `IntegrationSyncRun` (global) +
@@ -227,7 +227,7 @@ ALTER TABLE "integration_sync_run_company_results"
 -- =====================================================================
 --
 -- One row per (mapping, externalId) — the durable link between a
--- driver-side record and a Weavestream Asset. `last_synced_field_checksums`
+-- driver-side record and a RivetDocs Asset. `last_synced_field_checksums`
 -- is a JSON map keyed by AssetField.id; the worker uses it to detect
 -- manual edits when sync_direction = preserve_manual.
 --

@@ -14,7 +14,7 @@ Use this structure:
 Complete, UI-focused instructions for the task.
 ```
 
-- Use current labels and navigation from the Weavestream application.
+- Use current labels and navigation from the RivetDocs application.
 - Put `###` headings inside a task when needed; they remain part of the parent section.
 - Keep aliases short and specific. Retrieval is deterministic and uses titles, aliases, and body terms; it does not use embeddings.
 - Permission names must exist in `src/rbac/permissions.ts`. They are explanatory and do not grant access.

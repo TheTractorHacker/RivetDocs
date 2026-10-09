@@ -7,7 +7,7 @@ import {
   pdfSafeUserText,
   richTextToPlaintext,
 } from './pdf-builder.js';
-import { fenceInfoLanguage, isMermaidLanguage } from '@weavestream/shared';
+import { fenceInfoLanguage, isMermaidLanguage } from '@rivetdocs/shared';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import {
@@ -21,7 +21,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { delimiter, resolve } from 'node:path';
-import type { CompanyExportData } from '@weavestream/api/exports';
+import type { CompanyExportData } from '@rivetdocs/api/exports';
 import {
   companyPdfTestFixture,
   FIXTURE_BLOCKED_SECRET,
@@ -39,7 +39,7 @@ const UPLOAD_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
  *
  * Resolve them once up front instead: without them the inspection specs
  * skip with an install hint, and where they are required — explicit
- * `WEAVESTREAM_REQUIRE_PDF_TOOLS`, else a truthy `CI` — a missing binary
+ * `RIVETDOCS_REQUIRE_PDF_TOOLS`, else a truthy `CI` — a missing binary
  * is a hard failure, so a provisioning regression can never silently drop
  * the credential-rendering and encryption coverage.
  */
@@ -80,7 +80,7 @@ function envFlag(name: string): boolean | undefined {
 }
 
 const pdfToolsRequired =
-  envFlag('WEAVESTREAM_REQUIRE_PDF_TOOLS') ?? envFlag('CI') ?? false;
+  envFlag('RIVETDOCS_REQUIRE_PDF_TOOLS') ?? envFlag('CI') ?? false;
 
 function missingPdfToolsMessage(): string {
   return [
@@ -88,7 +88,7 @@ function missingPdfToolsMessage(): string {
     'Install them, then re-run this spec:',
     '  Debian/Ubuntu: sudo apt-get install -y poppler-utils libxml2-utils',
     '  macOS (Homebrew): brew install poppler   # xmllint ships with macOS',
-    'Set WEAVESTREAM_REQUIRE_PDF_TOOLS=0 to skip the inspection specs.',
+    'Set RIVETDOCS_REQUIRE_PDF_TOOLS=0 to skip the inspection specs.',
   ].join('\n');
 }
 
@@ -366,7 +366,7 @@ describe('parseMarkdownBlocks', () => {
   describe('cross-surface agreement', () => {
     // The property that matters: the PDF must caption a fence if and
     // only if the React renderers would draw it. Both now read the same
-    // rule from @weavestream/shared, so this compares the PDF's decision
+    // rule from @rivetdocs/shared, so this compares the PDF's decision
     // against that rule applied to the class react-markdown builds.
     const appWouldRender = (info: string) =>
       isMermaidLanguage(`language-${fenceInfoLanguage(info)}`.slice('language-'.length));
@@ -1210,7 +1210,7 @@ describe('standalone reconstruction dossier PDF', () => {
     expect(createHash('sha256').update(first).digest('hex'))
       .toBe(createHash('sha256').update(second).digest('hex'));
 
-    const requestedOutput = process.env['WEAVESTREAM_PDF_FIXTURE_OUTPUT'];
+    const requestedOutput = process.env['RIVETDOCS_PDF_FIXTURE_OUTPUT'];
     if (requestedOutput) {
       const output = resolve(repoRoot(), requestedOutput);
       mkdirSync(resolve(output, '..'), { recursive: true });

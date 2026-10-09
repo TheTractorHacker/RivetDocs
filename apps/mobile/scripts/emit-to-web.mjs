@@ -124,7 +124,7 @@ function precacheUrls(swSource) {
  *
  * So walk the manifest graph instead.
  *
- * The subtraction is required, not tidiness: `@weavestream/shared`'s
+ * The subtraction is required, not tidiness: `@rivetdocs/shared`'s
  * browser barrel is reachable BOTH statically (the palette hook renders
  * eagerly) and dynamically (the runtime), and Vite's manifest models
  * exactly that. A plain "no overlap" assertion would fail on a correct
@@ -213,14 +213,14 @@ function assertDiagramEngineIsLazy(manifest, swSource) {
  * of silently shipping a subset.
  */
 async function uiEnums() {
-  const shared = await import('@weavestream/shared');
+  const shared = await import('@rivetdocs/shared');
   const accents = shared.uiAccentValues;
   const themePrefs = shared.uiThemeValues;
   if (!Array.isArray(accents) || accents.length === 0) {
-    throw new Error('uiAccentValues missing from @weavestream/shared');
+    throw new Error('uiAccentValues missing from @rivetdocs/shared');
   }
   if (!Array.isArray(themePrefs) || themePrefs.length === 0) {
-    throw new Error('uiThemeValues missing from @weavestream/shared');
+    throw new Error('uiThemeValues missing from @rivetdocs/shared');
   }
   return {
     accents,

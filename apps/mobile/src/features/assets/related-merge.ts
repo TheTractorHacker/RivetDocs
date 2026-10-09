@@ -1,4 +1,4 @@
-import type { PasswordSummary } from '@weavestream/shared';
+import type { PasswordSummary } from '@rivetdocs/shared';
 import type { RelatedGroups, RelatedItem } from '../relations/api';
 
 /**

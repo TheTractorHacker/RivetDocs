@@ -211,7 +211,7 @@ describe('AssetsService.clone', () => {
     // Storage errors (EACCES, ENOSPC) carry absolute server paths.
     const { svc, uploads } = harness();
     uploads.copyToCompany.mockRejectedValueOnce(
-      new Error("EACCES: permission denied, open '/srv/weavestream/storage/co-dst/x'"),
+      new Error("EACCES: permission denied, open '/srv/rivetdocs/storage/co-dst/x'"),
     );
     const bulk = await svc.cloneMany(ACTOR, SRC, ['a-1'], DST, { archiveOriginal: false }, META);
     expect(bulk.ok).toEqual([]);

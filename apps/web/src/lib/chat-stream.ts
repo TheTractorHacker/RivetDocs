@@ -5,6 +5,6 @@
  * `packages/shared/src/browser/chat-stream.ts` in mobile Phase 3 so the
  * Ask anything panel can share it (2c precedent: web keeps the old
  * import path alive). New code should import from
- * `@weavestream/shared/browser` directly.
+ * `@rivetdocs/shared/browser` directly.
  */
-export { streamChatMessage, type ChatStreamMeta } from '@weavestream/shared/browser';
+export { streamChatMessage, type ChatStreamMeta } from '@rivetdocs/shared/browser';

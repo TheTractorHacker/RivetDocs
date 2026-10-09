@@ -10,7 +10,7 @@ import { timingSafeEqual } from 'node:crypto';
 import {
   INTERNAL_TOKEN_HEADER,
   deriveInternalApiToken,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { EnvService } from '../config/env.service.js';
 import { isPrivatePeer } from './request-meta.js';
 

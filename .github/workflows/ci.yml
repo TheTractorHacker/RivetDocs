@@ -37,12 +37,12 @@ jobs:
           node-version: "${{ env.NODE_VERSION }}"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @weavestream/db prisma:generate
-      - run: pnpm --filter @weavestream/shared build
-      - run: pnpm --filter @weavestream/db build
+      - run: pnpm --filter @rivetdocs/db prisma:generate
+      - run: pnpm --filter @rivetdocs/shared build
+      - run: pnpm --filter @rivetdocs/db build
       # apps/worker typechecks against the API's emitted declarations
-      # (`@weavestream/api/<entry>` → apps/api/dist/public/*.d.ts).
-      - run: pnpm --filter @weavestream/api build
+      # (`@rivetdocs/api/<entry>` → apps/api/dist/public/*.d.ts).
+      - run: pnpm --filter @rivetdocs/api build
       - run: pnpm -r typecheck
       # The worker loads API code from apps/api/dist, and each app resolves
       # packages from its own node_modules. A devDependency, an unexported
@@ -51,7 +51,7 @@ jobs:
       # image — and docker-build builds the worker image without running it.
       # The build below chains scripts/check-worker-deps.mjs, which walks the
       # compiled graph across both apps and fails on each of those.
-      - run: pnpm --filter @weavestream/worker build
+      - run: pnpm --filter @rivetdocs/worker build
 
   test:
     runs-on: ubuntu-latest
@@ -59,12 +59,12 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: weavestream
-          POSTGRES_PASSWORD: weavestream
-          POSTGRES_DB: weavestream_test
+          POSTGRES_USER: rivetdocs
+          POSTGRES_PASSWORD: rivetdocs
+          POSTGRES_DB: rivetdocs_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U weavestream -d weavestream_test"
+          --health-cmd "pg_isready -U rivetdocs -d rivetdocs_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -77,20 +77,20 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://weavestream:weavestream@localhost:5432/weavestream_test
+      DATABASE_URL: postgresql://rivetdocs:rivetdocs@localhost:5432/rivetdocs_test
       REDIS_URL: redis://localhost:6379/0
       # The company-PDF-export specs skip themselves when Poppler/libxml2
       # are absent (a clean contributor checkout). CI provisions both
       # below, so here a missing binary must fail the build instead —
       # otherwise a broken install step silently drops the credential
       # rendering and AES-256 encryption coverage.
-      WEAVESTREAM_REQUIRE_PDF_TOOLS: "1"
+      RIVETDOCS_REQUIRE_PDF_TOOLS: "1"
       # DB-mutating integration specs (folder visibility CTE, articles
       # cursor pagination) are explicit opt-in: locally, @prisma/client
       # loads the workspace .env, so a DATABASE_URL gate would silently
       # run them against the DEVELOPMENT database on every `pnpm test`.
       # This job's throwaway service database is where they belong.
-      WEAVESTREAM_RUN_DB_INTEGRATION_TESTS: "1"
+      RIVETDOCS_RUN_DB_INTEGRATION_TESTS: "1"
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -100,13 +100,13 @@ jobs:
           node-version: "${{ env.NODE_VERSION }}"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @weavestream/db prisma:generate
-      - run: pnpm --filter @weavestream/shared build
-      - run: pnpm --filter @weavestream/db build
+      - run: pnpm --filter @rivetdocs/db prisma:generate
+      - run: pnpm --filter @rivetdocs/shared build
+      - run: pnpm --filter @rivetdocs/db build
       # Apply migrations so DB-level integration specs (e.g. the
       # audit_log immutability trigger from migration 0032) run against
       # a schema that matches production.
-      - run: pnpm --filter @weavestream/db prisma:deploy
+      - run: pnpm --filter @rivetdocs/db prisma:deploy
       # The company-PDF-export specs shell out to poppler
       # (pdftotext/pdfinfo/pdffonts) to verify rendered credential text and
       # AES-256 encryption, and to xmllint to parse exported XMP.
@@ -114,7 +114,7 @@ jobs:
       - name: Install PDF inspection tools (poppler-utils, libxml2-utils)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils libxml2-utils
       # apps/worker specs load API code from apps/api/dist.
-      - run: pnpm --filter @weavestream/api build
+      - run: pnpm --filter @rivetdocs/api build
       - run: pnpm -r test
       # The Mermaid corpus fixtures are what the diagram sanitizer's
       # allowlist is derived from, and `packages/shared` deliberately has
@@ -130,14 +130,14 @@ jobs:
       # header of scripts/mermaid-corpus.mjs.
       - name: Install Chromium for the diagram checks
         run: npx --yes playwright@1.62.1 install --with-deps chromium
-      - run: pnpm --filter @weavestream/web mermaid:corpus:check
+      - run: pnpm --filter @rivetdocs/web mermaid:corpus:check
       # The desktop CSP permits 'unsafe-eval' in DEV ONLY, so a Mermaid
       # version that reached eval would pass every local check and fail
       # silently in production. This renders the corpus under the real
       # production policy and fails on any violation. It also pins the
       # canvas behaviour `toSrgbHex` depends on, which jsdom cannot
       # express (it has no canvas and always takes the null fallback).
-      - run: pnpm --filter @weavestream/web diagram:csp:check
+      - run: pnpm --filter @rivetdocs/web diagram:csp:check
 
   prisma-migrate-dry-run:
     runs-on: ubuntu-latest
@@ -145,17 +145,17 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: weavestream
-          POSTGRES_PASSWORD: weavestream
-          POSTGRES_DB: weavestream_migrate
+          POSTGRES_USER: rivetdocs
+          POSTGRES_PASSWORD: rivetdocs
+          POSTGRES_DB: rivetdocs_migrate
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U weavestream -d weavestream_migrate"
+          --health-cmd "pg_isready -U rivetdocs -d rivetdocs_migrate"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://weavestream:weavestream@localhost:5432/weavestream_migrate
+      DATABASE_URL: postgresql://rivetdocs:rivetdocs@localhost:5432/rivetdocs_migrate
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -168,7 +168,7 @@ jobs:
       # `prisma migrate deploy` is the real health signal: every migration
       # in packages/db/prisma/migrations must apply cleanly against a fresh
       # Postgres 16 instance. If this step fails the release is broken.
-      - run: pnpm --filter @weavestream/db prisma:deploy
+      - run: pnpm --filter @rivetdocs/db prisma:deploy
       # Schema-drift gate: schema.prisma must describe exactly what the
       # migrations build. The historical migrations were hand-written
       # with custom FK + index names, so schema.prisma carries explicit
@@ -179,7 +179,7 @@ jobs:
       # other side following.
       - name: Schema drift check
         run: |
-          pnpm --filter @weavestream/db exec prisma migrate diff \
+          pnpm --filter @rivetdocs/db exec prisma migrate diff \
             --from-schema-datasource prisma/schema.prisma \
             --to-schema-datamodel prisma/schema.prisma \
             --exit-code
@@ -214,6 +214,6 @@ jobs:
           push: false
           load: false
           build-args: |
-            WEAVESTREAM_VERSION=ci-${{ github.sha }}
+            RIVETDOCS_VERSION=ci-${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max

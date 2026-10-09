@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../../../lib/api';
-import type { LayoutSummary } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { LayoutSummary } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import {
   Btn,
   DataTable,

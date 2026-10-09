@@ -1,4 +1,4 @@
-import { UploadError } from '@weavestream/shared/browser';
+import { UploadError } from '@rivetdocs/shared/browser';
 import { uploadFile } from './upload-client';
 
 /**
@@ -12,13 +12,13 @@ import { uploadFile } from './upload-client';
  */
 
 jest.mock('./api', () => ({ apiFetch: jest.fn() }));
-jest.mock('@weavestream/shared/browser', () => {
-  const actual = jest.requireActual('@weavestream/shared/browser');
+jest.mock('@rivetdocs/shared/browser', () => {
+  const actual = jest.requireActual('@rivetdocs/shared/browser');
   return { ...actual, putWithProgress: jest.fn().mockResolvedValue(undefined) };
 });
 
 const { apiFetch } = jest.requireMock('./api') as { apiFetch: jest.Mock };
-const { putWithProgress } = jest.requireMock('@weavestream/shared/browser') as {
+const { putWithProgress } = jest.requireMock('@rivetdocs/shared/browser') as {
   putWithProgress: jest.Mock;
 };
 

@@ -3,7 +3,7 @@ import {
   diagramPaletteSignature,
   readDiagramPalette,
   type DiagramPalette,
-} from '@weavestream/shared/browser';
+} from '@rivetdocs/shared/browser';
 
 /**
  * The live diagram palette, re-read whenever the applied theme or accent

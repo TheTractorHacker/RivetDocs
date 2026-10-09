@@ -11,7 +11,7 @@ This guide walks through setting up a client portal for a tenant — from config
 
 ## Overview
 
-Each tenant in Weavestream has a client portal at `/portal/<company-slug>`. The portal shows a curated subset of the tenant's data, controlled by `visibleToClients` flags set by operators.
+Each tenant in RivetDocs has a client portal at `/portal/<company-slug>`. The portal shows a curated subset of the tenant's data, controlled by `visibleToClients` flags set by operators.
 
 ## Step 1 — Decide what to expose
 

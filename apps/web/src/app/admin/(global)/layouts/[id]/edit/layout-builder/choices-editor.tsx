@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { randomClientId } from '@weavestream/shared/browser';
+import { randomClientId } from '@rivetdocs/shared/browser';
 import { Icon } from '../../../../../../../components/ui';
 import { slugifyFieldSlug as slugify } from '../../../../../../../lib/slugify';
 import { InspectorField, InspectorInput, ToggleRow } from './inspector-controls';

@@ -12,7 +12,7 @@
  * Isomorphic on purpose: `deriveInternalApiToken` uses Web Crypto
  * (`globalThis.crypto.subtle`), which exists in both Node and the Next.js
  * edge/proxy runtime, so this module is safe to re-export from the
- * client-safe `@weavestream/shared` barrel.
+ * client-safe `@rivetdocs/shared` barrel.
  */
 
 /** Request header the web tier presents on internal-only API endpoints. */
@@ -21,7 +21,7 @@ export const INTERNAL_TOKEN_HEADER = 'x-ws-internal-token';
 // Domain-separation label mixed into the HMAC so the derived token can
 // never collide with any other use of COOKIE_SIGNING_KEY. Versioned so a
 // future scheme change can coexist during a rollout.
-const INTERNAL_TOKEN_LABEL = 'weavestream:internal-api-token:v1';
+const INTERNAL_TOKEN_LABEL = 'rivetdocs:internal-api-token:v1';
 
 function toHex(bytes: Uint8Array): string {
   let hex = '';

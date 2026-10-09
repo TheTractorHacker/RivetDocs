@@ -10,7 +10,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import type { LayoutStats, LayoutSummary } from '@weavestream/shared';
+import type { LayoutStats, LayoutSummary } from '@rivetdocs/shared';
 import { useRouter } from 'next/navigation';
 import { lower } from '../../../../../../../lib/term';
 import { useTerm } from '../../../../../../../lib/term-context';

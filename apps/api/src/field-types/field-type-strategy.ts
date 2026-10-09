@@ -1,4 +1,4 @@
-import type { FieldType } from '@weavestream/shared';
+import type { FieldType } from '@rivetdocs/shared';
 import type { Prisma } from '@prisma/client';
 import type { z } from 'zod';
 

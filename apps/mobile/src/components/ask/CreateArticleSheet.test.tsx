@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ChatToolCallDto } from '@weavestream/shared';
+import type { ChatToolCallDto } from '@rivetdocs/shared';
 import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { initialAskState, type AskState } from './ask-reducer';

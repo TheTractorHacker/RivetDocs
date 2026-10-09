@@ -6,7 +6,7 @@ import type {
   RecentActivityItem,
   StarredItem,
   UserRole,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { serverApiFetch } from './core';
 
 export type UserListItem = {

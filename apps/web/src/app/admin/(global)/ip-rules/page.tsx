@@ -46,7 +46,7 @@ export default async function IpRulesPage() {
         >
           <strong style={{ color: 'var(--text)' }}>Using Cloudflare Access?</strong>
           <p style={{ margin: '8px 0 10px', lineHeight: 1.55 }}>
-            These IP allow and deny rules apply inside Weavestream. If your
+            These IP allow and deny rules apply inside RivetDocs. If your
             organization manages access through Cloudflare application policies, you
             can also configure the Cloudflare integration to sync approved IPs to a
             Cloudflare IP list.

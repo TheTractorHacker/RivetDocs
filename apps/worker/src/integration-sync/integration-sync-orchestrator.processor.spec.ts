@@ -1,7 +1,7 @@
 import {
   integrationSyncMappingJobSchema,
   integrationSyncOrchestratorJobSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { IntegrationSyncOrchestratorWorker } from './integration-sync-orchestrator.processor.js';
 
 describe('integration sync orchestrator staged payload', () => {

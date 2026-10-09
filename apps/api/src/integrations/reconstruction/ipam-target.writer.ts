@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import {
   createIpReservationSchema,
   createSubnetSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { scanSensitiveMaterial } from '../sensitive-material.js';
 import {
   blockedOutcome,

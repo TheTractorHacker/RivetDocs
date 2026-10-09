@@ -9,7 +9,7 @@ import type {
   CreateIntegrationCompanyMappingInput,
   IntegrationCompanyMappingDto,
   UpdateIntegrationCompanyMappingInput,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
@@ -113,7 +113,7 @@ export class IntegrationCompanyMappingService {
         e.code === 'P2002'
       ) {
         throw new ConflictException(
-          `Source organisation "${input.externalOrgId}" is already mapped to a Weavestream company for this integration.`,
+          `Source organisation "${input.externalOrgId}" is already mapped to a RivetDocs company for this integration.`,
         );
       }
       throw e;

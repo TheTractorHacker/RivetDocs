@@ -7,7 +7,7 @@ description: Production deployment, TLS, upgrades, and backup strategy.
 
 # Deployment
 
-Weavestream is designed for self-hosted deployment using Docker Compose. This section covers everything you need to run it reliably in production.
+RivetDocs is designed for self-hosted deployment using Docker Compose. This section covers everything you need to run it reliably in production.
 
 ## Deployment Guides
 
@@ -28,7 +28,7 @@ Internet → Reverse Proxy (Nginx/Caddy/Traefik) → web:3000 → api:4000
                                                for uploaded files)
 ```
 
-Weavestream does not terminate TLS itself. A reverse proxy handles HTTPS and forwards to the Next.js `web` container on port 3000. **Exposing the `web` port (3000) directly to the internet is for local/LAN use only** — without a trusted proxy in front, client IP attribution for audit logs, lockout, rate limiting, and IP rules cannot be trusted. See [TLS & Reverse Proxy](/deployment/tls/).
+RivetDocs does not terminate TLS itself. A reverse proxy handles HTTPS and forwards to the Next.js `web` container on port 3000. **Exposing the `web` port (3000) directly to the internet is for local/LAN use only** — without a trusted proxy in front, client IP attribution for audit logs, lockout, rate limiting, and IP rules cannot be trusted. See [TLS & Reverse Proxy](/deployment/tls/).
 
 ## Supported Platforms
 

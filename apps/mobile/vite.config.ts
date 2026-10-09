@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 /**
- * Weavestream Mobile — static bundle served at `/m` by the Next.js
+ * RivetDocs Mobile — static bundle served at `/m` by the Next.js
  * container (Phase 0), and bundled into a Capacitor binary later. The
  * "must build to static files" constraint is why this is a Vite app and
  * not a second Next app: `output: 'export'` bans route handlers,
@@ -153,13 +153,13 @@ export default defineConfig({
   },
 
   optimizeDeps: {
-    // `@weavestream/shared` is a workspace-linked package that emits
+    // `@rivetdocs/shared` is a workspace-linked package that emits
     // CommonJS (it has no `"type": "module"`, and the Nest API requires
     // it). Vite treats linked deps as source and does not pre-bundle them
     // by default, which makes named imports from a CJS `export *` chain
     // fail. Forcing them through the optimizer converts them to ESM once,
     // at dev-server start.
-    include: ['@weavestream/shared', '@weavestream/shared/browser'],
+    include: ['@rivetdocs/shared', '@rivetdocs/shared/browser'],
   },
 
   server: {

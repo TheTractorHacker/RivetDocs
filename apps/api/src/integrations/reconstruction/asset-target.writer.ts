@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { IntegrationSyncDirectionValue } from '@weavestream/shared';
+import type { IntegrationSyncDirectionValue } from '@rivetdocs/shared';
 import type { Prisma } from '@prisma/client';
 import { scanSensitiveMaterial } from '../sensitive-material.js';
 import {

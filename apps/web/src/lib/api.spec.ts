@@ -4,11 +4,11 @@ const requestStepUp = jest.fn();
 const hasStepUpOpener = jest.fn();
 const ensureCsrf = jest.fn(async (..._a: unknown[]) => 'csrf-token');
 
-jest.mock('@weavestream/shared/browser', () => ({
+jest.mock('@rivetdocs/shared/browser', () => ({
   ensureCsrf: (...a: unknown[]) => ensureCsrf(...a),
 }));
 // `isStepUpProblem` is deliberately NOT mocked — it now lives in
-// `@weavestream/shared`, which loads for real here, so these tests
+// `@rivetdocs/shared`, which loads for real here, so these tests
 // exercise the actual `step_up_required` narrowing rather than a
 // local re-implementation that could drift from it.
 jest.mock('./step-up', () => ({

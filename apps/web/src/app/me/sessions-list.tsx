@@ -6,7 +6,7 @@ import {
   API_KEY_REVOCATION_WARNING,
   apiKeysRevokedNotice,
   type RevokeOtherSessionsResult,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { apiFetch } from '../../lib/api';
 import { FormattedRelative } from '../../lib/timezone-context';
 import {

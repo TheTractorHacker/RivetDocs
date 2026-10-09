@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { loadEnv, parsePreviousKeys, type Env } from '@weavestream/shared/server';
+import { loadEnv, parsePreviousKeys, type Env } from '@rivetdocs/shared/server';
 
 @Injectable()
 export class EnvService {

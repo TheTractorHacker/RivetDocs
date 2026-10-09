@@ -10,8 +10,8 @@ import type {
   LoginActivityBucket,
   SecuritySessionRow,
   ThrottleBlockEntry,
-} from '@weavestream/shared';
-import { topologyWarnings } from '@weavestream/shared/server';
+} from '@rivetdocs/shared';
+import { topologyWarnings } from '@rivetdocs/shared/server';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
@@ -23,7 +23,7 @@ import type { AuthedUser } from '../common/current-user.decorator.js';
 import {
   ADMIN_API_KEY_DEFAULT_PAGE_SIZE,
   type AdminApiKeyPage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 // Wire contract with the web tier: `proxy.ts` stashes the raw inbound
 // `X-Forwarded-For` chain under this header and `api-proxy.ts` forwards
@@ -613,7 +613,7 @@ export class SecurityService {
     if (peerTrusted && webTrustProxyHops === null) {
       interpretation.push(
         'The web tier did not report the TRUST_PROXY_HOPS value it applied: ' +
-          'the web container may run an older Weavestream version than the ' +
+          'the web container may run an older RivetDocs version than the ' +
           'API, or this request did not pass through `web`. trustProxyHops ' +
           'comes from the API container, which does not apply it, so the web ' +
           'tier may use a different value.',

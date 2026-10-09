@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { apiFetch } from '../../lib/api';
-import { copyToClipboard, copyWithPromise } from '@weavestream/shared/browser';
-import { problemMessage } from '@weavestream/shared';
+import { copyToClipboard, copyWithPromise } from '@rivetdocs/shared/browser';
+import { problemMessage } from '@rivetdocs/shared';
 import { Btn, Icon, useToast } from '../ui';
 
 export interface PasswordRowActionsProps {

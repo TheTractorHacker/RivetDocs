@@ -10,8 +10,8 @@ import {
   problemMessage,
   type FieldType,
   type FieldTypeMeta,
-} from '@weavestream/shared';
-import type { LayoutSummary } from '@weavestream/shared';
+} from '@rivetdocs/shared';
+import type { LayoutSummary } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import { useTimezone } from '../../../../../lib/timezone-context';
 import { Btn, Icon, LayoutSwatch, Tag, useToast } from '../../../../../components/ui';

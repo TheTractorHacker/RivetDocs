@@ -1,4 +1,4 @@
-import { stripTrailingSlashes } from '@weavestream/shared';
+import { stripTrailingSlashes } from '@rivetdocs/shared';
 
 /**
  * API paths that are internal-only: the web container polls them

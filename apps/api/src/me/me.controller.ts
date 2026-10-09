@@ -17,7 +17,7 @@ import {
   type ChangePasswordInput,
   type UpdateMeInput,
   type UserUiPreferencesUpdate,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Throttle } from '@nestjs/throttler';
 import { MeService } from './me.service.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';

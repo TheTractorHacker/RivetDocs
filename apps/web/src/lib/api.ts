@@ -1,7 +1,7 @@
 'use client';
 
-import { ensureCsrf } from '@weavestream/shared/browser';
-import { isStepUpProblem } from '@weavestream/shared';
+import { ensureCsrf } from '@rivetdocs/shared/browser';
+import { isStepUpProblem } from '@rivetdocs/shared';
 import { hasStepUpOpener, requestStepUp } from './step-up';
 
 export async function apiFetch<T>(

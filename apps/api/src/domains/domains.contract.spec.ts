@@ -2,7 +2,7 @@ import type {
   DomainAlertDto,
   DomainCheckDto,
   MonitoredDomainDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { SameShape, WireJson } from '../common/wire-contract.js';
 import type {
   DomainsService,

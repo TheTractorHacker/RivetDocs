@@ -1,4 +1,4 @@
-import { loadEnv, topologyWarnings, type Env } from '@weavestream/shared/server';
+import { loadEnv, topologyWarnings, type Env } from '@rivetdocs/shared/server';
 
 // A complete, schema-valid env we can clone and tweak per case. Mirrors the
 // fixture in `env.service.spec.ts`; kept local so each spec stays standalone.
@@ -15,7 +15,7 @@ function baseEnv(): NodeJS.ProcessEnv {
     MFA_ENCRYPTION_KEY: key,
     COOKIE_SIGNING_KEY: key,
     CSRF_SIGNING_KEY: key,
-    FILE_STORAGE_DIR: '/tmp/weavestream-test-files',
+    FILE_STORAGE_DIR: '/tmp/rivetdocs-test-files',
     PASSWORD_ENCRYPTION_KEY: key,
     PASSWORD_ENCRYPTION_KEY_KID: 'pk-1',
     INTEGRATION_SECRET_KEY: key,

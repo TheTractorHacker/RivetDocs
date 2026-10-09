@@ -137,7 +137,7 @@ describe('IntegrationCompletenessService', () => {
       relationId: targetKind === 'relation' ? 'relation-authority' : null,
       lastSyncedFieldChecksums: {},
       provenance: targetKind === 'subnet'
-        ? { ownership: 'weavestream', state: 'active', resourceKey: 'subnets' }
+        ? { ownership: 'rivetdocs', state: 'active', resourceKey: 'subnets' }
         : { ownership: 'breeze', state: 'blocked', resourceKey: targetKind },
     };
     prisma.integrationSyncRecord.findMany.mockResolvedValueOnce([record]);
@@ -247,9 +247,9 @@ describe('IntegrationCompletenessService', () => {
     prisma.article.findMany.mockResolvedValueOnce([{
       id: '00000000-0000-0000-0000-000000000024',
       markdownSource: [
-        '<!-- weavestream:breeze:managed:start -->',
+        '<!-- rivetdocs:breeze:managed:start -->',
         'source-managed projection',
-        '<!-- weavestream:breeze:managed:end -->',
+        '<!-- rivetdocs:breeze:managed:end -->',
         'License activation procedure retained by the operator.',
       ].join('\n'),
       contentPlaintext: '', archivedAt: new Date('2026-07-14T11:00:00.000Z'),
@@ -686,14 +686,14 @@ function completenessPrisma(input: {
         id: articleId(activeArticleId, index),
         markdownSource: entry.exact
           ? entry.text
-          : `<!-- weavestream:breeze:managed:start -->\n${entry.text}\n<!-- weavestream:breeze:managed:end -->`,
+          : `<!-- rivetdocs:breeze:managed:start -->\n${entry.text}\n<!-- rivetdocs:breeze:managed:end -->`,
         contentPlaintext: '', archivedAt: null,
       })),
       ...input.staleArticles.map((entry, index) => ({
         id: articleId(staleArticleId, index),
         markdownSource: entry.exact
           ? entry.text
-          : `<!-- weavestream:breeze:managed:start -->\n${entry.text}\n<!-- weavestream:breeze:managed:end -->`,
+          : `<!-- rivetdocs:breeze:managed:start -->\n${entry.text}\n<!-- rivetdocs:breeze:managed:end -->`,
         contentPlaintext: '', archivedAt: new Date('2026-07-14T12:00:00.000Z'),
       })),
     ]) },

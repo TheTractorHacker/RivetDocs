@@ -1,4 +1,4 @@
-import type { IntegrationTargetProvenance, PasswordSummary } from '@weavestream/shared';
+import type { IntegrationTargetProvenance, PasswordSummary } from '@rivetdocs/shared';
 import type {
   AssetRecord,
   AssetsPage,
@@ -131,7 +131,7 @@ export function makeProvenance(
     resourceId: '10000000-0000-4000-8000-0000000000r1',
     sourceLabel: 'Action1',
     sourceResource: 'action1:endpoints',
-    ownership: 'weavestream',
+    ownership: 'rivetdocs',
     state: 'active',
     firstSeenAt: '2026-06-01T09:00:00.000Z',
     lastSeenAt: '2026-07-20T09:00:00.000Z',

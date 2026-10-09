@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { problemMessage } from '@weavestream/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import { Btn, Dialog, Icon, useToast } from '../../../../../components/ui';
 import { apiFetch } from '../../../../../lib/api';
 import type { UploadSummary } from '../../../../../lib/server-api/uploads';

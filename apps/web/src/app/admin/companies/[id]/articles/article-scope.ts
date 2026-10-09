@@ -1,4 +1,4 @@
-import type { ArticleSummary, FolderNode } from '@weavestream/shared';
+import type { ArticleSummary, FolderNode } from '@rivetdocs/shared';
 
 /**
  * What the folder rail has selected, in the same vocabulary `?folderId=`

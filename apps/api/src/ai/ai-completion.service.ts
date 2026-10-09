@@ -4,7 +4,7 @@ import {
   excerptFromPlaintext,
   markdownToPlaintext,
   stripTrailingSlashes,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { safeFetch } from '../common/egress/safe-fetch.js';
 import { redactSecretsInText } from '../common/redact-secrets.js';
 import {

@@ -1,4 +1,4 @@
-import type { SearchEntityKind } from '@weavestream/shared';
+import type { SearchEntityKind } from '@rivetdocs/shared';
 
 /**
  * Map a search hit to the mobile route that can open it.

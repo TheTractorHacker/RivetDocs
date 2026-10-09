@@ -4,7 +4,7 @@ import {
   type AiToolMode,
   type ArticleTextEdit,
   type ChatToolCallDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 
 /**
  * Classification for the Ask proposal cards (Phase 5b — mobile now

@@ -7,7 +7,7 @@ import {
   findCatchAllFamilyGap,
   ipRuleCidrSchema,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   Btn,
   DataTable,
@@ -21,7 +21,7 @@ import {
   type DataColumn,
 } from '../../../../components/ui';
 import { apiFetch } from '../../../../lib/api';
-import type { IpRule, IpRuleAction } from '@weavestream/shared';
+import type { IpRule, IpRuleAction } from '@rivetdocs/shared';
 
 const IP_RULE_ACTION_LABELS: Record<IpRuleAction, string> = {
   ALLOW: 'Allow',

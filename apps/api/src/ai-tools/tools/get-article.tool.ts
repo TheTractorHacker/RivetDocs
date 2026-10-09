@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
-import { tiptapDocToMarkdown } from '@weavestream/shared';
-import type { GetArticleToolInput, GetArticleToolOutput } from '@weavestream/shared';
+import { tiptapDocToMarkdown } from '@rivetdocs/shared';
+import type { GetArticleToolInput, GetArticleToolOutput } from '@rivetdocs/shared';
 import { ArticlesService } from '../../articles/articles.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { entityHrefFor } from '../../search/entity-href.js';

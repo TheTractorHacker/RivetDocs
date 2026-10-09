@@ -1,5 +1,5 @@
-import { AiCompletionHttpError, AiNotConfiguredError } from '@weavestream/api/ai';
-import { articleSummaryJobId } from '@weavestream/shared';
+import { AiCompletionHttpError, AiNotConfiguredError } from '@rivetdocs/api/ai';
+import { articleSummaryJobId } from '@rivetdocs/shared';
 import { ArticleSummaryWorker } from './article-summary.processor.js';
 
 interface FakeArticle {

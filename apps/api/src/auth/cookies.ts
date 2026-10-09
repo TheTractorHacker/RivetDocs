@@ -1,5 +1,5 @@
 import type { CookieOptions, Response } from 'express';
-import { encodeUiCookie, type UiTheme, type UiAccent } from '@weavestream/shared';
+import { encodeUiCookie, type UiTheme, type UiAccent } from '@rivetdocs/shared';
 import type { EnvService } from '../config/env.service.js';
 
 export interface CookieNames {
@@ -110,7 +110,7 @@ export function setUiCookie(
   theme: UiTheme,
   accent: UiAccent,
 ): void {
-  // Wire format (`t=<theme>;a=<accent>`) lives in `@weavestream/shared`
+  // Wire format (`t=<theme>;a=<accent>`) lives in `@rivetdocs/shared`
   // so this writer, the accent-preserving reader in `ui.controller.ts`,
   // the web app's SSR paint, and the mobile shell all agree on it.
   res.cookie(cookieNames(env).ui, encodeUiCookie({ uiTheme: theme, uiAccent: accent }), {

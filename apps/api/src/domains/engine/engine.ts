@@ -19,7 +19,7 @@
  * persisted blob.
  */
 
-import type { DomainCheckDetails } from '@weavestream/shared';
+import type { DomainCheckDetails } from '@rivetdocs/shared';
 import { queryRdap } from './rdap.js';
 import { queryWhois43 } from './whois43.js';
 import { runDnsCheck } from './dns-check.js';

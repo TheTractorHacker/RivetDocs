@@ -21,13 +21,13 @@ import type {
   IntegrationGapsPage,
   IntegrationGapsQuery,
   IntegrationNativeTarget,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import {
   integrationCompletenessResponseSchema,
   integrationGapsPageSchema,
   reconstructionCompletenessCountsSchema,
   driverResourceDescriptorSchema,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   IntegrationSecretEncryptionService,
@@ -49,7 +49,7 @@ import { scanSensitiveMaterial } from './sensitive-material.js';
 import {
   getTenantContext,
   runWithTenantContext,
-} from '@weavestream/shared/server';
+} from '@rivetdocs/shared/server';
 
 export interface AuditMeta {
   ip: string;
@@ -1573,7 +1573,7 @@ function encodeGapCursor(
   };
   const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
   const signature = createHmac('sha256', key)
-    .update('weavestream-integration-gap-cursor-v2\0')
+    .update('rivetdocs-integration-gap-cursor-v2\0')
     .update(encoded)
     .digest('base64url');
   return `${encoded}.${signature}`;
@@ -1589,7 +1589,7 @@ function decodeGapCursor(
     const [encoded, suppliedSignature, extra] = cursor.split('.');
     if (!encoded || !suppliedSignature || extra !== undefined) throw new Error('shape');
     const expectedSignature = createHmac('sha256', key)
-      .update('weavestream-integration-gap-cursor-v2\0')
+      .update('rivetdocs-integration-gap-cursor-v2\0')
       .update(encoded)
       .digest();
     const supplied = Buffer.from(suppliedSignature, 'base64url');

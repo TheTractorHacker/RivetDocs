@@ -7,7 +7,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { UiTheme, UiAccent } from '@weavestream/shared';
+import type { UiTheme, UiAccent } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PasswordService } from './password.service.js';
 import { TokenService } from './token.service.js';

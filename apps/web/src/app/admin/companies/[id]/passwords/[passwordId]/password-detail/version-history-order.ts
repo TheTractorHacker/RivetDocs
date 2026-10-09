@@ -1,4 +1,4 @@
-import type { PasswordVersionSummary } from '@weavestream/shared';
+import type { PasswordVersionSummary } from '@rivetdocs/shared';
 
 /** Newest version first, without mutating the server's array. */
 export function sortVersionsNewestFirst(

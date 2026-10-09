@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type InputHTMLAttributes,
 } from 'react';
-import type { PasswordGeneratorDefaults } from '@weavestream/shared';
+import type { PasswordGeneratorDefaults } from '@rivetdocs/shared';
 import { Input, Icon } from '../ui';
 import { PasswordGeneratorPopover } from './password-generator-popover';
 
@@ -41,7 +41,7 @@ export interface SecretInputProps extends InputHTMLAttributes<HTMLInputElement> 
  * all detect `type="password"` inputs and pop "save this password?"
  * prompts. Inside our credentials vault that prompt is hostile — the
  * user doesn't want their browser to vault a password they just saved
- * to Weavestream. Using `type="text"` with `-webkit-text-security`
+ * to RivetDocs. Using `type="text"` with `-webkit-text-security`
  * keeps the dots in the UI but stops the browsers' heuristics from
  * firing. We also stamp common ignore attributes (`autoComplete=off`,
  * `data-lpignore`, `data-1p-ignore`, `data-bwignore`) for the

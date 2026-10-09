@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type { ApiKey, Prisma } from '@prisma/client';
-import type { CreateApiKeyInput } from '@weavestream/shared';
+import type { CreateApiKeyInput } from '@rivetdocs/shared';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 import type { RequestMeta } from '../common/request-meta.js';
 import { revokeApiKeysForUser } from './revoke-api-keys.js';

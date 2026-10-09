@@ -7,7 +7,7 @@ description: OpenAI-compatible AI assistant with article editing, context attach
 
 # AI Chat
 
-Weavestream includes a built-in AI chat panel available throughout the app. You can ask questions, retrieve permitted company documentation, get instructions for using Weavestream, and draft or edit articles without leaving your current workflow.
+RivetDocs includes a built-in AI chat panel available throughout the app. You can ask questions, retrieve permitted company documentation, get instructions for using RivetDocs, and draft or edit articles without leaving your current workflow.
 
 ## Opening the Chat Panel
 
@@ -28,7 +28,7 @@ Any provider that implements the OpenAI chat completions API is compatible, incl
 
 ### Private network access
 
-By default, Weavestream's server-side request guard refuses to connect to AI endpoints that resolve to private addresses — the same SSRF protection applied to every other outbound integration. If your LLM runs on your own machine or LAN (e.g. `http://localhost:11434/v1`), enable **Allow private-network addresses** in **Admin → Settings → AI**.
+By default, RivetDocs's server-side request guard refuses to connect to AI endpoints that resolve to private addresses — the same SSRF protection applied to every other outbound integration. If your LLM runs on your own machine or LAN (e.g. `http://localhost:11434/v1`), enable **Allow private-network addresses** in **Admin → Settings → AI**.
 
 The opt-in permits only a curated set of private ranges (loopback, RFC1918, CGNAT/Tailscale, IPv6 loopback and unique-local). Link-local and cloud-metadata addresses (such as `169.254.169.254`) remain blocked even with the setting enabled, and DNS-rebinding protection stays active. Operators who need ranges outside the curated list can allow them process-wide via the `EGRESS_ALLOWED_PRIVATE_CIDRS` environment variable.
 
@@ -44,7 +44,7 @@ Each conversation is stored as a **chat session** tied to your user account. Ses
 
 ## Product Help and Read Tools
 
-For questions about using Weavestream itself—such as creating an asset layout, configuring an integration, mapping organizations, or running a sync—the assistant can retrieve release-matched instructions bundled with the deployed application. This app help is read-only: it explains the current UI and lists permissions that may be required, but it cannot inspect live integration state or perform the documented steps.
+For questions about using RivetDocs itself—such as creating an asset layout, configuring an integration, mapping organizations, or running a sync—the assistant can retrieve release-matched instructions bundled with the deployed application. This app help is read-only: it explains the current UI and lists permissions that may be required, but it cannot inspect live integration state or perform the documented steps.
 
 The assistant can also search records the signed-in user is permitted to access and read selected articles or relationships. Product help and tenant data are separate: static instructions do not prove that a particular asset, mapping, integration, or sync run exists.
 
@@ -90,4 +90,4 @@ AI chat sends your conversation and its attached context directly to the LLM end
 - The acting user's email address, user id, and role, plus the active company id
 - The conversation history of the current chat session
 
-Context is only attached when you (or the auto-attach behaviour of the page you are on) add it — but once attached, it is transmitted in full. The LLM endpoint you configure is solely responsible for data handling under its own terms — Weavestream does not proxy requests through any Weavestream-operated service, and it does not filter or anonymise the content before sending. Choose a provider you trust with your client documentation, or self-host the model.
+Context is only attached when you (or the auto-attach behaviour of the page you are on) add it — but once attached, it is transmitted in full. The LLM endpoint you configure is solely responsible for data handling under its own terms — RivetDocs does not proxy requests through any RivetDocs-operated service, and it does not filter or anonymise the content before sending. Choose a provider you trust with your client documentation, or self-host the model.

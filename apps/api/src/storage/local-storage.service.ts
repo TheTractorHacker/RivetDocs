@@ -11,7 +11,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { Transform, type Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { resolveDataDir } from '@weavestream/shared/server';
+import { resolveDataDir } from '@rivetdocs/shared/server';
 import { EnvService } from '../config/env.service.js';
 
 /**

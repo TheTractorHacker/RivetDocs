@@ -6,7 +6,7 @@ import {
   randomClientId,
   sanitizeDiagramSvg,
   type DiagramPalette,
-} from '@weavestream/shared/browser';
+} from '@rivetdocs/shared/browser';
 
 /**
  * The Mermaid lazy boundary — mobile's mirror of

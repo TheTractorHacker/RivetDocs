@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { DriverFieldDescriptor } from '@weavestream/shared';
+import type { DriverFieldDescriptor } from '@rivetdocs/shared';
 import {
   CompanyPicker,
   Field,

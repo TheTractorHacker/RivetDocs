@@ -6,8 +6,8 @@ import {
   domainCheckJobSchema,
   parseDkimSelectorOverride,
   type DomainCheckJob,
-} from '@weavestream/shared';
-import { EnvService, RedisService, PrismaService } from '@weavestream/api/runtime';
+} from '@rivetdocs/shared';
+import { EnvService, RedisService, PrismaService } from '@rivetdocs/api/runtime';
 import {
   DomainsService,
   type AuditMeta,
@@ -15,7 +15,7 @@ import {
   deriveDomainStatus,
   runDomainCheck,
   runHttpCheck,
-} from '@weavestream/api/domains';
+} from '@rivetdocs/api/domains';
 import {
   createManagedWorker,
   type ManagedWorker,
@@ -23,7 +23,7 @@ import {
 
 const SYSTEM_META: AuditMeta = {
   ip: '127.0.0.1',
-  userAgent: 'weavestream-worker/domain-checks',
+  userAgent: 'rivetdocs-worker/domain-checks',
 };
 
 /**

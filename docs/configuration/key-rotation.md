@@ -7,7 +7,7 @@ description: Rotate JWT signing keys and password encryption keys without downti
 
 # Key Rotation
 
-Weavestream supports zero-downtime key rotation for both JWT signing keys and password encryption keys. Old keys remain valid during the transition period; new tokens and ciphertext blobs are written under the new key immediately.
+RivetDocs supports zero-downtime key rotation for both JWT signing keys and password encryption keys. Old keys remain valid during the transition period; new tokens and ciphertext blobs are written under the new key immediately.
 
 ## JWT Signing Key Rotation
 
@@ -105,7 +105,7 @@ For Postgres, the actual database role password must also be changed inside Post
 
 ```bash
 docker compose exec postgres psql -U postgres -c \
-  "ALTER ROLE weavestream WITH PASSWORD '<new-password>';"
+  "ALTER ROLE rivetdocs WITH PASSWORD '<new-password>';"
 ```
 
 ## MFA Encryption Key

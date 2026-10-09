@@ -2,7 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import {
   CURRENT_PASSWORD_INVALID_CODE,
   isCurrentPasswordInvalidProblem,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { ProblemExceptionFilter } from './problem-exception.filter.js';
 
 /**

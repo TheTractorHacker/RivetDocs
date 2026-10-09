@@ -4,7 +4,7 @@ import type {
   PasswordFolderSchema,
   PasswordSummary,
   PasswordVersionSummary,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type { SameShape, WireJson } from '../common/wire-contract.js';
 import type {
   PasswordAccessUser,

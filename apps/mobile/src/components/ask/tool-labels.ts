@@ -1,4 +1,4 @@
-import { type AiToolName } from '@weavestream/shared';
+import { type AiToolName } from '@rivetdocs/shared';
 
 /**
  * `tool_activity` names → the transient "the assistant is looking

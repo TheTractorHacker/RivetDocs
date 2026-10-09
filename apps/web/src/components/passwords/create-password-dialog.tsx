@@ -5,10 +5,10 @@ import {
   optionalHttpUrlError,
   type PasswordGeneratorDefaults,
   problemMessage,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Btn, Dialog, Field, Icon, Input, Select, Textarea } from '../ui';
 import { apiFetch } from '../../lib/api';
-import type { PasswordFolderSchema } from '@weavestream/shared';
+import type { PasswordFolderSchema } from '@rivetdocs/shared';
 import {
   buildPasswordFolderOptions,
   formatFolderOptionLabel,

@@ -6,8 +6,8 @@
     "baseUrl": ".",
     "types": ["node", "jest"],
     "paths": {
-      "@weavestream/shared": ["../../packages/shared/dist/index.d.ts"],
-      "@weavestream/shared/server": ["../../packages/shared/dist/server.d.ts"]
+      "@rivetdocs/shared": ["../../packages/shared/dist/index.d.ts"],
+      "@rivetdocs/shared/server": ["../../packages/shared/dist/server.d.ts"]
     }
   },
   "include": ["src/**/*.ts"],

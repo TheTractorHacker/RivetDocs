@@ -47,7 +47,7 @@ export default function GlobalError({
               marginBottom: 12,
             }}
           >
-            Weavestream
+            RivetDocs
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 8px' }}>
             Something went wrong

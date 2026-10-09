@@ -7,16 +7,16 @@ body:
       value: |
         Thanks for taking the time to file a bug report. Before submitting,
         please check that your issue isn't already covered by an existing
-        [issue](https://github.com/Weavestream/Weavestream/issues) or
-        [discussion](https://github.com/Weavestream/Weavestream/discussions).
+        [issue](https://github.com/TheTractorHacker/RivetDocs/issues) or
+        [discussion](https://github.com/TheTractorHacker/RivetDocs/discussions).
 
         **Security issues must not be reported here.** See
-        [SECURITY.md](https://github.com/Weavestream/Weavestream/blob/main/SECURITY.md).
+        [SECURITY.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/SECURITY.md).
   - type: input
     id: version
     attributes:
-      label: Weavestream version
-      description: Value of `WEAVESTREAM_VERSION` in your `.env` (or `latest` if unpinned).
+      label: RivetDocs version
+      description: Value of `RIVETDOCS_VERSION` in your `.env` (or `latest` if unpinned).
       placeholder: 1.0.0
     validations:
       required: true

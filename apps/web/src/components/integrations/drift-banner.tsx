@@ -1,11 +1,11 @@
 'use client';
 
-import type { CloudflareIpListDto } from '@weavestream/shared';
+import type { CloudflareIpListDto } from '@rivetdocs/shared';
 import { Btn, Icon, Tag } from '../ui';
 
 /**
- * Banner that surfaces drift between Weavestream and Cloudflare for a
- * single registered list. Weavestream is the authoritative source, so
+ * Banner that surfaces drift between RivetDocs and Cloudflare for a
+ * single registered list. RivetDocs is the authoritative source, so
  * the periodic drift sweep self-heals any discrepancy by re-pushing the
  * local entries on the next cron tick. This banner therefore has three
  * modes:
@@ -129,7 +129,7 @@ export function DriftBanner({
         </Tag>
         <span style={{ fontSize: 13, color: 'var(--text)', flex: 1 }}>
           {summary.length === 0
-            ? 'Cloudflare and Weavestream do not match.'
+            ? 'Cloudflare and RivetDocs do not match.'
             : `${summary.join(' · ')}.`}
           {healFailed
             ? ' Auto-recovery will retry on the next sweep — use the button to retry now.'

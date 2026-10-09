@@ -15,7 +15,7 @@ import {
   type PublicUiPreferences,
   type UiAccent,
   type UiTheme,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { Public, SkipCsrf } from '../common/public.decorator.js';
 import { ZodBody } from '../common/zod-validation.pipe.js';
 import { setUiCookie, cookieNames } from '../auth/cookies.js';

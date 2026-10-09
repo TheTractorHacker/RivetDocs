@@ -4,7 +4,7 @@ import type {
   ArticleSummary,
   FolderNode,
   IntegrationTargetProvenance,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import { serverApiFetch } from './core';
 
 // ───────────────────────────────────────────────────────────────────

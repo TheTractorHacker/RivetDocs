@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import type { MembershipRole } from '@weavestream/shared';
+import type { MembershipRole } from '@rivetdocs/shared';
 import { requireMe } from '../../../../lib/server-api/auth';
 import { serverApiFetch } from '../../../../lib/server-api/core';
 import { hasCapability } from '../../../../lib/roles';

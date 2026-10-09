@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { safeExternalHref } from '@weavestream/shared';
+import { safeExternalHref } from '@rivetdocs/shared';
 import { Icon, type IconName } from '../../components/Icon';
 import { Card } from '../../components/primitives';
 

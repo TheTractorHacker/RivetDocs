@@ -1,5 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
-import type { StepUpFactor } from '@weavestream/shared';
+import type { StepUpFactor } from '@rivetdocs/shared';
 
 /**
  * Thrown by `StepUpGuard` when a sensitive route is hit without a valid

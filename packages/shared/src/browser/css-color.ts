@@ -6,7 +6,7 @@
  *
  * Mermaid derives most of its palette from a few seed colours using
  * khroma, whose parser accepts hex, `rgb()`, `hsl()` and CSS keywords
- * and **throws** on anything else. Weavestream's tokens are a mix:
+ * and **throws** on anything else. RivetDocs's tokens are a mix:
  * `--bg`, `--surface`, `--panel*`, `--line*`, `--text*`, `--muted`,
  * `--dim` and `--faint` are plain hex, but `--accent`, `--accent-soft`,
  * `--accent-line`, `--warn`, `--danger`, `--ok`, `--info` and every

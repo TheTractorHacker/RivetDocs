@@ -2,7 +2,7 @@ import {
   driverDescriptorSchema,
   type SourceFieldDto,
   type SourceOrgDto,
-} from '@weavestream/shared';
+} from '@rivetdocs/shared';
 import type {
   DriverFetchPage,
   FetchRecordsContext,
@@ -467,14 +467,14 @@ export class BreezeDriver implements IntegrationDriver {
           sourceId: blocked.id,
         },
         })),
-        // Weavestream's own inspection, not Breeze's: the record arrived in
+        // RivetDocs's own inspection, not Breeze's: the record arrived in
         // full and the transform quarantined it. Name the side that withheld
         // it so an operator knows where to correct the definition, and keep a
         // distinct reason code from Breeze's `secret_detected`.
         ...inlineBlocked.map((blocked) => ({
           kind: 'secret_blocked' as const,
           externalId: `${blocked.orgId}:${resource.data}:${blocked.id}`,
-          message: `Weavestream withheld a ${resource.data} record because its definition contains secret-like material. Remove the credential-like value from the record in Breeze and rerun the sync.`,
+          message: `RivetDocs withheld a ${resource.data} record because its definition contains secret-like material. Remove the credential-like value from the record in Breeze and rerun the sync.`,
           details: {
             reasonCode: 'secret_like_material',
             fieldPaths: [],
@@ -486,7 +486,7 @@ export class BreezeDriver implements IntegrationDriver {
         ...boundedBlocked.map((blocked) => ({
           kind: 'validation' as const,
           externalId: `${blocked.orgId}:${resource.data}:${blocked.id}`,
-          message: `Weavestream withheld a ${resource.data} record because it exceeds a native field bound.`,
+          message: `RivetDocs withheld a ${resource.data} record because it exceeds a native field bound.`,
           details: {
             reasonCode: 'bounded_input',
             sourceResource: resource.data,
@@ -494,14 +494,14 @@ export class BreezeDriver implements IntegrationDriver {
             sourceId: blocked.id,
           },
         })),
-        // A record Weavestream could not read is skipped and the rest of the
+        // A record RivetDocs could not read is skipped and the rest of the
         // page is written. `validation` keeps the resource non-authoritative,
         // so the stale sweep never archives data because of a record that was
         // only unreadable this time.
         ...unreadable.map((error) => ({
           kind: 'validation' as const,
           externalId: error.sourceId ? `${ctx.externalOrgId}:${resource.data}:${error.sourceId}` : null,
-          message: `Weavestream skipped a ${resource.data} record it could not read. The other records in the page were synced.`,
+          message: `RivetDocs skipped a ${resource.data} record it could not read. The other records in the page were synced.`,
           details: {
             reasonCode: 'unreadable_source_record',
             fieldPaths: error.fieldPaths,

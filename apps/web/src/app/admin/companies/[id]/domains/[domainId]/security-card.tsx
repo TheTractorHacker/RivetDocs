@@ -1,7 +1,7 @@
 'use client';
 
 import { Panel, Tag } from '../../../../../../components/ui';
-import type { DomainCheckDetails } from '@weavestream/shared';
+import type { DomainCheckDetails } from '@rivetdocs/shared';
 
 /**
  * Security posture panel for the v2 domain detail page.

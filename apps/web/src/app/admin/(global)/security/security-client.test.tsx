@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ToastProvider } from '../../../../components/ui';
-import type { ConnectionDiagnostics } from '@weavestream/shared';
+import type { ConnectionDiagnostics } from '@rivetdocs/shared';
 import { SecurityCenterClient } from './security-client';
 
 const apiFetch = jest.fn();

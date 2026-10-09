@@ -1,4 +1,4 @@
-import type { DriverDescriptor } from '@weavestream/shared';
+import type { DriverDescriptor } from '@rivetdocs/shared';
 import { IntegrationsService, ensureResourceDestination, validateResourceRegistry, validateResourceTargetConfig, assertResourcePatchCompatible } from './integrations.service.js';
 import { NotFoundException } from '@nestjs/common';
 import type { RecommendedDestination } from './drivers/integration-driver.js';
@@ -7,7 +7,7 @@ import {
   getTenantContext,
   runWithTenantContext,
   type TenantContext,
-} from '@weavestream/shared/server';
+} from '@rivetdocs/shared/server';
 import { assertTenantScope } from '../prisma/tenant-scoped-models.js';
 
 const baseDescriptor = {

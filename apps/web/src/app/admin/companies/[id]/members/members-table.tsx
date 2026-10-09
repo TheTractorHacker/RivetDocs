@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { MembershipRole, UserRole } from '@weavestream/shared';
-import { problemMessage } from '@weavestream/shared';
+import type { MembershipRole, UserRole } from '@rivetdocs/shared';
+import { problemMessage } from '@rivetdocs/shared';
 import type { CompanyMembership as Row } from '../../../../../lib/server-api/companies';
 import { apiFetch } from '../../../../../lib/api';
 import {
