@@ -33,7 +33,7 @@ describe('Task 11 disposable database safety', () => {
   });
 
   it('keeps run databases distinct and off the template when the template name fills the identifier limit', () => {
-    const templateName = `rivetdocs_task11_${'x'.repeat(44)}`;
+    const templateName = `rivetdocs_task11_${'x'.repeat(46)}`;
     expect(templateName).toHaveLength(63);
 
     const first = reconstructionRunDatabaseName(templateName, '4321-aaaaaaaa');
