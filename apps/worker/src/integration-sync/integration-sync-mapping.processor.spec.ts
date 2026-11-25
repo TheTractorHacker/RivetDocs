@@ -1,16 +1,4 @@
-import {
-  IntegrationSyncMappingWorker,
-  dependencySkipOutcome,
-} from './integration-sync-mapping.processor.js';
-
-describe('dependencySkipOutcome', () => {
-  it('visibly skips a downstream resource without erasing prior totals', () => {
-    expect(dependencySkipOutcome('relations', ['devices'])).toMatchObject({
-      status: 'failed', resourceKey: 'relations', totals: { missingDependency: 1, blocked: 1 },
-      conflicts: [expect.objectContaining({ kind: 'validation_error', message: expect.stringMatching(/devices/) })],
-    });
-  });
-});
+import { IntegrationSyncMappingWorker } from './integration-sync-mapping.processor.js';
 
 describe('IntegrationSyncMappingWorker DAG execution', () => {
   it('runs reservations after subnets/devices and relations after all entity resources', async () => {
@@ -44,7 +32,7 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
       };
     }) };
     const prisma = {
-      integrationSyncRun: { findUnique: jest.fn().mockResolvedValue({ id: ids.run, triggeredBy: ids.actor, integrationId: 'integration' }) },
+      integrationSyncRun: { findUnique: jest.fn().mockResolvedValue({ id: ids.run, triggeredBy: ids.actor, integrationId: 'integration', integration: { createdBy: null, driver: 'breeze' } }) },
       integrationCompanyMapping: { findUnique: jest.fn().mockResolvedValue({ id: ids.mapping, companyId: 'company', integrationId: 'integration' }) },
       integrationResource: { findMany: jest.fn().mockResolvedValue(resources) },
     };
@@ -53,8 +41,8 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
     };
     const worker = new IntegrationSyncMappingWorker(
       {} as never, {} as never, prisma as never, sync as never, runner as never,
-      { persistGaps: jest.fn() } as never,
       { log: jest.fn() } as never,
+      { syncMapping: jest.fn() } as never,
     );
     const handle = (worker as unknown as { handle(job: {
       data: unknown;
@@ -72,6 +60,50 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
     expect(runner.runMapping).toHaveBeenCalledWith(expect.objectContaining({ mode: 'incremental' }));
     expect(sync.mergeResourceResult).toHaveBeenCalledTimes(resources.length);
     expect(sync.closeRun).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [true, true],
+    [false, false],
+    [undefined, false],
+  ])('passes acceptSourceChanges=%s from the run row (never the payload) as %s', async (stored, expected) => {
+    const runId = '00000000-0000-0000-0000-000000000041';
+    const mappingId = '00000000-0000-0000-0000-000000000042';
+    const resourceId = '00000000-0000-0000-0000-000000000043';
+    const runner = { runMapping: jest.fn().mockResolvedValue({
+      status: 'succeeded', resourceKey: 'devices', companyId: 'company',
+      totals: { ...totalsForWorker(), errors: 0 }, conflicts: [], error: null,
+    }) };
+    const prisma = {
+      integrationSyncRun: { findUnique: jest.fn().mockResolvedValue({
+        id: runId, triggeredBy: null, integrationId: 'integration', acceptSourceChanges: stored,
+        integration: { createdBy: null },
+      }) },
+      integrationCompanyMapping: { findUnique: jest.fn().mockResolvedValue({
+        id: mappingId, companyId: 'company', integrationId: 'integration',
+      }) },
+      integrationResource: { findMany: jest.fn().mockResolvedValue([
+        { id: resourceId, resourceKey: 'devices', dependsOnResourceKeys: [] },
+      ]) },
+    };
+    const worker = new IntegrationSyncMappingWorker(
+      {} as never, {} as never, prisma as never,
+      { markMappingRunning: jest.fn(), mergeResourceResult: jest.fn(), closeRun: jest.fn() } as never,
+      runner as never,
+      { log: jest.fn() } as never,
+      { syncMapping: jest.fn() } as never,
+    );
+    const handle = (worker as unknown as { handle(job: { data: unknown }): Promise<unknown> }).handle.bind(worker);
+    await handle({ data: {
+      syncRunId: runId, integrationCompanyMappingId: mappingId, resourceId,
+      resourceIds: [resourceId], mode: 'full',
+      // A forged payload flag has no effect.
+      acceptSourceChanges: !expected,
+    } });
+    expect(runner.runMapping).toHaveBeenCalledWith(expect.objectContaining({ acceptSourceChanges: expected }));
+    expect(prisma.integrationSyncRun.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ acceptSourceChanges: true }),
+    }));
   });
 
   it('passes an explicit full run mode to every resource runner call', async () => {
@@ -99,8 +131,8 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
     };
     const worker = new IntegrationSyncMappingWorker(
       {} as never, {} as never, prisma as never, sync as never, runner as never,
-      { persistGaps: jest.fn() } as never,
       { log: jest.fn() } as never,
+      { syncMapping: jest.fn() } as never,
     );
     const handle = (worker as unknown as { handle(job: {
       data: unknown;
@@ -118,12 +150,11 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
   it.each([
     ['real', false],
     ['dry-run', true],
-  ] as const)('%s dependency skip only persists an exact-scope gap for a real run', async (_label, dryRun) => {
+  ] as const)('%s run still runs a dependent resource after its dependency failed, with no resource-wide gap', async (_label, dryRun) => {
     const runId = '00000000-0000-0000-0000-000000000031';
     const mappingId = '00000000-0000-0000-0000-000000000032';
     const deviceId = '00000000-0000-0000-0000-000000000033';
     const relationId = '00000000-0000-0000-0000-000000000034';
-    const tx = {};
     const prisma = {
       integrationSyncRun: { findUnique: jest.fn().mockResolvedValue({
         id: runId, triggeredBy: null, integrationId: 'integration',
@@ -136,21 +167,24 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
         { id: deviceId, resourceKey: 'devices', dependsOnResourceKeys: [] },
         { id: relationId, resourceKey: 'relations', dependsOnResourceKeys: ['devices'] },
       ]) },
-      $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
+      $transaction: jest.fn(),
     };
-    const runner = { runMapping: jest.fn().mockResolvedValue({
-      status: 'failed', resourceKey: 'devices', companyId: 'company',
-      totals: totalsForWorker(), conflicts: [], error: 'validation failed',
+    const order: string[] = [];
+    const runner = { runMapping: jest.fn(async ({ resourceId }: { resourceId: string }) => {
+      order.push(resourceId);
+      return resourceId === deviceId
+        ? { status: 'failed', resourceKey: 'devices', companyId: 'company',
+          totals: totalsForWorker(), conflicts: [], error: 'validation failed' }
+        : { status: 'succeeded', resourceKey: 'relations', companyId: 'company',
+          totals: totalsForWorker(), conflicts: [], error: null };
     }) };
     const sync = {
       markMappingRunning: jest.fn(), mergeResourceResult: jest.fn(), closeRun: jest.fn(),
     };
-    const provenance = {
-      persistGaps: jest.fn(), resolveAbsentGaps: jest.fn(),
-    };
     const worker = new IntegrationSyncMappingWorker(
       {} as never, {} as never, prisma as never, sync as never, runner as never,
-      provenance as never, { log: jest.fn() } as never,
+      { log: jest.fn() } as never,
+      { syncMapping: jest.fn() } as never,
     );
     const handle = (worker as unknown as { handle(job: {
       data: unknown; attemptsMade?: number; opts?: { attempts?: number };
@@ -161,21 +195,60 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
       resourceId: deviceId, resourceIds: [deviceId, relationId],
       dryRun,
     } });
-    if (dryRun) {
-      expect(prisma.$transaction).not.toHaveBeenCalled();
-      expect(provenance.persistGaps).not.toHaveBeenCalled();
-    } else {
-      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-      expect(provenance.persistGaps).toHaveBeenCalledWith(tx, expect.objectContaining({
-        companyId: 'company', integrationCompanyMappingId: mappingId, resourceId: relationId,
-      }), [expect.objectContaining({
-        externalId: null, kind: 'missing_dependency',
-        details: expect.objectContaining({
-          reasonCode: 'dependency_unavailable', dependencyResourceKey: 'devices',
-        }),
-      })]);
-    }
-    expect(provenance.resolveAbsentGaps).not.toHaveBeenCalled();
+
+    // The dependency order is kept; a failed parent does not skip the child.
+    // A missing parent is a record gap the child's runner reports itself.
+    expect(order).toEqual([deviceId, relationId]);
+    expect(runner.runMapping).toHaveBeenCalledWith(expect.objectContaining({ resourceId: relationId, dryRun }));
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(sync.mergeResourceResult).toHaveBeenCalledWith(expect.objectContaining({
+      resourceKey: 'relations', status: 'succeeded',
+    }));
+  });
+
+  it('runs a resource whose dependency is disabled or not part of this run (issue 111)', async () => {
+    const runId = '00000000-0000-0000-0000-000000000041';
+    const mappingId = '00000000-0000-0000-0000-000000000042';
+    const relationId = '00000000-0000-0000-0000-000000000043';
+    const prisma = {
+      integrationSyncRun: { findUnique: jest.fn().mockResolvedValue({
+        id: runId, triggeredBy: null, integrationId: 'integration',
+        integration: { createdBy: 'creator' },
+      }) },
+      integrationCompanyMapping: { findUnique: jest.fn().mockResolvedValue({
+        id: mappingId, companyId: 'company', integrationId: 'integration',
+      }) },
+      // `custom-field-values` is disabled, so the run does not select it.
+      integrationResource: { findMany: jest.fn().mockResolvedValue([
+        { id: relationId, resourceKey: 'device-relationships', dependsOnResourceKeys: ['custom-field-values'] },
+      ]) },
+      $transaction: jest.fn(),
+    };
+    const runner = { runMapping: jest.fn().mockResolvedValue({
+      status: 'succeeded', resourceKey: 'device-relationships', companyId: 'company',
+      totals: totalsForWorker(), conflicts: [], error: null,
+    }) };
+    const sync = {
+      markMappingRunning: jest.fn(), mergeResourceResult: jest.fn(), closeRun: jest.fn(),
+    };
+    const worker = new IntegrationSyncMappingWorker(
+      {} as never, {} as never, prisma as never, sync as never, runner as never,
+      { log: jest.fn() } as never,
+      { syncMapping: jest.fn() } as never,
+    );
+    const handle = (worker as unknown as { handle(job: {
+      data: unknown; attemptsMade?: number; opts?: { attempts?: number };
+    }): Promise<unknown> }).handle.bind(worker);
+
+    await handle({ data: {
+      syncRunId: runId, integrationCompanyMappingId: mappingId,
+      resourceId: relationId, resourceIds: [relationId],
+    } });
+
+    expect(runner.runMapping).toHaveBeenCalledWith(expect.objectContaining({ resourceId: relationId }));
+    expect(sync.mergeResourceResult).toHaveBeenCalledWith(expect.objectContaining({
+      resourceKey: 'device-relationships', status: 'succeeded',
+    }));
   });
 
   it('rethrows a hard resource failure after persisting and closing the mapping', async () => {
@@ -205,8 +278,8 @@ describe('IntegrationSyncMappingWorker DAG execution', () => {
     const runner = { runMapping: jest.fn().mockResolvedValue(failure) };
     const worker = new IntegrationSyncMappingWorker(
       {} as never, {} as never, prisma as never, sync as never, runner as never,
-      { persistGaps: jest.fn() } as never,
       { log: jest.fn() } as never,
+      { syncMapping: jest.fn() } as never,
     );
     const handle = (worker as unknown as { handle(job: {
       data: unknown;
@@ -280,19 +353,19 @@ describe('IntegrationSyncMappingWorker legacy per-resource jobs', () => {
       markMappingRunning: jest.fn(), mergeResourceResult: jest.fn(), closeRun: jest.fn(),
       failMappingJob: jest.fn(),
     };
-    const provenance = { persistGaps: jest.fn() };
     const worker = new IntegrationSyncMappingWorker(
       {} as never, {} as never, prisma as never, sync as never, runner as never,
-      provenance as never, { log: jest.fn() } as never,
+      { log: jest.fn() } as never,
+      { syncMapping: jest.fn() } as never,
     );
     const handle = (worker as unknown as { handle(job: {
       data: unknown; attemptsMade?: number; opts?: { attempts?: number };
     }): Promise<unknown> }).handle.bind(worker);
-    return { prisma, runner, sync, provenance, handle };
+    return { prisma, runner, sync, handle };
   }
 
   it('runs a dep-carrying resource ungated and merges with the fan-out-wide count', async () => {
-    const { runner, sync, provenance, handle } = build({
+    const { runner, sync, handle } = build({
       resources: [
         // Deps point at siblings that run as independent legacy jobs (or were
         // backfilled by a post-upgrade driver refresh) — they must not gate.
@@ -307,7 +380,6 @@ describe('IntegrationSyncMappingWorker legacy per-resource jobs', () => {
     expect(runner.runMapping).toHaveBeenCalledWith(expect.objectContaining({
       resourceId, mode: 'incremental',
     }));
-    expect(provenance.persistGaps).not.toHaveBeenCalled();
     expect(sync.mergeResourceResult).toHaveBeenCalledTimes(1);
     expect(sync.mergeResourceResult).toHaveBeenCalledWith(expect.objectContaining({
       resourceKey: 'devices', status: 'succeeded', expectedResources: 3,
@@ -349,3 +421,89 @@ function totalsForWorker() {
     blocked: 0, secretBlocked: 0, missingDependency: 0, errors: 1,
   };
 }
+
+describe('IntegrationSyncMappingWorker provider domains', () => {
+  const runId = '00000000-0000-0000-0000-000000000041';
+  const mappingId = '00000000-0000-0000-0000-000000000042';
+  const resourceId = '00000000-0000-0000-0000-000000000043';
+
+  function arrange(driver: string, syncMapping: jest.Mock) {
+    const runner = { runMapping: jest.fn().mockResolvedValue({
+      status: 'succeeded', resourceKey: 'users', companyId: 'company',
+      totals: { ...totalsForWorker(), errors: 0 }, conflicts: [], error: null,
+    }) };
+    const prisma = {
+      integrationSyncRun: { findUnique: jest.fn().mockResolvedValue({
+        id: runId, triggeredBy: 'actor', integrationId: 'integration',
+        integration: { createdBy: null, driver },
+      }) },
+      integrationCompanyMapping: { findUnique: jest.fn().mockResolvedValue({
+        id: mappingId, companyId: 'company', integrationId: 'integration',
+      }) },
+      integrationResource: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: resourceId, resourceKey: 'users', dependsOnResourceKeys: [] },
+        ]),
+        count: jest.fn().mockResolvedValue(1),
+      },
+    };
+    const sync = { markMappingRunning: jest.fn(), mergeResourceResult: jest.fn(), closeRun: jest.fn() };
+    const worker = new IntegrationSyncMappingWorker(
+      {} as never, {} as never, prisma as never, sync as never, runner as never,
+      { log: jest.fn() } as never,
+      { syncMapping } as never,
+    );
+    const handle = (worker as unknown as { handle(job: { data: unknown }): Promise<unknown> }).handle.bind(worker);
+    return { handle, sync };
+  }
+
+  const job = (extra: Record<string, unknown> = {}) => ({ data: {
+    syncRunId: runId, integrationCompanyMappingId: mappingId, resourceId,
+    resourceIds: [resourceId], ...extra,
+  } });
+
+  it('syncs the mapping\'s domains once after the resources, for Google Workspace only', async () => {
+    const syncMapping = jest.fn().mockResolvedValue({});
+    await arrange('google-workspace', syncMapping).handle(job());
+    expect(syncMapping).toHaveBeenCalledTimes(1);
+    expect(syncMapping).toHaveBeenCalledWith(mappingId, 'actor');
+
+    const other = jest.fn();
+    await arrange('breeze', other).handle(job());
+    expect(other).not.toHaveBeenCalled();
+  });
+
+  it('syncs Microsoft 365 domains the same way', async () => {
+    const syncMapping = jest.fn().mockResolvedValue({});
+    await arrange('microsoft-365', syncMapping).handle(job());
+    expect(syncMapping).toHaveBeenCalledWith(mappingId, 'actor');
+  });
+
+  it('labels a failed Microsoft 365 domain sync warning with its provider', async () => {
+    const syncMapping = jest.fn().mockRejectedValue(new Error('db detail'));
+    const { handle, sync } = arrange('microsoft-365', syncMapping);
+    await handle(job());
+    const merged = sync.mergeResourceResult.mock.calls[0]![0] as { conflicts: Array<{ message: string }> };
+    expect(merged.conflicts[0]!.message).toContain('Microsoft 365 domains were not synced');
+  });
+
+  it('skips the domain sync on a dry run and on legacy per-resource jobs', async () => {
+    const syncMapping = jest.fn();
+    await arrange('google-workspace', syncMapping).handle(job({ dryRun: true }));
+    await arrange('google-workspace', syncMapping).handle({ data: {
+      syncRunId: runId, integrationCompanyMappingId: mappingId, resourceId,
+    } });
+    expect(syncMapping).not.toHaveBeenCalled();
+  });
+
+  it('turns a domain sync failure into a run warning, not a failed mapping', async () => {
+    const syncMapping = jest.fn().mockRejectedValue(new Error('db detail'));
+    const { handle, sync } = arrange('google-workspace', syncMapping);
+    await expect(handle(job())).resolves.toBeDefined();
+    const merged = sync.mergeResourceResult.mock.calls[0]![0] as { status: string; conflicts: Array<{ message: string }> };
+    expect(merged.status).toBe('succeeded');
+    expect(merged.conflicts).toEqual([expect.objectContaining({ kind: 'validation_error' })]);
+    expect(merged.conflicts[0]!.message).toContain('Google Workspace domains were not synced');
+    expect(merged.conflicts[0]!.message).not.toContain('db detail');
+  });
+});

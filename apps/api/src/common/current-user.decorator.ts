@@ -1,6 +1,11 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
-import type { GlobalAccess, PlatformCapability, UserRole } from '@rivetdocs/shared';
+import type {
+  GlobalAccess,
+  PasswordAccessScope,
+  PlatformCapability,
+  UserRole,
+} from '@rivetdocs/shared';
 
 export interface AuthedUser {
   id: string;
@@ -17,6 +22,15 @@ export interface AuthedUser {
   sessionId: string;
   mfaEnforcementCompletedAt: Date | null;
   mfaPending: boolean;
+  /**
+   * Who this user may open password entries WITHOUT their own allow-list
+   * for, per company: the global password access policy plus the user's
+   * active membership overrides (`allow` / `deny`). Resolved once per
+   * request in `AuthGuard` (`resolvePasswordAccessScope`) so the policy
+   * functions in `passwords/password-access-policy.ts` stay synchronous.
+   * API keys and MCP connections inherit their owner's scope.
+   */
+  passwordAccess: PasswordAccessScope;
   /**
    * Set when the principal authenticated with an API key rather than a
    * browser session. Presence — not absence — is the signal: guards that
@@ -35,6 +49,25 @@ export interface AuthedUser {
    * a deliberate act at mint time. Absent for interactive principals.
    */
   apiKeyAllowWrite?: boolean;
+  /**
+   * Set when the principal is a remote MCP connection (OAuth on `/mcp`),
+   * reaching REST only through the API's internal listener. Such a principal
+   * reuses the two grant fields above: `apiKeyAllowWrite` is the connection's
+   * grant, and `apiKeyAllowPasswordReveal` is always false. It never carries
+   * `apiKeyId`, so audit rows never mix keys and connections.
+   */
+  mcpConnectionId?: string;
+}
+
+/**
+ * True for every non-interactive principal: an API key or a remote MCP
+ * connection. Containment checks key off this, never off `apiKeyId` alone,
+ * so a new programmatic principal cannot slip past them.
+ */
+export function isProgrammatic(
+  user: Pick<AuthedUser, 'apiKeyId' | 'mcpConnectionId'> | undefined,
+): boolean {
+  return !!(user?.apiKeyId || user?.mcpConnectionId);
 }
 
 export const CurrentUser = createParamDecorator(

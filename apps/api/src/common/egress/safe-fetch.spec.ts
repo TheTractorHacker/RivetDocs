@@ -2,7 +2,9 @@ import {
   configureEgressGuard,
   EgressBlockedError,
   resetEgressGuardForTests,
+  resolveEgressAddress,
   safeFetch,
+  setDefaultResolveForTests,
   type EgressBlockedInfo,
 } from './safe-fetch.js';
 import {
@@ -353,7 +355,7 @@ describe('safeFetch — egress guard', () => {
     });
 
     it('blocks a redirect that points at a private IP', async () => {
-      // First hop returns a 302 → http://internal.example/. The resolve
+      // First hop returns a 302 → https://internal.example/. The resolve
       // stub returns a public IP for the first lookup and a private IP
       // for the destination, so the second safeFetch entry must reject
       // with EgressBlockedError instead of performing the request.
@@ -362,7 +364,7 @@ describe('safeFetch — egress guard', () => {
         Promise.resolve(
           new Response(null, {
             status: 302,
-            headers: { location: 'http://internal.example/admin' },
+            headers: { location: 'https://internal.example/admin' },
           }),
         )) as unknown as typeof fetch;
       const resolve = async () => {
@@ -418,6 +420,203 @@ describe('safeFetch — egress guard', () => {
     });
   });
 
+  describe('redirect header, body and method rules', () => {
+    type Sent = { url: string; method: string; headers: Headers; body: unknown };
+
+    // Replies with a single redirect, then 200, and records every request.
+    const redirectOnce = (status: number, location: string) => {
+      const sent: Sent[] = [];
+      const fetchImpl = ((url: string, init?: RequestInit) => {
+        sent.push({
+          url,
+          method: init?.method ?? 'GET',
+          headers: new Headers(init?.headers),
+          body: init?.body,
+        });
+        return Promise.resolve(
+          sent.length === 1
+            ? new Response(null, { status, headers: { location } })
+            : new Response('ok', { status: 200 }),
+        );
+      }) as unknown as typeof fetch;
+      return { sent, fetchImpl };
+    };
+    const base = { timeoutMs: 1000, resolve: resolveTo(['8.8.8.8']) };
+
+    it('strips Authorization, Proxy-Authorization and Cookie on a cross-origin hop', async () => {
+      const { sent, fetchImpl } = redirectOnce(302, 'https://other.example/x');
+      const res = await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl,
+        headers: {
+          AUTHORIZATION: 'Bearer secret',
+          'proxy-Authorization': 'Basic secret',
+          Cookie: 'sid=secret',
+          Accept: 'application/json',
+          'User-Agent': 'rivetdocs-test',
+        },
+      });
+      expect(res.status).toBe(200);
+      expect(sent).toHaveLength(2);
+      expect(sent[0]!.headers.get('authorization')).toBe('Bearer secret');
+      const hop = sent[1]!.headers;
+      expect(hop.get('authorization')).toBeNull();
+      expect(hop.get('proxy-authorization')).toBeNull();
+      expect(hop.get('cookie')).toBeNull();
+      expect(hop.get('accept')).toBe('application/json');
+      expect(hop.get('user-agent')).toBe('rivetdocs-test');
+    });
+
+    it('keeps credentials on a same-origin hop', async () => {
+      const { sent, fetchImpl } = redirectOnce(302, '/moved');
+      await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl,
+        headers: { Authorization: 'Bearer secret', 'X-API-Key': 'k' },
+      });
+      expect(sent[1]!.url).toBe('https://start.example/moved');
+      expect(sent[1]!.headers.get('authorization')).toBe('Bearer secret');
+      expect(sent[1]!.headers.get('x-api-key')).toBe('k');
+    });
+
+    it('treats a port change as cross-origin', async () => {
+      const { sent, fetchImpl } = redirectOnce(302, 'https://start.example:8443/go');
+      await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl,
+        headers: { Authorization: 'Bearer secret' },
+      });
+      expect(sent[1]!.headers.get('authorization')).toBeNull();
+    });
+
+    it('refuses a cross-origin hop that carries a non-allowlisted header', async () => {
+      const { sent, fetchImpl } = redirectOnce(302, 'https://other.example/x');
+      await expect(
+        safeFetch('https://start.example/go', {
+          ...base,
+          fetchImpl,
+          headers: { Accept: 'application/json', 'X-API-KEY': 'secret-key' },
+        }),
+      ).rejects.toThrow(/non-allowlisted headers: x-api-key/);
+      expect(sent).toHaveLength(1);
+    });
+
+    it('never puts a header value in the refusal message', async () => {
+      const { fetchImpl } = redirectOnce(302, 'https://other.example/x');
+      const err = await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl,
+        headers: { 'X-API-Key': 'secret-key' },
+      }).catch((e: unknown) => e);
+      expect(String(err)).not.toContain('secret-key');
+    });
+
+    it('refuses a cross-origin 307 that would re-send the body', async () => {
+      const { sent, fetchImpl } = redirectOnce(307, 'https://other.example/x');
+      await expect(
+        safeFetch('https://start.example/go', {
+          ...base,
+          fetchImpl,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{"prompt":"customer data"}',
+        }),
+      ).rejects.toThrow(/request body across origins/);
+      expect(sent).toHaveLength(1);
+    });
+
+    it.each([303, 301, 302])('rewrites POST to a bodyless GET on %i', async (status) => {
+      const { sent, fetchImpl } = redirectOnce(status, '/result');
+      await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer s' },
+        body: '{"a":1}',
+      });
+      expect(sent[1]!.method).toBe('GET');
+      expect(sent[1]!.body).toBeUndefined();
+      expect(sent[1]!.headers.get('content-type')).toBeNull();
+      // Same origin: credentials survive the rewrite.
+      expect(sent[1]!.headers.get('authorization')).toBe('Bearer s');
+    });
+
+    it('rewrites PUT to GET on 303 but keeps PUT on 301/302', async () => {
+      const see = redirectOnce(303, '/r');
+      await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl: see.fetchImpl,
+        method: 'PUT',
+        body: 'x',
+      });
+      expect(see.sent[1]!.method).toBe('GET');
+      expect(see.sent[1]!.body).toBeUndefined();
+
+      const moved = redirectOnce(301, '/r');
+      await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl: moved.fetchImpl,
+        method: 'PUT',
+        body: 'x',
+      });
+      expect(moved.sent[1]!.method).toBe('PUT');
+      expect(moved.sent[1]!.body).toBe('x');
+    });
+
+    it('keeps HEAD on 303', async () => {
+      const { sent, fetchImpl } = redirectOnce(303, '/r');
+      await safeFetch('https://start.example/go', { ...base, fetchImpl, method: 'HEAD' });
+      expect(sent[1]!.method).toBe('HEAD');
+    });
+
+    it.each([307, 308])('keeps method and body on a same-origin %i', async (status) => {
+      const { sent, fetchImpl } = redirectOnce(status, '/r');
+      await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"a":1}',
+      });
+      expect(sent[1]!.method).toBe('POST');
+      expect(sent[1]!.body).toBe('{"a":1}');
+      expect(sent[1]!.headers.get('content-type')).toBe('application/json');
+    });
+
+    it('follows a cross-origin 303 from a POST once the body is dropped', async () => {
+      const { sent, fetchImpl } = redirectOnce(303, 'https://other.example/r');
+      const res = await safeFetch('https://start.example/go', {
+        ...base,
+        fetchImpl,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer s' },
+        body: '{"a":1}',
+      });
+      expect(res.status).toBe(200);
+      expect(sent[1]!.method).toBe('GET');
+      expect(sent[1]!.headers.get('authorization')).toBeNull();
+    });
+
+    it('refuses an https → http downgrade, even same-host', async () => {
+      const { sent, fetchImpl } = redirectOnce(301, 'http://start.example/go');
+      await expect(
+        safeFetch('https://start.example/go', { ...base, fetchImpl }),
+      ).rejects.toThrow(/https → http redirect downgrade/);
+      expect(sent).toHaveLength(1);
+    });
+
+    it('still allows an http → https upgrade', async () => {
+      const { sent, fetchImpl } = redirectOnce(301, 'https://start.example/go');
+      const res = await safeFetch('http://start.example/go', {
+        ...base,
+        fetchImpl,
+        headers: { Accept: 'text/html' },
+      });
+      expect(res.status).toBe(200);
+      expect(sent[1]!.url).toBe('https://start.example/go');
+    });
+  });
+
   describe('DNS resolution failures', () => {
     it('surfaces a clean error when the resolver throws', async () => {
       await expect(
@@ -440,6 +639,127 @@ describe('safeFetch — egress guard', () => {
         }),
       ).rejects.toBeInstanceOf(EgressBlockedError);
     });
+  });
+});
+
+describe('resolveEgressAddress — raw socket guard', () => {
+  const resolveTo = (ips: readonly string[]) => async () => ips;
+  const target = 'tls://monitored.example:443';
+
+  afterEach(() => resetEgressGuardForTests());
+
+  it('returns a validated public address, preferring IPv4', async () => {
+    await expect(
+      resolveEgressAddress('monitored.example', target, {
+        resolve: resolveTo(['2606:4700::1111', '93.184.216.34']),
+      }),
+    ).resolves.toBe('93.184.216.34');
+  });
+
+  it('returns a public IPv6 address when that is all there is', async () => {
+    await expect(
+      resolveEgressAddress('monitored.example', target, {
+        resolve: resolveTo(['2606:4700::6810:84e5']),
+      }),
+    ).resolves.toBe('2606:4700::6810:84e5');
+  });
+
+  it.each([
+    ['loopback', '127.0.0.1'],
+    ['RFC1918', '10.0.0.1'],
+    ['cloud metadata', '169.254.169.254'],
+    ['IPv6 loopback', '::1'],
+    ['IPv4-mapped loopback', '::ffff:127.0.0.1'],
+  ])('blocks a %s answer', async (_label, ip) => {
+    await expect(
+      resolveEgressAddress('monitored.example', target, { resolve: resolveTo([ip]) }),
+    ).rejects.toBeInstanceOf(EgressBlockedError);
+  });
+
+  it('blocks a mixed public + private answer', async () => {
+    await expect(
+      resolveEgressAddress('monitored.example', target, {
+        resolve: resolveTo(['93.184.216.34', '127.0.0.1']),
+      }),
+    ).rejects.toBeInstanceOf(EgressBlockedError);
+  });
+
+  it('blocks a private IP literal without resolving it', async () => {
+    const resolve = jest.fn(resolveTo(['93.184.216.34']));
+    await expect(
+      resolveEgressAddress('10.1.2.3', target, { resolve }),
+    ).rejects.toBeInstanceOf(EgressBlockedError);
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it.each(['127.1', '10.1', '0x7f.1', '2130706433', '0177.0.0.1'])(
+    'resolves shorthand IPv4 %s instead of trusting it as a literal',
+    async (shorthand) => {
+      // The system resolver canonicalises shorthand to the real address.
+      const resolve = jest.fn(resolveTo(['127.0.0.1']));
+      await expect(
+        resolveEgressAddress(shorthand, target, { resolve }),
+      ).rejects.toBeInstanceOf(EgressBlockedError);
+      expect(resolve).toHaveBeenCalledWith(shorthand);
+    },
+  );
+
+  it('blocks shorthand IPv4 through the real system resolver', async () => {
+    await expect(resolveEgressAddress('127.1', target)).rejects.toThrow(/127\.0\.0\.1 is in blocked range/);
+  });
+
+  it('fails closed when the resolver returns a non-canonical address', async () => {
+    await expect(
+      resolveEgressAddress('monitored.example', target, { resolve: resolveTo(['127.1']) }),
+    ).rejects.toThrow(/not a canonical IP address/);
+    // Even with private networks allowed, a non-address is never handed on.
+    configureEgressGuard({ allowPrivateNetworks: true, allowedPrivateCidrs: '' });
+    await expect(
+      resolveEgressAddress('monitored.example', target, { resolve: resolveTo(['127.1']) }),
+    ).rejects.toBeInstanceOf(EgressBlockedError);
+  });
+
+  it('blocks when DNS returns nothing', async () => {
+    await expect(
+      resolveEgressAddress('monitored.example', target, { resolve: resolveTo([]) }),
+    ).rejects.toBeInstanceOf(EgressBlockedError);
+  });
+
+  it('uses the process default resolver when none is passed', async () => {
+    setDefaultResolveForTests(resolveTo(['127.0.0.1']));
+    await expect(resolveEgressAddress('monitored.example', target)).rejects.toBeInstanceOf(
+      EgressBlockedError,
+    );
+  });
+
+  it('honours the operator allow-list and allow-all settings', async () => {
+    configureEgressGuard({ allowPrivateNetworks: false, allowedPrivateCidrs: '10.42.0.0/16' });
+    await expect(
+      resolveEgressAddress('whois.lan', target, { resolve: resolveTo(['10.42.5.7']) }),
+    ).resolves.toBe('10.42.5.7');
+    await expect(
+      resolveEgressAddress('whois.lan', target, { resolve: resolveTo(['10.99.0.5']) }),
+    ).rejects.toBeInstanceOf(EgressBlockedError);
+
+    configureEgressGuard({ allowPrivateNetworks: true, allowedPrivateCidrs: '' });
+    await expect(
+      resolveEgressAddress('whois.lan', target, { resolve: resolveTo(['127.0.0.1']) }),
+    ).resolves.toBe('127.0.0.1');
+  });
+
+  it('reports blocks through the telemetry hook', async () => {
+    const seen: EgressBlockedInfo[] = [];
+    configureEgressGuard({
+      allowPrivateNetworks: false,
+      allowedPrivateCidrs: '',
+      onBlocked: (info) => seen.push(info),
+    });
+    await expect(
+      resolveEgressAddress('monitored.example', target, { resolve: resolveTo(['127.0.0.1']) }),
+    ).rejects.toBeInstanceOf(EgressBlockedError);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.reason).toBe('private_ip_blocked');
+    expect(seen[0]!.hostname).toBe('monitored.example');
   });
 });
 
@@ -521,5 +841,126 @@ describe('parseCidr / ipMatchesAny', () => {
       expect(ipv4Mask(8)).toBe(0xff000000);
       expect(ipv4Mask(32)).toBe(0xffffffff);
     });
+  });
+});
+
+describe('safeFetch — timeoutCoversBody', () => {
+  const resolveTo = (ips: readonly string[]) => async () => ips;
+  afterEach(() => resetEgressGuardForTests());
+
+  /** Headers at once; then the body follows `chunks`, each after `gapMs`, and stalls when `stall` is set. */
+  function slowBody(chunks: string[], gapMs: number, stall: boolean) {
+    const timers: NodeJS.Timeout[] = [];
+    let cancelled = false;
+    const fetchImpl = (async () => {
+      let i = 0;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          return new Promise<void>((resolve) => {
+            if (i >= chunks.length) {
+              if (!stall) controller.close();
+              // A stalled source never resolves this pull.
+              if (!stall) resolve();
+              return;
+            }
+            timers.push(
+              setTimeout(() => {
+                controller.enqueue(new TextEncoder().encode(chunks[i++]!));
+                resolve();
+              }, gapMs),
+            );
+          });
+        },
+        cancel() {
+          cancelled = true;
+        },
+      });
+      return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    return {
+      fetchImpl,
+      wasCancelled: () => cancelled,
+      cleanup: () => timers.forEach(clearTimeout),
+    };
+  }
+
+  const opts = (fetchImpl: typeof fetch, extra: Record<string, unknown> = {}) => ({
+    timeoutMs: 50,
+    timeoutCoversBody: true,
+    fetchImpl,
+    resolve: resolveTo(['93.184.216.34']),
+    ...extra,
+  });
+
+  it('fails a body that stalls after the headers, at the deadline', async () => {
+    const src = slowBody(['{"a":'], 1, true);
+    try {
+      const started = Date.now();
+      const res = await safeFetch('https://agent.example/client.json', opts(src.fetchImpl));
+      await expect(res.text()).rejects.toThrow(/timeout/);
+      expect(Date.now() - started).toBeLessThan(500);
+      expect(src.wasCancelled()).toBe(true);
+    } finally {
+      src.cleanup();
+    }
+  });
+
+  it('fails a body that trickles past the deadline', async () => {
+    const src = slowBody(Array.from({ length: 40 }, () => 'x'), 20, false);
+    try {
+      const started = Date.now();
+      const res = await safeFetch('https://agent.example/client.json', opts(src.fetchImpl));
+      await expect(res.text()).rejects.toThrow(/timeout/);
+      expect(Date.now() - started).toBeLessThan(500);
+    } finally {
+      src.cleanup();
+    }
+  });
+
+  it('reads a body that finishes in time, with no late abort', async () => {
+    const src = slowBody(['{"a":', '1}'], 5, false);
+    const external = new AbortController();
+    try {
+      const res = await safeFetch(
+        'https://agent.example/client.json',
+        opts(src.fetchImpl, { timeoutMs: 200, signal: external.signal }),
+      );
+      await expect(res.json()).resolves.toEqual({ a: 1 });
+      // Past the deadline, and an abort after the body is done: nothing fails.
+      await new Promise((r) => setTimeout(r, 250));
+      external.abort();
+    } finally {
+      src.cleanup();
+    }
+  });
+
+  it('honours the caller signal during the body read', async () => {
+    const src = slowBody(['{"a":'], 1, true);
+    const external = new AbortController();
+    try {
+      const res = await safeFetch(
+        'https://agent.example/client.json',
+        opts(src.fetchImpl, { timeoutMs: 5_000, signal: external.signal }),
+      );
+      const reading = res.text();
+      setTimeout(() => external.abort(new Error('caller gave up')), 20);
+      await expect(reading).rejects.toThrow(/caller gave up/);
+    } finally {
+      src.cleanup();
+    }
+  });
+
+  it('without the flag, keeps today\'s behaviour: the deadline ends at the headers', async () => {
+    const src = slowBody(['{"a":', '1}'], 80, false);
+    try {
+      const res = await safeFetch('https://agent.example/client.json', {
+        timeoutMs: 50,
+        fetchImpl: src.fetchImpl,
+        resolve: resolveTo(['93.184.216.34']),
+      });
+      await expect(res.json()).resolves.toEqual({ a: 1 });
+    } finally {
+      src.cleanup();
+    }
   });
 });

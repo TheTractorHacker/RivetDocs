@@ -1,6 +1,7 @@
 import type {
   ExpirationRow,
   GlobalAccess,
+  MembershipPasswordAccess,
   MembershipRole,
   PlatformCapability,
   RecentActivityItem,
@@ -46,6 +47,8 @@ export type UserDetail = UserListItem & {
     id: string;
     role: MembershipRole;
     expiresAt: string | null;
+    /** Company-level password access override. */
+    passwordAccess: MembershipPasswordAccess;
     revokedAt: string | null;
     createdAt: string;
     company: { id: string; name: string; slug: string; archivedAt: string | null };
@@ -110,10 +113,12 @@ export async function getAdminStats(): Promise<AdminStats | null> {
  */
 export async function listExpirations(
   companyId?: string,
+  includeDismissed = false,
 ): Promise<ExpirationRow[]> {
-  const path = companyId
+  const base = companyId
     ? `/companies/${companyId}/expirations`
     : '/expirations';
+  const path = includeDismissed ? `${base}?includeDismissed=1` : base;
   const res = await serverApiFetch<{ items: ExpirationRow[] }>(path);
   return res.data?.items ?? [];
 }

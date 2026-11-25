@@ -5,6 +5,7 @@ import { listExpirations } from '../../../../lib/server-api/admin';
 import { PageBody, PageHeader } from '../../../../components/shell/page-header';
 import { Panel, Tag } from '../../../../components/ui';
 import { ExpirationsTable } from '../../../../components/expirations/expirations-table';
+import { DismissedToggle } from '../../../../components/expirations/dismissed-toggle';
 
 export const metadata: Metadata = { title: 'Expiring soon' };
 
@@ -16,13 +17,19 @@ export const metadata: Metadata = { title: 'Expiring soon' };
  * dates is a legitimate SUPER_ADMIN-only affordance (see the matching
  * guard on `/domains/alerts`).
  */
-export default async function GlobalExpirationsPage() {
+export default async function GlobalExpirationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dismissed?: string }>;
+}) {
+  const showDismissed = (await searchParams).dismissed === '1';
   const me = await requireMe();
   if (me.role !== 'SUPER_ADMIN') {
     redirect('/admin');
   }
-  const rows = await listExpirations();
-  const expiredCount = rows.filter((r) => r.status === 'EXPIRED').length;
+  const rows = await listExpirations(undefined, showDismissed);
+  const active = rows.filter((r) => !r.dismissal);
+  const expiredCount = active.filter((r) => r.status === 'EXPIRED').length;
 
   return (
     <>
@@ -37,13 +44,10 @@ export default async function GlobalExpirationsPage() {
       <PageBody>
         <Panel
           title={
-            <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-              {rows.length} item{rows.length === 1 ? '' : 's'}
-              {expiredCount > 0 && (
-                <Tag tone="danger">
-                  {expiredCount} expired
-                </Tag>
-              )}
+            <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              {active.length} item{active.length === 1 ? '' : 's'}
+              {expiredCount > 0 && <Tag tone="danger">{expiredCount} expired</Tag>}
+              <DismissedToggle href="/admin/expirations" showing={showDismissed} />
             </span>
           }
           noPad

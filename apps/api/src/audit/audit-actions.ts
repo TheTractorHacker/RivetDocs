@@ -18,6 +18,17 @@ export const AUDIT_ACTIONS = {
     mfaBackupUsed: 'auth.mfa.backup.used',
     mfaBackupRegenerate: 'auth.mfa.backup.regenerate',
     sessionsRevokeOthers: 'auth.sessions.revoke_others',
+    // A user approved a remote MCP connection (an AI app) on the consent
+    // page. `entityId` is the connection id; `after` carries the client id,
+    // its host (null for an app that registered itself), `clientVerified`,
+    // the redirect host, `allowWrite` and the approving `sessionId` — never a
+    // code or token.
+    mcpConnectionCreate: 'auth.mcp_connection.create',
+    // A remote MCP connection was revoked. `after.reason` is `user`, `admin`,
+    // `token_reuse` (a code or refresh token was replayed) or
+    // `client_revoked` (the client revoked its token); `after.targetUserId`
+    // is the owner.
+    mcpConnectionRevoke: 'auth.mcp_connection.revoke',
   },
   user: {
     create: 'user.create',
@@ -50,6 +61,24 @@ export const AUDIT_ACTIONS = {
     // Instance-wide API key switch (`PUT /settings/api-keys`). `before` and
     // `after` carry `{ apiKeysEnabled }`.
     apiKeysToggle: 'settings.api_keys.toggle',
+    // Instance-wide remote MCP switch (`PUT /settings/mcp-remote`). `before`
+    // and `after` carry `{ mcpRemoteEnabled }`.
+    mcpRemoteToggle: 'settings.mcp_remote.toggle',
+    // Which AI apps may connect (`PUT /settings/mcp-client-policy`).
+    // `before` and `after` carry `{ mcpClientPolicy }`.
+    mcpClientPolicyChange: 'settings.mcp_client_policy.change',
+    // Global password access policy (`PUT /settings/password-access-policy`).
+    // `before` and `after` carry `{ mode, userIds }` (user ids only).
+    passwordAccessPolicyChange: 'settings.password_access_policy.change',
+    // Pre-connections instance OAuth app (`PUT /settings/integration-oauth-apps/:provider`,
+    // removed). Kept so older audit rows still resolve; new rows use
+    // `integration.oauthAppUpdate`.
+    integrationOAuthAppUpdate: 'settings.integration_oauth_app.update',
+    // Pre-connections Check setup on the instance OAuth app (removed route).
+    integrationOAuthAppCheck: 'settings.integration_oauth_app.check',
+    // Integration priority order (`PUT /settings/integration-priority`).
+    // `before` and `after` carry `{ order }` (driver keys only).
+    integrationPriorityUpdate: 'settings.integration_priority.update',
   },
   domain: {
     create: 'domain.create',
@@ -114,6 +143,11 @@ export const AUDIT_ACTIONS = {
   // Direct (non-integration) record CRUD. The integration sync path
   // continues to use `integration.asset.*` so the two streams stay
   // distinguishable in the audit log.
+  // Expiring-soon feed: hide one item for one due date (and undo).
+  expiration: {
+    dismiss: 'expiration.dismiss',
+    restore: 'expiration.restore',
+  },
   asset: {
     create: 'asset.create',
     update: 'asset.update',
@@ -121,6 +155,9 @@ export const AUDIT_ACTIONS = {
     restore: 'asset.restore',
     // Copy into a company (entityId = the copy; after.sourceAssetId).
     clone: 'asset.clone',
+    // CSV export of one layout's list (entityId = the layout; after
+    // carries counts, field slugs, and filter shape — never cell values).
+    export: 'asset.export',
   },
   article: {
     create: 'article.create',
@@ -145,6 +182,11 @@ export const AUDIT_ACTIONS = {
     delete: 'integration.delete',
     secretUpdate: 'integration.secret.update',
     testConnection: 'integration.test_connection',
+    setupCheck: 'integration.setup_check',
+    // Custom API definition Test (one page read). `after` carries the
+    // section, outcome, record count or HTTP status and the correlation id;
+    // never a value, a header or a secret. No entity id for a draft.
+    customApiTest: 'integration.custom_api.test',
     companyMappingCreate: 'integration.company_mapping.create',
     companyMappingUpdate: 'integration.company_mapping.update',
     companyMappingDelete: 'integration.company_mapping.delete',
@@ -157,9 +199,34 @@ export const AUDIT_ACTIONS = {
     syncMappingStarted: 'integration.sync.mapping.started',
     syncMappingFinished: 'integration.sync.mapping.finished',
     syncMappingFailed: 'integration.sync.mapping.failed',
+    // A manual run that accepts held source changes (field drift, mass
+    // removal). Counts and ids only.
+    syncAcceptSourceChanges: 'integration.sync.accept_source_changes',
+    // OAuth connect / disconnect. Rows carry the provider, scope list and a
+    // reason category on failure; never tokens or provider error text.
+    oauthConnect: 'integration.oauth.connect',
+    oauthConnectFailed: 'integration.oauth.connect.failed',
+    oauthDisconnect: 'integration.oauth.disconnect',
+    // The integration's OAuth app (App tab, `PUT /admin/integrations/:id/oauth-app`).
+    // `after` carries the provider, client id and the secret's last-four mask only.
+    oauthAppUpdate: 'integration.oauth_app.update',
+    // Check setup on the integration's OAuth app: outcome and failed step ids only.
+    oauthAppCheck: 'integration.oauth_app.check',
+    // Microsoft 365: the admin's explicit choice about the tenant's report
+    // concealment setting ("Conceal user, group, and site names in all
+    // reports", Graph adminReportSettings.displayConcealedNames). Rows carry
+    // the choice, the value before and after; `.failed` carries a reason.
+    microsoftReportNames: 'integration.microsoft.report_names',
+    microsoftReportNamesFailed: 'integration.microsoft.report_names.failed',
     assetCreated: 'integration.asset.created',
     assetUpdated: 'integration.asset.updated',
     assetClaimed: 'integration.asset.claimed',
+    // A person chose the source value or kept theirs for a standard-field
+    // difference. Rows carry ids and the choice, never field values.
+    differenceResolve: 'integration.difference.resolve',
+    // Summary of a Differences tab bulk action (counts only); each item
+    // also writes its own differenceResolve row.
+    differenceResolveBulk: 'integration.difference.resolve_bulk',
     assetArchived: 'integration.asset.archived',
     assetReleased: 'integration.asset.released',
     matchAmbiguous: 'integration.match.ambiguous',
@@ -184,6 +251,10 @@ export const AUDIT_ACTIONS = {
     // `.failed` row instead, carrying `{ runId, error }`.
     cloudflareRegistrarSync: 'integration.cloudflare.registrar_sync',
     cloudflareRegistrarSyncFailed: 'integration.cloudflare.registrar_sync.failed',
+    // Google Workspace domains → Domains monitoring, once per mapping sync.
+    googleWorkspaceDomainSync: 'integration.google_workspace.domain_sync',
+    // Microsoft 365 domains → Domains monitoring, once per mapping sync.
+    microsoft365DomainSync: 'integration.microsoft_365.domain_sync',
   },
   subnet: {
     create: 'subnet.create',
@@ -307,6 +378,7 @@ export const ALL_AUDIT_ACTIONS: string[] = [
   ...Object.values(AUDIT_ACTIONS.export),
   ...Object.values(AUDIT_ACTIONS.alert),
   ...Object.values(AUDIT_ACTIONS.asset),
+  ...Object.values(AUDIT_ACTIONS.expiration),
   ...Object.values(AUDIT_ACTIONS.article),
   ...Object.values(AUDIT_ACTIONS.integration),
   ...Object.values(AUDIT_ACTIONS.subnet),

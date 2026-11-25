@@ -2,6 +2,9 @@ import { UnauthorizedException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthGuard } from './auth.guard.js';
+import { McpDelegationService } from '../../mcp/mcp-delegation.service.js';
+import { internalListenerHandler } from '../../common/internal-listener.js';
+import { FULL_PASSWORD_ACCESS, NO_PASSWORD_ACCESS } from '../../passwords/password-access-policy.js';
 
 const ENV = {
   values: {
@@ -12,9 +15,37 @@ const ENV = {
   },
 } as never;
 
+const CLAUDE_CONNECTION = {
+  id: 'c-1',
+  userId: 'u-1',
+  allowWrite: false,
+  clientId: 'https://claude.ai/oauth/mcp-client-metadata',
+  redirectHost: 'claude.ai',
+};
+/** A connection from an app that registered itself, on a loopback redirect. */
+const DCR_CONNECTION = { ...CLAUDE_CONNECTION, clientId: 'Xk3_registered-id', redirectHost: '127.0.0.1' };
+
 function makeGuard(
   rotateResult: unknown,
-  { apiKeysEnabled = true, key = null }: { apiKeysEnabled?: boolean; key?: unknown } = {},
+  {
+    apiKeysEnabled = true,
+    key = null,
+    mcpRemoteEnabled = true,
+    mcpClientPolicy = 'claude_chatgpt',
+    connection = CLAUDE_CONNECTION,
+    passwordPolicy = { mode: 'all_users' as const, userIds: [] as string[] },
+    memberships = [] as unknown[],
+    userRole = 'OPERATOR',
+  }: {
+    apiKeysEnabled?: boolean;
+    key?: unknown;
+    mcpRemoteEnabled?: boolean;
+    mcpClientPolicy?: 'claude_chatgpt' | 'any';
+    connection?: { id: string; userId: string; allowWrite: boolean; clientId: string; redirectHost: string } | null;
+    passwordPolicy?: { mode: 'all_users' | 'selected_users'; userIds: string[] };
+    memberships?: unknown[];
+    userRole?: string;
+  } = {},
 ) {
   const reflector = { getAllAndOverride: jest.fn().mockReturnValue(false) } as never;
   // No access cookie is sent, so verifyAccessToken is never reached and the
@@ -34,7 +65,7 @@ function makeGuard(
       findUnique: jest.fn().mockResolvedValue({
         id: 'u-1',
         email: 'u@example.com',
-        role: 'OPERATOR',
+        role: userRole,
         isActive: true,
         globalAccess: null,
         platformCapabilities: [],
@@ -48,7 +79,15 @@ function makeGuard(
     verify: jest.fn().mockResolvedValue(key),
     touch: jest.fn().mockResolvedValue(undefined),
   };
-  const settings = { apiKeysEnabled: jest.fn().mockResolvedValue(apiKeysEnabled) };
+  const settings = {
+    apiKeysEnabled: jest.fn().mockResolvedValue(apiKeysEnabled),
+    mcpRemoteEnabled: jest.fn().mockResolvedValue(mcpRemoteEnabled),
+    mcpClientPolicy: jest.fn().mockResolvedValue(mcpClientPolicy),
+    passwordAccessPolicy: jest.fn().mockResolvedValue(passwordPolicy),
+  };
+  const delegations = new McpDelegationService();
+  const mcpConnections = { findActiveById: jest.fn().mockResolvedValue(connection) };
+  const permissions = { loadMemberships: jest.fn().mockResolvedValue(memberships) };
   const guard = new AuthGuard(
     reflector,
     tokens,
@@ -57,8 +96,11 @@ function makeGuard(
     ENV,
     apiKeys as never,
     settings as never,
+    delegations,
+    mcpConnections as never,
+    permissions as never,
   );
-  return { guard, auth, apiKeys, settings };
+  return { guard, auth, apiKeys, settings, delegations, mcpConnections, prisma, permissions };
 }
 
 function makeCtx() {
@@ -184,5 +226,247 @@ describe('AuthGuard bearer handling', () => {
     const user = (req as unknown as { user: { apiKeyId: string; apiKeyAllowWrite: boolean } }).user;
     expect(user.apiKeyId).toBe('k-1');
     expect(user.apiKeyAllowWrite).toBe(false);
+  });
+});
+
+/**
+ * Issue #110: password access (global policy + active membership
+ * overrides) is resolved once per request onto `req.user.passwordAccess`,
+ * for every principal kind. API keys and MCP connections inherit their
+ * owner's result.
+ */
+describe('AuthGuard password access scope', () => {
+  const ROTATED = {
+    accessToken: 'new-jwt',
+    refreshToken: 'new-refresh-token',
+    payload: { sub: 'u-1', sid: 's-1', role: 'OPERATOR' },
+  };
+  const LIVE_KEY = { id: 'k-1', userId: 'u-1', allowPasswordReveal: false, allowWrite: false, lastUsedAt: null };
+  const OUTSIDE = { mode: 'selected_users' as const, userIds: ['someone-else'] };
+  const INSIDE = { mode: 'selected_users' as const, userIds: ['u-1'] };
+  const CO_X = 'co-x';
+  const CO_Y = 'co-y';
+  const membership = (
+    companyId: string,
+    passwordAccess: 'inherit' | 'allow' | 'deny',
+    extra: { expiresAt?: Date | null; revokedAt?: Date | null } = {},
+  ) => ({ companyId, role: 'FULL', expiresAt: null, revokedAt: null, passwordAccess, ...extra });
+
+  type ScopedUser = { passwordAccess: { byDefault: boolean; allowCompanyIds: string[]; denyCompanyIds: string[] } };
+
+  async function cookieUser(opts: Parameters<typeof makeGuard>[1] = {}) {
+    const made = makeGuard(ROTATED, opts);
+    const { ctx, req } = makeCtx();
+    await expect(made.guard.canActivate(ctx)).resolves.toBe(true);
+    return { user: (req as unknown as { user: ScopedUser }).user, ...made };
+  }
+
+  it('is full access under all_users (the default)', async () => {
+    const { user } = await cookieUser();
+    expect(user.passwordAccess).toEqual(FULL_PASSWORD_ACCESS);
+  });
+
+  it('follows the selected users list for a cookie session', async () => {
+    expect((await cookieUser({ passwordPolicy: OUTSIDE })).user.passwordAccess.byDefault).toBe(false);
+    expect((await cookieUser({ passwordPolicy: INSIDE })).user.passwordAccess.byDefault).toBe(true);
+  });
+
+  it('adds active membership overrides from the cached snapshots for a session', async () => {
+    const { user, permissions } = await cookieUser({
+      passwordPolicy: OUTSIDE,
+      memberships: [membership(CO_X, 'allow'), membership(CO_Y, 'deny'), membership('co-z', 'inherit')],
+    });
+    expect(user.passwordAccess).toEqual({
+      byDefault: false,
+      allowCompanyIds: [CO_X],
+      denyCompanyIds: [CO_Y],
+    });
+    expect(permissions.loadMemberships).toHaveBeenCalledWith('u-1', { fresh: false });
+  });
+
+  it('ignores expired and revoked memberships', async () => {
+    const past = new Date(Date.now() - 60_000);
+    const { user } = await cookieUser({
+      memberships: [
+        membership(CO_X, 'deny', { expiresAt: past }),
+        membership(CO_Y, 'deny', { revokedAt: past }),
+      ],
+    });
+    expect(user.passwordAccess).toEqual(FULL_PASSWORD_ACCESS);
+  });
+
+  it('skips the membership load for a super admin', async () => {
+    const { user, permissions } = await cookieUser({
+      userRole: 'SUPER_ADMIN',
+      passwordPolicy: OUTSIDE,
+      memberships: [membership(CO_X, 'deny')],
+    });
+    expect(user.passwordAccess).toEqual(FULL_PASSWORD_ACCESS);
+    expect(permissions.loadMemberships).not.toHaveBeenCalled();
+  });
+
+  it("gives an API key its owner's result, from a fresh membership read", async () => {
+    const { guard, permissions } = makeGuard(ROTATED, {
+      key: LIVE_KEY,
+      passwordPolicy: OUTSIDE,
+      memberships: [membership(CO_X, 'allow')],
+    });
+    const { ctx, req } = makeCtx();
+    req.headers.authorization = 'Bearer ws_0123456789abcdef01_secret';
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect((req as unknown as { user: ScopedUser }).user.passwordAccess).toEqual({
+      byDefault: false,
+      allowCompanyIds: [CO_X],
+      denyCompanyIds: [],
+    });
+    expect(permissions.loadMemberships).toHaveBeenCalledWith('u-1', { fresh: true });
+  });
+});
+
+describe('AuthGuard remote MCP delegation handles', () => {
+  const PATH = '/api/v1/companies/11111111-1111-4111-8111-111111111111/assets';
+
+  /** A request as the internal listener (or the public port) would deliver it. */
+  function makeDelegatedCtx(
+    handle: string,
+    { internal = true, method = 'GET', path = PATH }: { internal?: boolean; method?: string; path?: string } = {},
+  ) {
+    const req = {
+      method,
+      path,
+      signedCookies: {},
+      ip: '127.0.0.1',
+      headers: { authorization: `Bearer ${handle}` },
+    } as unknown as Request & { user?: Record<string, unknown> };
+    // Mark it exactly as the internal listener does.
+    if (internal) internalListenerHandler(() => undefined)(req as never, {} as never);
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => ({}) }),
+      getHandler: () => ({}),
+      getClass: () => ({}),
+    } as unknown as ExecutionContext;
+    return { ctx, req };
+  }
+
+  const grant = { connectionId: 'c-1', userId: 'u-1', method: 'GET' as const, path: PATH };
+
+  it('authenticates the connection\'s user once, with key-style containment and no apiKeyId', async () => {
+    const { guard, delegations, apiKeys } = makeGuard(null);
+    const handle = delegations.mint(grant);
+    const { ctx, req } = makeDelegatedCtx(handle);
+
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.user).toMatchObject({
+      id: 'u-1',
+      sessionId: 'c-1',
+      mcpConnectionId: 'c-1',
+      mfaPending: false,
+      apiKeyAllowWrite: false,
+      apiKeyAllowPasswordReveal: false,
+    });
+    expect(req.user).not.toHaveProperty('apiKeyId');
+    expect(apiKeys.verify).not.toHaveBeenCalled();
+    // The connection inherits its owner's password access (all_users here).
+    expect(req.user).toMatchObject({ passwordAccess: FULL_PASSWORD_ACCESS });
+
+    // Single use: the same handle again is refused.
+    const again = makeDelegatedCtx(handle);
+    await expect(guard.canActivate(again.ctx)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it("gives the connection its owner's password access, from a fresh membership read", async () => {
+    const { guard, delegations, permissions } = makeGuard(null, {
+      passwordPolicy: { mode: 'selected_users', userIds: [] },
+    });
+    const { ctx, req } = makeDelegatedCtx(delegations.mint(grant));
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.user).toMatchObject({ passwordAccess: NO_PASSWORD_ACCESS });
+    expect(permissions.loadMemberships).toHaveBeenCalledWith('u-1', { fresh: true });
+  });
+
+  it('applies a deny membership override to the connection', async () => {
+    const { guard, delegations } = makeGuard(null, {
+      memberships: [
+        { companyId: 'co-x', role: 'FULL', expiresAt: null, revokedAt: null, passwordAccess: 'deny' },
+      ],
+    });
+    const { ctx, req } = makeDelegatedCtx(delegations.mint(grant));
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.user).toMatchObject({
+      passwordAccess: { byDefault: true, allowCompanyIds: [], denyCompanyIds: ['co-x'] },
+    });
+  });
+
+  it('carries the connection\'s write grant', async () => {
+    const { guard, delegations } = makeGuard(null, {
+      connection: { ...CLAUDE_CONNECTION, allowWrite: true },
+    });
+    const { ctx, req } = makeDelegatedCtx(delegations.mint(grant));
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(req.user).toMatchObject({ apiKeyAllowWrite: true, apiKeyAllowPasswordReveal: false });
+  });
+
+  it('refuses a valid handle on the public listener, even from a loopback peer', async () => {
+    const { guard, delegations } = makeGuard(null);
+    const { ctx } = makeDelegatedCtx(delegations.mint(grant), { internal: false });
+    await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it.each([
+    ['another method', { method: 'POST' }],
+    ['another path', { path: '/api/v1/companies/11111111-1111-4111-8111-111111111111/passwords' }],
+  ])('refuses the handle for %s, and burns it', async (_label, opts) => {
+    const { guard, delegations } = makeGuard(null);
+    const handle = delegations.mint(grant);
+    await expect(guard.canActivate(makeDelegatedCtx(handle, opts).ctx)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    await expect(guard.canActivate(makeDelegatedCtx(handle).ctx)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('refuses an unknown or expired handle', async () => {
+    const { guard, delegations } = makeGuard(null);
+    await expect(guard.canActivate(makeDelegatedCtx('wsd_unknown').ctx)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    const handle = delegations.mint(grant);
+    const real = Date.now.bind(Date);
+    const spy = jest.spyOn(Date, 'now').mockImplementation(() => real() + 31_000);
+    try {
+      await expect(guard.canActivate(makeDelegatedCtx(handle).ctx)).rejects.toBeInstanceOf(UnauthorizedException);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('refuses when the connection was revoked, belongs to someone else, or the switch is off', async () => {
+    for (const opts of [
+      { connection: null },
+      { connection: { ...CLAUDE_CONNECTION, userId: 'u-2' } },
+      { mcpRemoteEnabled: false },
+      // Another app's connection while only Claude and ChatGPT may connect.
+      { connection: DCR_CONNECTION },
+    ]) {
+      const { guard, delegations } = makeGuard(null, opts);
+      await expect(guard.canActivate(makeDelegatedCtx(delegations.mint(grant)).ctx)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+    }
+  });
+
+  it('accepts another app\'s connection while any app may connect', async () => {
+    const { guard, delegations } = makeGuard(null, { connection: DCR_CONNECTION, mcpClientPolicy: 'any' });
+    await expect(guard.canActivate(makeDelegatedCtx(delegations.mint(grant)).ctx)).resolves.toBe(true);
+  });
+
+  it('refuses a deactivated user', async () => {
+    const { guard, delegations, prisma } = makeGuard(null);
+    (prisma as unknown as { user: { findUnique: jest.Mock } }).user.findUnique.mockResolvedValue({
+      id: 'u-1',
+      isActive: false,
+    });
+    await expect(guard.canActivate(makeDelegatedCtx(delegations.mint(grant)).ctx)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 });

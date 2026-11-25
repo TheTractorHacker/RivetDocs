@@ -5,14 +5,15 @@ import { requireMe } from '../../../../../lib/server-api/auth';
 import { getSettings } from '../../../../../lib/server-api/settings';
 import { getCompanyDetail } from '../../../../../lib/server-api/companies';
 import { getActiveLayouts } from '../../../../../lib/server-api/layouts';
-import { listAssets } from '../../../../../lib/server-api/assets';
+import { listAllAssetsForPage } from '../../../../../lib/server-api/assets';
+import { parseSearchTerms } from '../../../../../lib/search-terms';
 import { throwUnlessFound } from '../../../../../lib/server-api/core';
 import {
   getCompanyActivePasswords,
 } from '../../../../../lib/server-api/passwords';
 import { canWriteCompany } from '../../../../../lib/roles';
 import { PageBody, PageHeader } from '../../../../../components/shell/page-header';
-import { Icon, LayoutSwatch, LinkBtn, Panel, Tag } from '../../../../../components/ui';
+import { ErrorBanner, Icon, LayoutSwatch, LinkBtn, Panel, Tag } from '../../../../../components/ui';
 import { buildTerm, lower } from '../../../../../lib/term';
 import { companyCrumbs } from '../../../../../lib/company-crumbs';
 import { AssetsTable } from './assets-table';
@@ -39,7 +40,7 @@ export default async function CompanyAssetsPage({
   const manage = canWriteCompany(me, company.id);
 
   const layoutId = typeof sp.layout === 'string' ? sp.layout : undefined;
-  const q = typeof sp.q === 'string' ? sp.q : undefined;
+  const searchTerms = parseSearchTerms(sp.q);
   const includeArchived = sp.archived === '1';
   const fieldFilters: Record<string, string> = {};
   for (const [k, v] of Object.entries(sp)) {
@@ -47,14 +48,16 @@ export default async function CompanyAssetsPage({
     if (typeof v === 'string') fieldFilters[k.slice('field.'.length)] = v;
   }
 
-  const [layouts, assets, passwords] = await Promise.all([
+  // A filter the API refuses (unknown field, wrong value type, too many
+  // search terms) shows as a banner over an empty list. The table still
+  // renders its pills, so the bad filter can be removed in 1 click.
+  const [layouts, { assets, filterError }, passwords] = await Promise.all([
     getActiveLayouts(),
-    listAssets(companyId, {
+    listAllAssetsForPage(companyId, {
       layoutId,
-      q,
+      q: searchTerms,
       includeArchived,
       fieldFilters,
-      limit: 200,
     }),
     // Passwords share the same global tag namespace as assets, so we load
     // them here too. The table surfaces matching credentials inline when
@@ -92,13 +95,25 @@ export default async function CompanyAssetsPage({
         }
       />
       <PageBody>
+        {filterError && (
+          <div style={{ marginBottom: 12 }}>
+            <ErrorBanner title="Filter not applied" detail={filterError} tone="warn" />
+          </div>
+        )}
         <Panel
           title={
             <span>
-              {assets.items.length} asset{assets.items.length === 1 ? '' : 's'}
+              {assets.items.length}
+              {assets.truncated ? '+' : ''} asset
+              {assets.items.length === 1 ? '' : 's'}
               {includeArchived && (
                 <Tag tone="outline" style={{ marginLeft: 10 }}>
                   incl. archived
+                </Tag>
+              )}
+              {assets.truncated && (
+                <Tag tone="warn" style={{ marginLeft: 10 }}>
+                  showing the first {assets.items.length}
                 </Tag>
               )}
             </span>
@@ -111,7 +126,7 @@ export default async function CompanyAssetsPage({
             rows={assets.items}
             passwords={passwords}
             layouts={layouts}
-            q={q ?? ''}
+            searchTerms={searchTerms}
             layoutId={layoutId ?? ''}
             includeArchived={includeArchived}
             fieldFilters={fieldFilters}

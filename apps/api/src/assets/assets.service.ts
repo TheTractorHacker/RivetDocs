@@ -7,33 +7,39 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
-import type {
+import {
   Prisma,
-  Asset,
-  AssetField,
-  AssetFieldValue,
-  AssetLayout,
+  type Asset,
+  type AssetField,
+  type AssetFieldValue,
+  type AssetLayout,
 } from '@prisma/client';
 import type {
+  AssetExportColumns,
   BulkAssetResult,
   CreateAssetInput,
   UpdateAssetInput,
   UserRole,
 } from '@rivetdocs/shared';
+import { ASSET_EXPORT_MAX_ROWS } from '@rivetdocs/shared';
+import { toCsv } from '../common/csv.js';
 import type { FieldType, IntegrationTargetProvenance } from '@rivetdocs/shared';
 import { readTargetProvenance } from '../integrations/reconstruction/integration-provenance.service.js';
-import { FILTERABLE_FIELD_TYPES } from '@rivetdocs/shared';
+import { FILTERABLE_FIELD_TYPES, integrationSectionSchema } from '@rivetdocs/shared';
+import type { AssetIntegrationSection } from '@rivetdocs/shared';
 import type { FileFieldEntry } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { isUniqueConstraintError } from '../prisma/prisma-errors.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
-import { AuditLogService } from '../audit/audit.service.js';
+import { AuditLogService, type AuditEntry } from '../audit/audit.service.js';
 import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
+import { choices as choiceOptions } from '../field-types/strategies/choice.strategy.js';
+import { escapeLikePattern } from '../common/like-pattern.js';
 import { RelationsService } from '../relations/relations.service.js';
 import { getTenantContext } from '@rivetdocs/shared/server';
 import { UploadContentMissingException, UploadsService } from '../uploads/uploads.service.js';
 import { describeError } from '../common/describe-error.js';
-import { SearchIndexService } from '../search/search-index.service.js';
+import { SearchIndexService, assetSearchWords } from '../search/search-index.service.js';
 import { PasswordsService } from '../passwords/passwords.service.js';
 import { StarsService } from '../stars/stars.service.js';
 import { TagsService } from '../tags/tags.service.js';
@@ -42,6 +48,8 @@ import type { AuthedUser } from '../common/current-user.decorator.js';
 import { INTEGRATION_WRITE_ACTOR } from '../common/integration-write-actor.js';
 import { expandMatchValueVariants } from '../integrations/match-resolver.service.js';
 import { hasEligibleNativeBinding } from '../integrations/reconstruction/native-binding-ownership.js';
+import { differenceDisplayValue, parseFieldDiffs } from '../integrations/field-diffs.js';
+import { sourceRecordUrl } from '../integrations/drivers/source-urls.js';
 
 export interface AuditMeta {
   ip: string;
@@ -99,12 +107,105 @@ export interface IntegrationAssetWriteInput {
   name: string;
   assetLayoutId: string;
   matchKeyFieldIds: string[];
+  /**
+   * Match-first (runner-controlled, see ReconstructionWriteContext): adopt
+   * a single unbound asset with no external identity whose match-key
+   * values equal the record's. Off by default: an integration otherwise
+   * never takes over a manually created asset.
+   */
+  claimUnboundMatch?: boolean;
+  /**
+   * The binding adopted an operator-created asset (match-first), so the
+   * asset keeps the operator's name on every later sync. Assets the
+   * integration created itself keep following the source name.
+   */
+  keepTargetName?: boolean;
+  /**
+   * Per-run cache for the match-first case-insensitive fallback, owned by
+   * the sync runner so the lowercased index is built once per run instead
+   * of once per record. Absent: a throwaway index per call.
+   */
+  matchFirstIndexes?: MatchFirstIndexCache;
+  /**
+   * Co-binding (runner-controlled, with `claimUnboundMatch`): asset
+   * external sources (driver keys) whose assets this record may share.
+   * When no manual asset matches, one asset carrying one of these sources
+   * and no binding of this integration is bound instead of creating a
+   * duplicate; its identity and name stay with the integration that owns it.
+   */
+  coBindSources?: readonly string[];
+  /**
+   * Integration priority (driver keys, highest first) and this
+   * integration's driver. With several integrations bound to one asset,
+   * the highest-priority one that provides a value owns a standard field;
+   * a lower one only fills it when empty and otherwise reports a difference.
+   */
+  priority?: { driver: string; order: readonly string[] };
   fieldValues: Array<{
     targetFieldId: string;
     value: unknown;
     syncDirection: 'source_wins' | 'preserve_manual' | 'manual_only';
   }>;
   previousFieldChecksums: Readonly<Record<string, string>>;
+  /**
+   * Runner-controlled (resources that declare `standardFields`): a
+   * `preserve_manual` field a person changed is reported in `fieldDiffs`
+   * instead of being silently kept, and a person's value that already
+   * equals the source makes the field follow the source again.
+   */
+  recordFieldDiffs?: boolean;
+  /**
+   * With `recordFieldDiffs`: this binding's "Keep ours" choices, keyed by
+   * AssetField.id, each with the source fingerprint it was made against.
+   * While the source still sends that value, the field is never written.
+   */
+  keptLocal?: Readonly<Record<string, string>>;
+}
+
+/** A standard field a person changed that now differs from the source value. */
+export interface IntegrationFieldDiff {
+  sourceValue: unknown;
+  sourceFingerprint: string;
+  localFingerprint: string;
+}
+
+/**
+ * Lowercased match-key value -> ids of unbound, identity-free assets, keyed
+ * by company + layout + mapping + resource + match fields. `'overflow'`
+ * marks an index whose source exceeded MATCH_FIRST_INDEX_CAP.
+ */
+export type MatchFirstIndexCache = Map<string, Map<string, string[]> | 'overflow'>;
+
+/** Most unbound manual assets one match-first index may hold. */
+const MATCH_FIRST_INDEX_CAP = 5_000;
+
+/** Checksums of the values that mean "no value" (never a provided value). */
+const EMPTY_FIELD_CHECKSUMS = new Set([null, '', []].map((value) => assetFieldChecksum(value)));
+
+function isEmptyFieldValue(value: unknown): boolean {
+  return EMPTY_FIELD_CHECKSUMS.has(assetFieldChecksum(value));
+}
+
+/** Another integration's binding on the same asset, as the write policy sees it. */
+interface CoBinding {
+  /** Index in the priority order (lower wins); unknown drivers rank last. */
+  rank: number;
+  /** AssetField.id -> checksum of the value that integration last wrote. */
+  checksums: Record<string, string>;
+}
+
+function priorityRank(priority: IntegrationAssetWriteInput['priority'], driver: string): number {
+  const order = priority?.order ?? [];
+  const index = order.indexOf(driver);
+  return index === -1 ? order.length : index;
+}
+
+function providesValue(checksum: string | undefined): boolean {
+  return checksum !== undefined && !EMPTY_FIELD_CHECKSUMS.has(checksum);
+}
+
+function foldMatchValue(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function legacyIntegrationExternalSource(
@@ -166,6 +267,10 @@ export interface IntegrationAssetWriteResult {
   companyId: string;
   change: 'created' | 'updated' | 'unchanged' | 'restored' | 'blocked';
   fieldChecksums?: Record<string, string>;
+  /** Present when `recordFieldDiffs` was set: keyed by AssetField.id. */
+  fieldDiffs?: Record<string, IntegrationFieldDiff>;
+  /** This write adopted an operator-created asset (match-first). */
+  adopted?: boolean;
   gap?: {
     kind: 'missing_dependency' | 'validation' | 'ambiguous' | 'synchronization_error';
     message: string;
@@ -186,9 +291,13 @@ const INTEGRATION_AUDIT_META: AuditMeta = {
  */
 const INTEGRATION_WRITE_MAX_ATTEMPTS = 3;
 
+/** Most search terms (`q` values) one asset list request may stack. */
+export const MAX_ASSET_SEARCH_TERMS = 10;
+
 export interface AssetListOptions {
   layoutId?: string;
-  q?: string;
+  /** One search term, or several stacked ones (`?q=a&q=b`). */
+  q?: string | string[];
   includeArchived?: boolean;
   /** Raw `field.<slug>=<value>` filters, parsed from `req.query`. */
   fieldFilters?: Record<string, string>;
@@ -248,6 +357,11 @@ export interface SerializedAsset {
   }>;
   /** Safe, tenant-scoped reconstruction provenance for the exact native target. */
   provenance: IntegrationTargetProvenance[];
+  /**
+   * Driver-supplied integration sections, one per binding that carries
+   * one. Detail only, and never for CLIENT_USER (see `get`).
+   */
+  integrationSections?: Array<Omit<AssetIntegrationSection, 'lastSyncedAt'> & { lastSyncedAt: Date }>;
   fieldValues: Record<string, unknown>;
   fields: Array<{
     id: string;
@@ -278,6 +392,118 @@ export interface SerializedAsset {
 
 type LayoutWithFields = AssetLayout & { fields: AssetField[] };
 
+export interface AssetExportOptions {
+  layoutId: string;
+  q?: string | string[];
+  includeArchived?: boolean;
+  /** Tag-table id; applied in memory after the row cap (see `exportCsv`). */
+  tagId?: string;
+  columns: AssetExportColumns;
+}
+
+/**
+ * Field types that never appear in a CSV export, in either column mode.
+ * A Vaultwarden link points at a vault item; it is not inventory data.
+ */
+export const EXPORT_EXCLUDED_FIELD_TYPES: ReadonlySet<FieldType> = new Set<FieldType>([
+  'VAULTWARDEN_LINK',
+]);
+
+/** Non-archived fields the role may read — the single visibility rule. */
+function fieldsVisibleTo(fields: AssetField[], role: UserRole): AssetField[] {
+  return fields.filter(
+    (f) => f.archivedAt === null && (role !== 'CLIENT_USER' || f.visibleToClients),
+  );
+}
+
+/**
+ * True when any of `tagFieldSlugs` holds a hydrated `{ id }` chip equal
+ * to `tagId` — the same match the per-layout table's tag filter uses.
+ */
+export function rowHasTag(
+  fieldValues: Record<string, unknown>,
+  tagFieldSlugs: readonly string[],
+  tagId: string,
+): boolean {
+  return tagFieldSlugs.some((slug) => {
+    const v = fieldValues[slug];
+    if (!Array.isArray(v)) return false;
+    return v.some(
+      (entry: unknown) =>
+        !!entry && typeof entry === 'object' && (entry as { id?: unknown }).id === tagId,
+    );
+  });
+}
+
+/**
+ * Plain-text CSV cell for one hydrated field value. Absent and null
+ * values are empty cells; `0` and `false` keep their meaning.
+ */
+export function exportCellText(
+  fieldType: FieldType,
+  value: unknown,
+  options: Record<string, unknown>,
+  references: SerializedAsset['references'],
+  registry: Pick<FieldTypesRegistry, 'get'>,
+): string {
+  if (value === null || value === undefined) return '';
+  switch (fieldType) {
+    case 'TAGS':
+      return (Array.isArray(value) ? value : [])
+        .map((v: unknown) =>
+          v && typeof v === 'object' && typeof (v as { name?: unknown }).name === 'string'
+            ? (v as { name: string }).name
+            : typeof v === 'string'
+              ? v
+              : '',
+        )
+        .filter(Boolean)
+        .join(', ');
+    case 'ASSET_REFERENCE':
+      // Stored as an array even for single-target fields.
+      return (Array.isArray(value) ? value : [value])
+        .map((v: unknown) => {
+          const id = String(v);
+          return references[id]?.name ?? id;
+        })
+        .join(', ');
+    case 'FILE':
+      // File names only: hydrated entries also carry download URLs.
+      return (Array.isArray(value) ? value : [])
+        .map((e: unknown) =>
+          e && typeof e === 'object' && typeof (e as { filename?: unknown }).filename === 'string'
+            ? (e as { filename: string }).filename
+            : '',
+        )
+        .filter(Boolean)
+        .join(', ');
+    case 'RICH_TEXT':
+    case 'DROPDOWN':
+    case 'MULTISELECT':
+    case 'BOOLEAN':
+      return registry.get(fieldType).toPlaintext(value, options);
+    default:
+      if (typeof value === 'object') return JSON.stringify(value);
+      return String(value);
+  }
+}
+
+/**
+ * The distinct, non-blank search terms in a `q` value. A term repeated
+ * in another letter case counts once.
+ */
+function searchTerms(q: string | string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const terms: string[] = [];
+  for (const raw of Array.isArray(q) ? q : q === undefined ? [] : [q]) {
+    const term = raw.trim();
+    if (!term || seen.has(term.toLowerCase())) continue;
+    seen.add(term.toLowerCase());
+    terms.push(term);
+  }
+  return terms;
+}
+
 @Injectable()
 export class AssetsService {
   private readonly logger = new Logger(AssetsService.name);
@@ -299,11 +525,17 @@ export class AssetsService {
   // --------------------------------------------------------------------
 
   /**
-   * List assets for a company with layout filter, name search, archive
+   * List assets for a company with layout filter, text search, archive
    * filter, and `field.<slug>=<value>` filter DSL. Each `field.*` filter
-   * is resolved against the layout's field definitions (filterable types
-   * only — see `FILTERABLE_FIELD_TYPES`) and ANDed as separate nested
-   * `fieldValues.some` predicates.
+   * is resolved against the field definitions (filterable types only —
+   * see `FILTERABLE_FIELD_TYPES`) and the filters are ANDed. See
+   * `resolveFieldFilters` for the match rules.
+   *
+   * `q` matches when every word is in the name or in any indexed field
+   * value (`SearchIndexService.matchAssetIds`), so a pasted serial
+   * number, IP address or custom value finds its asset. The direct
+   * name match stays as well, for an asset whose index row is missing.
+   * Several `q` terms stack: an asset must match every one.
    */
   async list(
     actor: AuthedUser,
@@ -311,64 +543,7 @@ export class AssetsService {
     options: AssetListOptions = {},
   ): Promise<{ items: SerializedAsset[]; nextCursor: string | null }> {
     const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
-
-    const where: Prisma.AssetWhereInput = { companyId };
-    if (!options.includeArchived) where.archivedAt = null;
-    if (options.layoutId) where.assetLayoutId = options.layoutId;
-    if (options.q) {
-      where.name = { contains: options.q, mode: 'insensitive' };
-    }
-
-    const filterClauses: Prisma.AssetWhereInput[] = [];
-    const fieldFilters = options.fieldFilters ?? {};
-    const filterSlugs = Object.keys(fieldFilters);
-
-    if (filterSlugs.length > 0) {
-      // Resolve slugs to field rows so the middle layer never has to do
-      // its own string->id lookup.
-      const layoutConstraint = options.layoutId
-        ? { assetLayoutId: options.layoutId }
-        : {};
-      const fieldRows = await this.prisma.assetField.findMany({
-        where: { ...layoutConstraint, slug: { in: filterSlugs }, archivedAt: null },
-      });
-      const fieldBySlug = new Map(fieldRows.map((f) => [f.slug, f]));
-
-      for (const slug of filterSlugs) {
-        const field = fieldBySlug.get(slug);
-        if (!field) {
-          throw new BadRequestException({
-            error: 'UnknownFilterField',
-            slug,
-            message: `No field "${slug}" exists on the selected layout.`,
-          });
-        }
-        if (!FILTERABLE_FIELD_TYPES.has(field.fieldType)) {
-          throw new BadRequestException({
-            error: 'UnfilterableField',
-            slug,
-            fieldType: field.fieldType,
-            message: `Field "${slug}" (${field.fieldType}) is not filterable.`,
-          });
-        }
-
-        const raw = fieldFilters[slug]!;
-        const parsed = this.coerceFilterValue(field.fieldType, raw);
-
-        filterClauses.push({
-          fieldValues: {
-            some: {
-              assetFieldId: field.id,
-              value: { equals: parsed as Prisma.InputJsonValue },
-            },
-          },
-        });
-      }
-    }
-
-    if (filterClauses.length > 0) {
-      where.AND = filterClauses;
-    }
+    const where = await this.buildListWhere(actor, companyId, options);
 
     const items = await this.prisma.asset.findMany({
       where,
@@ -427,6 +602,193 @@ export class AssetsService {
   }
 
   /**
+   * The `WHERE` shared by `list` and `exportCsv`: tenant scope, archive
+   * toggle, layout, stacked search terms, and `field.<slug>=` filters.
+   */
+  private async buildListWhere(
+    actor: AuthedUser,
+    companyId: string,
+    options: Pick<AssetListOptions, 'layoutId' | 'q' | 'includeArchived' | 'fieldFilters'>,
+  ): Promise<Prisma.AssetWhereInput> {
+    const where: Prisma.AssetWhereInput = { companyId };
+    if (!options.includeArchived) where.archivedAt = null;
+    if (options.layoutId) where.assetLayoutId = options.layoutId;
+    const terms = searchTerms(options.q);
+    if (terms.length > MAX_ASSET_SEARCH_TERMS) {
+      throw new BadRequestException({
+        error: 'TooManySearchTerms',
+        message: `Use at most ${MAX_ASSET_SEARCH_TERMS} search terms.`,
+      });
+    }
+    // Check every term first, so a bad last term costs no search queries.
+    for (const term of terms) assetSearchWords(term);
+    const searchClauses: Prisma.AssetWhereInput[] = [];
+    for (const term of terms) {
+      const matched = await this.searchIndex.matchAssetIds(companyId, term, {
+        clientVisibleOnly: actor.role === 'CLIENT_USER',
+      });
+      searchClauses.push({
+        OR: [
+          { name: { contains: escapeLikePattern(term), mode: 'insensitive' } },
+          { id: { in: matched } },
+        ],
+      });
+    }
+
+    const filterClauses = [
+      ...searchClauses,
+      ...(await this.resolveFieldFilters(companyId, options.layoutId, options.fieldFilters ?? {})),
+    ];
+
+    if (filterClauses.length > 0) {
+      where.AND = filterClauses;
+    }
+    return where;
+  }
+
+  /**
+   * CSV export of one layout's list, with the same rows the per-layout
+   * table shows: the base list (search + archive toggle) capped at
+   * `ASSET_EXPORT_MAX_ROWS` first, then the tag filter in memory — the
+   * page loads, caps, and tag-filters in that same order.
+   *
+   * Field visibility follows `serialize` (CLIENT_USER sees
+   * `visibleToClients` fields only); `EXPORT_EXCLUDED_FIELD_TYPES` drop
+   * out of both column modes. One `asset.export` audit row per call,
+   * awaited and not caught: no file leaves without its audit row.
+   */
+  async exportCsv(
+    actor: AuthedUser,
+    companyId: string,
+    options: AssetExportOptions,
+    meta: AuditMeta,
+  ): Promise<{ filename: string; csv: string; rowCount: number; truncated: boolean }> {
+    const layout = await this.loadLayout(options.layoutId);
+    if (layout.archivedAt) throw new NotFoundException(`Layout ${options.layoutId} not found`);
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { slug: true },
+    });
+    if (!company) throw new NotFoundException(`Company ${companyId} not found`);
+
+    const fields = fieldsVisibleTo(layout.fields, actor.role)
+      .filter((f) => !EXPORT_EXCLUDED_FIELD_TYPES.has(f.fieldType))
+      .sort((a, b) => a.position - b.position);
+    const fieldColumns =
+      options.columns === 'all'
+        ? fields.filter((f) => !f.isPrimary)
+        : fields.filter((f) => f.showInTable && !f.isPrimary);
+
+    const where = await this.buildListWhere(actor, companyId, {
+      layoutId: layout.id,
+      q: options.q,
+      includeArchived: options.includeArchived,
+    });
+    const fieldIds = fieldColumns.map((f) => f.id);
+    const rows: Array<Asset & { fieldValues: AssetFieldValue[] }> = [];
+    let cursor: string | undefined;
+    const BATCH = 500;
+    while (rows.length <= ASSET_EXPORT_MAX_ROWS) {
+      const batch = await this.prisma.asset.findMany({
+        where,
+        // Same order as `list`, so the cap keeps the rows the page keeps.
+        orderBy: [{ archivedAt: 'asc' }, { name: 'asc' }, { id: 'asc' }],
+        take: Math.min(BATCH, ASSET_EXPORT_MAX_ROWS + 1 - rows.length),
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        include: {
+          fieldValues: {
+            where: {
+              assetField: {
+                archivedAt: null,
+                OR: [{ id: { in: fieldIds } }, { fieldType: 'TAGS' }],
+              },
+            },
+          },
+        },
+      });
+      rows.push(...batch);
+      if (batch.length === 0 || rows.length > ASSET_EXPORT_MAX_ROWS) break;
+      cursor = batch[batch.length - 1]!.id;
+    }
+    const truncated = rows.length > ASSET_EXPORT_MAX_ROWS;
+    const capped = truncated ? rows.slice(0, ASSET_EXPORT_MAX_ROWS) : rows;
+
+    let serialized = capped.map((a) => this.serialize(a, layout, a.fieldValues, actor.role));
+    await this.hydrateFileFields(companyId, serialized);
+    await this.hydrateAssetReferences(companyId, serialized);
+    await this.hydrateTagFields(serialized);
+
+    if (options.tagId) {
+      const tagFieldSlugs = fields.filter((f) => f.fieldType === 'TAGS').map((f) => f.slug);
+      const tagId = options.tagId;
+      serialized = serialized.filter((a) => rowHasTag(a.fieldValues, tagFieldSlugs, tagId));
+    }
+
+    const iso = (d: Date | null) => (d ? d.toISOString() : '');
+    const columns: Array<{ header: string; cell: (a: SerializedAsset) => string }> = [
+      { header: 'Name', cell: (a) => a.name },
+      ...fieldColumns.map((f) => ({
+        header: f.name,
+        cell: (a: SerializedAsset) =>
+          exportCellText(
+            f.fieldType,
+            a.fieldValues[f.slug],
+            (f.options ?? {}) as Record<string, unknown>,
+            a.references,
+            this.registry,
+          ),
+      })),
+      ...(options.columns === 'all'
+        ? [
+            { header: 'ID', cell: (a: SerializedAsset) => a.id },
+            { header: 'Created', cell: (a: SerializedAsset) => iso(a.createdAt) },
+            { header: 'Updated', cell: (a: SerializedAsset) => iso(a.updatedAt) },
+            { header: 'Archived at', cell: (a: SerializedAsset) => iso(a.archivedAt) },
+          ]
+        : [
+            { header: 'Updated', cell: (a: SerializedAsset) => iso(a.updatedAt) },
+            ...(options.includeArchived
+              ? [{ header: 'Archived at', cell: (a: SerializedAsset) => iso(a.archivedAt) }]
+              : []),
+          ]),
+    ];
+    const csv = toCsv(
+      columns.map((c) => c.header),
+      serialized.map((a) => columns.map((c) => c.cell(a))),
+    );
+
+    await this.audit.log({
+      actorId: actor.id,
+      action: AUDIT_ACTIONS.asset.export,
+      entityType: 'AssetLayout',
+      entityId: layout.id,
+      companyId,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      before: null,
+      after: {
+        columns: options.columns,
+        fieldSlugs: fieldColumns.map((f) => f.slug),
+        rowCount: serialized.length,
+        truncated,
+        filters: {
+          searchTermCount: searchTerms(options.q).length,
+          includeArchived: options.includeArchived === true,
+          tagId: options.tagId ?? null,
+        },
+      },
+    });
+
+    const date = new Date().toISOString().slice(0, 10);
+    return {
+      filename: `${company.slug}-${layout.slug}-${date}.csv`,
+      csv,
+      rowCount: serialized.length,
+      truncated,
+    };
+  }
+
+  /**
    * Returns a `{ layoutId -> count }` map of active (non-archived)
    * assets grouped by layout, scoped to a single company. Used by the
    * company-scoped sidebar to render `(n)` counts next to each layout
@@ -472,7 +834,93 @@ export class AssetsService {
       targetKind: 'asset',
       targetId: id,
     });
+    // Sections carry MSP-internal posture (admin roles, 2SV, alerts,
+    // licences) with no per-row client visibility, so client users never
+    // receive them, even on an asset they can read.
+    if (actor.role !== 'CLIENT_USER') {
+      serialized.integrationSections = await this.readIntegrationSections(companyId, id);
+    }
     return serialized;
+  }
+
+  private async readIntegrationSections(
+    companyId: string,
+    assetId: string,
+  ): Promise<NonNullable<SerializedAsset['integrationSections']>> {
+    const rows = await this.prisma.integrationSyncRecord.findMany({
+      where: { companyId, assetId, sectionData: { not: Prisma.DbNull } },
+      select: {
+        id: true,
+        externalId: true,
+        lastSyncedAt: true,
+        sectionData: true,
+        fieldDiffs: true,
+        state: true,
+        sourceKind: true,
+        resource: { select: { resourceKey: true } },
+        companyMapping: {
+          select: { externalOrgId: true, integration: { select: { id: true, driver: true, name: true, config: true } } },
+        },
+      },
+      orderBy: { lastSyncedAt: 'desc' },
+    });
+    const diffsByRow = new Map(rows.map((row) => [row.id, parseFieldDiffs(row.fieldDiffs)]));
+    const fieldIds = [...new Set([...diffsByRow.values()].flatMap((diffs) => Object.keys(diffs)))];
+    const [fields, values] = fieldIds.length === 0
+      ? [[], []]
+      : await Promise.all([
+          this.prisma.assetField.findMany({
+            where: { id: { in: fieldIds }, archivedAt: null },
+            select: { id: true, name: true },
+          }),
+          this.prisma.assetFieldValue.findMany({
+            where: { companyId, assetId, assetFieldId: { in: fieldIds } },
+            select: { assetFieldId: true, value: true },
+          }),
+        ]);
+    const labelById = new Map(fields.map((field) => [field.id, field.name]));
+    const valueById = new Map(values.map((value) => [value.assetFieldId, value.value]));
+    const out: NonNullable<SerializedAsset['integrationSections']> = [];
+    for (const row of rows) {
+      // Re-validated on read: the column is only ever written validated,
+      // but the renderer must never see anything outside the schema.
+      const parsed = integrationSectionSchema.safeParse(row.sectionData);
+      if (!parsed.success) continue;
+      const { integration } = row.companyMapping;
+      const sourceUrl = sourceRecordUrl(integration.driver, {
+        externalId: row.externalId,
+        externalOrgId: row.companyMapping.externalOrgId,
+        resourceKey: row.resource.resourceKey,
+        sourceKind: row.sourceKind,
+        config: integration.config,
+      });
+      out.push({
+        integrationId: integration.id,
+        driver: integration.driver,
+        integrationName: integration.name,
+        lastSyncedAt: row.lastSyncedAt,
+        active: row.state === 'active',
+        section: parsed.data,
+        ...(sourceUrl ? { sourceUrl } : {}),
+        syncRecordId: row.id,
+        differences: Object.entries(diffsByRow.get(row.id) ?? {}).flatMap(([assetFieldId, diff]) => {
+          const fieldLabel = labelById.get(assetFieldId);
+          // A field archived since the sync has nothing left to resolve.
+          if (fieldLabel === undefined) return [];
+          return [{
+            syncRecordId: row.id,
+            assetFieldId,
+            fieldLabel,
+            localValue: differenceDisplayValue(valueById.get(assetFieldId)),
+            sourceValue: differenceDisplayValue(diff.sourceValue),
+            detectedAt: diff.detectedAt,
+          }];
+        }),
+      });
+    }
+    // ponytail: section values are not indexed for search in v1; add them
+    // to SearchIndex (upsertAsset) when operators ask to search them.
+    return out;
   }
 
   // --------------------------------------------------------------------
@@ -543,7 +991,7 @@ export class AssetsService {
       // Phase 6: rebuild search_index inside the same tx so the row
       // only becomes discoverable after its field values are visible
       // to the rest of the app.
-      await this.searchIndex.upsertAsset(tx, created.id);
+      await this.searchIndex.upsertAsset(tx, created.id, companyId);
 
       return created;
     });
@@ -574,6 +1022,8 @@ export class AssetsService {
     id: string,
     input: UpdateAssetInput,
     meta: AuditMeta,
+    /** Run the write in the caller's transaction (it holds a lock the write must not outlive). */
+    client?: Prisma.TransactionClient,
   ): Promise<SerializedAsset> {
     const existing = await this.prisma.asset.findFirst({
       where: { id, companyId },
@@ -627,7 +1077,9 @@ export class AssetsService {
       fieldValues: this.currentValuesAsMap(layout, existing.fieldValues),
     };
 
-    await this.prisma.$transaction(async (tx) => {
+    const runTransaction = <T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) =>
+      client ? callback(client) : this.prisma.$transaction(callback);
+    await runTransaction(async (tx) => {
       // `updateMany` lets us carry `companyId` in the `where` clause so
       // the tenant-scope middleware can verify the write is in-scope.
       // Plain `update` requires a unique `where`, which would only
@@ -661,10 +1113,10 @@ export class AssetsService {
       // Phase 6: rewrite the denormalised plaintext so the asset's
       // updated field values and name surface in the next search
       // query. Same-tx so a rollback cleans both sides up together.
-      await this.searchIndex.upsertAsset(tx, id);
+      await this.searchIndex.upsertAsset(tx, id, companyId);
     });
 
-    await this.audit.log({
+    const entry: AuditEntry = {
       actorId: actor.id,
       action: 'asset.update',
       entityType: 'Asset',
@@ -684,7 +1136,10 @@ export class AssetsService {
         // fields. Secondary store; see docs/security/data-retention.md.
         fieldValues: validated,
       },
-    });
+    };
+    // A caller transaction owns the commit: the row goes in with it, so a
+    // rollback leaves no audit of a write that never happened.
+    await (client ? this.audit.logWithClient(client, entry) : this.audit.log(entry));
 
     return this.get(actor, companyId, id);
   }
@@ -800,6 +1255,14 @@ export class AssetsService {
       normalizedForMatch,
       readClient,
     );
+    if (resolution.overflow) {
+      return integrationAssetBlocked(
+        input.companyId,
+        'ambiguous',
+        'Too many unlinked assets in the layout to match safely; link this record manually.',
+        'match_first_index_overflow',
+      );
+    }
     if (resolution.ambiguous) {
       return integrationAssetBlocked(
         input.companyId,
@@ -809,6 +1272,8 @@ export class AssetsService {
       );
     }
     const target = resolution.target;
+    const claimed = resolution.claimed === true;
+    const coBound = resolution.coBound === true;
     if (input.existingTargetId && !target) {
       return integrationAssetBlocked(
         input.companyId,
@@ -832,35 +1297,102 @@ export class AssetsService {
       target ? 'update' : 'write',
     );
     const fieldChecksums: Record<string, string> = {};
+    const fieldDiffs: Record<string, IntegrationFieldDiff> = {};
     const valuesToWrite: Record<string, unknown> = {};
     const existingValues = target
       ? this.currentValuesAsMap(layout, target.fieldValues)
       : {};
+    // An existing binding (not a first sync or a match-first adoption): a
+    // field newly mapped onto it has no baseline of its own, but the value
+    // it holds was put there by a person, not by this integration.
+    const establishedBinding = input.recordFieldDiffs === true && !!input.existingTargetId;
+    // Other integrations bound to the same asset (standard-field resources
+    // only): the priority order decides who owns each field.
+    const others = input.recordFieldDiffs === true && target
+      ? await this.coBindings(input, target.id, readClient)
+      : [];
+    const ownRank = priorityRank(input.priority, input.priority?.driver ?? '');
     for (const [fieldId, entry] of directionByFieldId) {
       const field = fieldById.get(fieldId)!;
       const stored = existingValues[field.slug];
       const storedChecksum = assetFieldChecksum(stored);
       if (entry.syncDirection === 'manual_only') continue;
       const previousChecksum = input.previousFieldChecksums[fieldId];
+      const sourceValue = normalized[field.slug];
+      const sourceFingerprint = assetFieldChecksum(sourceValue);
+      const storedEmpty = stored === null || stored === undefined;
+      // The recorded baseline stays the last integration-authored
+      // checksum. Recording the manual value's checksum instead would
+      // adopt the operator edit as "last synced", so the next run to
+      // reach this path would see no edit and overwrite it:
+      // preserve_manual retains the operator value until the operator
+      // reverts the field to the last synced value themselves.
+      const keepBaseline = (): void => {
+        if (previousChecksum !== undefined) fieldChecksums[fieldId] = previousChecksum;
+      };
+      const reportDifference = (): void => {
+        if (!input.recordFieldDiffs) return;
+        // The asset already holds the source value: nothing differs, and
+        // the field follows the source again from here on.
+        if (sourceFingerprint === storedChecksum) fieldChecksums[fieldId] = storedChecksum;
+        else fieldDiffs[fieldId] = { sourceValue, sourceFingerprint, localFingerprint: storedChecksum };
+      };
+      if (others.length > 0) {
+        const providers = others.filter((other) => providesValue(other.checksums[fieldId]));
+        // An empty source value never clears what another integration put there.
+        if (providers.length > 0 && isEmptyFieldValue(sourceValue)) {
+          keepBaseline();
+          continue;
+        }
+        // A higher-priority integration provides this field: this one only
+        // fills it while empty, and otherwise records a difference.
+        if (!storedEmpty && providers.some((other) => other.rank < ownRank)) {
+          keepBaseline();
+          reportDifference();
+          continue;
+        }
+        // Owner. A value another bound integration last wrote is
+        // integration-authored and is replaced, even when this integration
+        // has a baseline of its own (it was promoted in the priority order).
+        // A value no integration wrote is a person's edit (preserve_manual),
+        // and so is a value kept with "Keep ours" against this source value.
+        const ownBaseline = providesValue(previousChecksum) ? previousChecksum : undefined;
+        const writtenByOther = others.some((other) => other.checksums[fieldId] === storedChecksum);
+        const personsEdit = ownBaseline !== storedChecksum && !writtenByOther;
+        const keptLocal = input.keptLocal?.[fieldId] === sourceFingerprint;
+        if (
+          entry.syncDirection === 'preserve_manual' &&
+          !storedEmpty &&
+          (personsEdit || keptLocal)
+        ) {
+          keepBaseline();
+          reportDifference();
+          continue;
+        }
+        valuesToWrite[field.slug] = sourceValue;
+        fieldChecksums[fieldId] = sourceFingerprint;
+        continue;
+      }
       if (
         entry.syncDirection === 'preserve_manual' &&
         stored !== null &&
         stored !== undefined &&
-        previousChecksum !== undefined &&
-        previousChecksum !== storedChecksum
+        (previousChecksum !== undefined ? previousChecksum !== storedChecksum : establishedBinding)
       ) {
-        // The recorded baseline stays the last integration-authored
-        // checksum. Recording the manual value's checksum instead would
-        // adopt the operator edit as "last synced", so the next run to
-        // reach this path would see no edit and overwrite it —
-        // preserve_manual retains the operator value until the operator
-        // reverts the field to the last synced value themselves.
-        fieldChecksums[fieldId] = previousChecksum;
+        keepBaseline();
+        reportDifference();
         continue;
       }
       const value = normalized[field.slug];
       valuesToWrite[field.slug] = value;
       fieldChecksums[fieldId] = assetFieldChecksum(value);
+    }
+    // A fact the source left out this run keeps its baseline, so a later
+    // value is still compared with what the integration last wrote.
+    for (const [fieldId, checksum] of Object.entries(input.previousFieldChecksums)) {
+      if (!directionByFieldId.has(fieldId) && fieldById.has(fieldId) && fieldChecksums[fieldId] === undefined) {
+        fieldChecksums[fieldId] = checksum;
+      }
     }
     await this.assertUniqueValues(
       layout,
@@ -871,16 +1403,20 @@ export class AssetsService {
     );
 
     const legacyExternalSource = legacyIntegrationExternalSource(input);
+    // A co-bound asset keeps the identity of the integration that owns it.
     const sameIdentity =
       !target ||
-      target.externalSource === null ||
+      (!coBound && target.externalSource === null) ||
       (target.externalId === input.externalId &&
         (target.externalSource === (input.externalSource ?? null) ||
           target.externalSource === legacyExternalSource));
+    // An asset adopted from the operator (now, or by an earlier sync) keeps
+    // the operator's name; assets the integration created follow the source.
+    const nameToWrite = target && (claimed || input.keepTargetName === true) ? target.name : input.name;
     const identityChanged =
       !!target &&
       sameIdentity &&
-      (target.name !== input.name ||
+      (target.name !== nameToWrite ||
         target.externalId !== input.externalId ||
         target.externalSource !== (input.externalSource ?? null));
     const restored = target?.archivedAt != null;
@@ -911,7 +1447,7 @@ export class AssetsService {
           )
         : null;
     if (input.dryRun) {
-      if (target && !(await this.hasEligibleAssetBinding(readClient, input, target.id))) {
+      if (target && !claimed && !(await this.hasEligibleAssetBinding(readClient, input, target.id))) {
         return integrationAssetBlocked(input.companyId, 'ambiguous', 'The existing asset is not owned by an eligible reconstruction binding.', 'manual_ownership', target.id);
       }
       const dryRunValues = classificationValues!;
@@ -935,6 +1471,8 @@ export class AssetsService {
           fieldsChanged,
         }),
         fieldChecksums,
+        ...(input.recordFieldDiffs ? { fieldDiffs } : {}),
+        ...(claimed ? { adopted: true } : {}),
       };
     }
 
@@ -992,7 +1530,7 @@ export class AssetsService {
           true,
         );
         await this.linkFileFieldUploadsToAsset(tx, input.companyId, row.id, layout, canonicalValues);
-        await this.searchIndex.upsertAsset(tx, row.id);
+        await this.searchIndex.upsertAsset(tx, row.id, input.companyId);
         await this.audit.logWithClient(tx, {
           actorId: input.auditActorId,
           action: 'integration.asset.created',
@@ -1017,7 +1555,7 @@ export class AssetsService {
     } else {
       targetId = target.id;
       const outcome = await runTransaction(async (tx) => {
-        if (!(await this.hasEligibleAssetBinding(tx, input, target.id))) {
+        if (!claimed && !(await this.hasEligibleAssetBinding(tx, input, target.id))) {
           return { status: 'blocked' as const };
         }
         let canonicalValues = classificationValues!;
@@ -1049,12 +1587,18 @@ export class AssetsService {
                 // edit.
                 archivedAt: target!.archivedAt,
                 updatedAt: target!.updatedAt,
+                // Match-first adoption is an atomic claim: it only lands while
+                // the asset still has no external identity, so two mappings or
+                // resources racing for the same manual asset cannot both adopt it.
+                // A co-bind pins the owner's identity instead.
+                ...(claimed && !coBound ? { externalSource: null, externalId: null } : {}),
+                ...(coBound ? { externalSource: target!.externalSource, externalId: target!.externalId } : {}),
               },
               data: {
                 ...(restored ? { archivedAt: null } : {}),
                 ...(sameIdentity
                   ? {
-                      name: input.name,
+                      name: nameToWrite,
                       externalId: input.externalId,
                       externalSource: input.externalSource ?? null,
                     }
@@ -1074,6 +1618,17 @@ export class AssetsService {
             throw error;
           }
           if (guarded.count === 0) {
+            if (claimed && !coBound) {
+              const now = await tx.asset.findUnique({
+                where: { id: target!.id },
+                select: { externalSource: true, externalId: true },
+              });
+              // Another writer adopted it first: never overwrite its identity
+              // or fields, and never fall through to creating a duplicate.
+              if (now && (now.externalSource !== null || now.externalId !== null)) {
+                return { status: 'claim_lost' as const };
+              }
+            }
             return { status: 'conflict' as const };
           }
           // Side-effecting field resolution is safe only after the guarded
@@ -1098,7 +1653,7 @@ export class AssetsService {
             true,
           );
           await this.linkFileFieldUploadsToAsset(tx, input.companyId, target!.id, layout, canonicalValues);
-          await this.searchIndex.upsertAsset(tx, target!.id);
+          await this.searchIndex.upsertAsset(tx, target!.id, input.companyId);
           await this.audit.logWithClient(tx, {
             actorId: input.auditActorId,
             action: 'integration.asset.updated',
@@ -1118,6 +1673,15 @@ export class AssetsService {
       if (outcome.status === 'conflict') {
         return 'revision_conflict';
       }
+      if (outcome.status === 'claim_lost') {
+        return integrationAssetBlocked(
+          input.companyId,
+          'ambiguous',
+          'Another integration record adopted the matching asset at the same time; link this record manually.',
+          'match_first_claim_lost',
+          target.id,
+        );
+      }
       this.updateIntegrationFieldChecksums(
         directionByFieldId,
         fieldById,
@@ -1128,7 +1692,14 @@ export class AssetsService {
       change = outcome.change;
     }
 
-    return { targetId, companyId: input.companyId, change, fieldChecksums };
+    return {
+      targetId,
+      companyId: input.companyId,
+      change,
+      fieldChecksums,
+      ...(input.recordFieldDiffs ? { fieldDiffs } : {}),
+      ...(claimed ? { adopted: true } : {}),
+    };
   }
 
   private async hasEligibleAssetBinding(
@@ -1179,7 +1750,7 @@ export class AssetsService {
       });
       // Phase 6: mirror `archived_at` into `search_index` so the default
       // query filter (`archived_at IS NULL`) hides the row immediately.
-      await this.searchIndex.upsertAsset(tx, id);
+      await this.searchIndex.upsertAsset(tx, id, companyId);
     });
 
     // Phase 10: cascade archive to embedded credentials. Runs outside
@@ -1221,7 +1792,7 @@ export class AssetsService {
         where: { id, companyId },
         data: { archivedAt: null, updatedBy: actor.id },
       });
-      await this.searchIndex.upsertAsset(tx, id);
+      await this.searchIndex.upsertAsset(tx, id, companyId);
     });
 
     // Phase 10: mirror the restore onto embedded credentials the asset
@@ -1803,6 +2374,12 @@ export class AssetsService {
   ): Promise<{
     target: (Asset & { fieldValues: AssetFieldValue[] }) | null;
     ambiguous: boolean;
+    /** Match-first adoption of an unbound, identity-free asset. */
+    claimed?: boolean;
+    /** Match-first co-binding of an asset another integration owns (with `claimed`). */
+    coBound?: boolean;
+    /** The match-first index source exceeded its cap: nothing adopted. */
+    overflow?: boolean;
   }> {
     const byId = async (id: string) =>
       client.asset.findUnique({ where: { id }, include: { fieldValues: true } });
@@ -1880,10 +2457,209 @@ export class AssetsService {
         candidate.externalSource === (input.externalSource ?? null) &&
         candidate.externalId === input.externalId,
     );
-    return {
-      target: compatible.length === 1 ? compatible[0]! : null,
-      ambiguous: candidates.length > 1,
+    if (candidates.length > 1) return { target: null, ambiguous: true };
+    if (compatible.length === 1) return { target: compatible[0]!, ambiguous: false };
+    if (input.claimUnboundMatch !== true) return { target: null, ambiguous: false };
+    // Match-first: a single candidate nobody owns (no external identity,
+    // no binding from this mapping/resource per the query above) is
+    // adopted. Co-binding: the single match belongs to another integration
+    // that fills standard fields (the same person or device seen twice);
+    // its binding stays and this integration's record joins it. Assets
+    // carrying any other source's identity are never taken.
+    const only = candidates[0];
+    if (only) {
+      const kind = only.externalSource === null && only.externalId === null
+        ? 'manual'
+        : (await this.isCoBindable(input, only, client)) ? 'cobind' : null;
+      if (kind === null) return { target: null, ambiguous: false };
+      // Text-like keys: the variant OR above only tries as-is / lower /
+      // upper, so `sn-001` finds `SN-001` but never `Sn-001`. Adopt only
+      // when the complete case-insensitive set holds this asset alone.
+      const folded = await this.caseInsensitiveMatches(input, layout, values, client);
+      if (folded === 'overflow') return { target: null, ambiguous: false, overflow: true };
+      if (folded && [...folded.manual, ...folded.shared].some((id) => id !== only.id)) {
+        return { target: null, ambiguous: true };
+      }
+      return { target: only, ambiguous: false, claimed: true, ...(kind === 'cobind' ? { coBound: true } : {}) };
+    }
+    const folded = await this.caseInsensitiveMatches(input, layout, values, client);
+    if (folded === 'overflow') return { target: null, ambiguous: false, overflow: true };
+    return folded ? this.adoptCaseInsensitiveMatch(input, folded, client) : { target: null, ambiguous: false };
+  }
+
+  /**
+   * Match-first for text-like keys stored in mixed case (an operator typed
+   * `Alice@Example.COM` into a TEXT field). Prisma has no case-insensitive
+   * filter on Json columns, so the unbound, identity-free assets of the
+   * layout (and, with `coBindSources`, the co-bindable ones) are indexed in
+   * memory by lowercased key, once per sync run (see `matchFirstIndexes`),
+   * and every record of the run looks up there. Null when a key is not
+   * text-like (strict keys are compared exactly by the variant query);
+   * `'overflow'` when an index source exceeded its cap, which can prove
+   * neither uniqueness nor absence.
+   */
+  private async caseInsensitiveMatches(
+    input: IntegrationAssetWriteInput,
+    layout: LayoutWithFields,
+    values: Record<string, unknown>,
+    client: Pick<Prisma.TransactionClient, 'asset'> | PrismaService,
+  ): Promise<{ manual: string[]; shared: string[] } | 'overflow' | null> {
+    const wanted: string[] = [];
+    for (const fieldId of input.matchKeyFieldIds) {
+      const field = layout.fields.find((candidate) => candidate.id === fieldId);
+      if (!field || !['TEXT', 'EMAIL', 'URL'].includes(field.fieldType)) return null;
+      const value = values[field.slug];
+      if (typeof value !== 'string') return null;
+      wanted.push(foldMatchValue(value));
+    }
+    const lookup = async (mode: 'manual' | 'cobind'): Promise<string[] | 'overflow'> => {
+      const cache = input.matchFirstIndexes ?? new Map();
+      const cacheKey = [mode, input.companyId, input.assetLayoutId, input.integrationCompanyMappingId, input.resourceId, ...input.matchKeyFieldIds].join('|');
+      let index = cache.get(cacheKey);
+      if (index === undefined) {
+        index = await this.buildMatchFirstIndex(input, client, mode);
+        cache.set(cacheKey, index);
+      }
+      return index === 'overflow' ? 'overflow' : index.get(JSON.stringify(wanted)) ?? [];
     };
+    const manual = await lookup('manual');
+    if (manual === 'overflow') return 'overflow';
+    if ((input.coBindSources?.length ?? 0) === 0) return { manual, shared: [] };
+    const shared = await lookup('cobind');
+    return shared === 'overflow' ? 'overflow' : { manual, shared };
+  }
+
+  /**
+   * Adopt the one asset of a case-insensitive match set. Manual and
+   * co-bindable assets count together: two of any kind are ambiguous.
+   */
+  private async adoptCaseInsensitiveMatch(
+    input: IntegrationAssetWriteInput,
+    folded: { manual: string[]; shared: string[] },
+    client: Pick<Prisma.TransactionClient, 'asset' | 'integrationSyncRecord'> | PrismaService,
+  ): Promise<{ target: (Asset & { fieldValues: AssetFieldValue[] }) | null; ambiguous: boolean; claimed?: boolean; coBound?: boolean }> {
+    const ids = new Set([...folded.manual, ...folded.shared]);
+    if (ids.size > 1) return { target: null, ambiguous: true };
+    const [id] = ids;
+    if (id === undefined) return { target: null, ambiguous: false };
+    // Re-read with every field value, and re-check ownership: an earlier
+    // record of this run may already have adopted or co-bound the asset.
+    const target = await client.asset.findUnique({ where: { id }, include: { fieldValues: true } });
+    if (!target) return { target: null, ambiguous: false };
+    if (folded.manual.includes(id)) {
+      return target.archivedAt === null && target.externalSource === null && target.externalId === null
+        ? { target, ambiguous: false, claimed: true }
+        : { target: null, ambiguous: false };
+    }
+    return (await this.isCoBindable(input, target, client))
+      ? { target, ambiguous: false, claimed: true, coBound: true }
+      : { target: null, ambiguous: false };
+  }
+
+  /**
+   * Co-binding guard: a live asset in this company and layout, owned by an
+   * integration that fills standard fields (its external source is one of
+   * `coBindSources`), with no binding of this integration (an asset this
+   * integration already holds under another external id is never shared).
+   */
+  private async isCoBindable(
+    input: IntegrationAssetWriteInput,
+    target: Asset,
+    client: Pick<Prisma.TransactionClient, 'integrationSyncRecord'> | PrismaService,
+  ): Promise<boolean> {
+    if (
+      target.archivedAt !== null ||
+      target.companyId !== input.companyId ||
+      target.assetLayoutId !== input.assetLayoutId ||
+      target.externalSource === null ||
+      !(input.coBindSources ?? []).includes(target.externalSource)
+    ) return false;
+    // Two mappings of one integration can sync the same company at once:
+    // serialize the check with the binding write (same page transaction)
+    // per integration and asset, so only one record co-binds it. Without
+    // that transaction the check cannot be serialized: refuse to co-bind.
+    if (!input.tx) return false;
+    await input.tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`cobind:${input.integrationId}:${target.id}`}, 0))`;
+    const own = await client.integrationSyncRecord.findFirst({
+      where: { companyId: input.companyId, assetId: target.id, companyMapping: { integrationId: input.integrationId } },
+      select: { id: true },
+    });
+    return own === null;
+  }
+
+  /** Bindings of OTHER integrations on the asset (live ones only), ranked. */
+  private async coBindings(
+    input: IntegrationAssetWriteInput,
+    targetId: string,
+    client: Pick<Prisma.TransactionClient, 'integrationSyncRecord'> | PrismaService,
+  ): Promise<CoBinding[]> {
+    const rows = await client.integrationSyncRecord.findMany({
+      where: {
+        companyId: input.companyId,
+        assetId: targetId,
+        targetKind: 'asset',
+        state: { in: ['active', 'blocked'] },
+        companyMapping: { integrationId: { not: input.integrationId } },
+      },
+      select: {
+        lastSyncedFieldChecksums: true,
+        companyMapping: { select: { integration: { select: { driver: true } } } },
+      },
+      // No cap: a cap could drop the highest-priority provider. The set is
+      // bounded by the integrations bound to this one asset.
+    });
+    return rows.map((row) => ({
+      rank: priorityRank(input.priority, row.companyMapping.integration.driver),
+      checksums: (row.lastSyncedFieldChecksums ?? {}) as Record<string, string>,
+    }));
+  }
+
+  private async buildMatchFirstIndex(
+    input: IntegrationAssetWriteInput,
+    client: Pick<Prisma.TransactionClient, 'asset'> | PrismaService,
+    mode: 'manual' | 'cobind' = 'manual',
+  ): Promise<Map<string, string[]> | 'overflow'> {
+    const unbound = await client.asset.findMany({
+      where: {
+        companyId: input.companyId,
+        assetLayoutId: input.assetLayoutId,
+        archivedAt: null,
+        ...(mode === 'manual'
+          ? {
+              externalSource: null,
+              externalId: null,
+              integrationSyncRecords: {
+                none: {
+                  integrationCompanyMappingId: input.integrationCompanyMappingId,
+                  resourceId: input.resourceId,
+                },
+              },
+            }
+          : {
+              externalSource: { in: [...(input.coBindSources ?? [])] },
+              integrationSyncRecords: { none: { companyMapping: { integrationId: input.integrationId } } },
+            }),
+      },
+      select: {
+        id: true,
+        fieldValues: { where: { assetFieldId: { in: input.matchKeyFieldIds } }, select: { assetFieldId: true, value: true } },
+      },
+      take: MATCH_FIRST_INDEX_CAP + 1,
+    });
+    if (unbound.length > MATCH_FIRST_INDEX_CAP) return 'overflow';
+    const index = new Map<string, string[]>();
+    for (const asset of unbound) {
+      const key: string[] = [];
+      for (const fieldId of input.matchKeyFieldIds) {
+        const stored = asset.fieldValues.find((row) => row.assetFieldId === fieldId)?.value;
+        if (typeof stored !== 'string') break;
+        key.push(foldMatchValue(stored));
+      }
+      if (key.length !== input.matchKeyFieldIds.length) continue;
+      const k = JSON.stringify(key);
+      index.set(k, [...(index.get(k) ?? []), asset.id]);
+    }
+    return index;
   }
 
   private async loadLayout(
@@ -2247,11 +3023,114 @@ export class AssetsService {
     });
   }
 
-  private coerceFilterValue(fieldType: string, raw: string): unknown {
+  /**
+   * Turn `field.<slug>=<value>` filters into one `id IN (...)` clause per
+   * slug; the clauses are ANDed by the caller.
+   *
+   * - Without a layout, one slug can name a field on several layouts
+   *   (`manufacturer` on Laptops and Servers). Every such field counts:
+   *   an asset matches when any of them holds the value.
+   * - NUMBER and BOOLEAN match by value. Every other filterable type is
+   *   stored as a JSON string and matches trimmed and case-insensitive.
+   * - DROPDOWN stores the choice slug, but people type the label they
+   *   see, so a label resolves to its slug.
+   *
+   * The match runs as raw SQL because Prisma's JSON filters have no
+   * case-insensitive mode. It is scoped to `companyId` in the WHERE
+   * clause and every value is a bound parameter.
+   */
+  private async resolveFieldFilters(
+    companyId: string,
+    layoutId: string | undefined,
+    fieldFilters: Record<string, string>,
+  ): Promise<Prisma.AssetWhereInput[]> {
+    const slugs = Object.keys(fieldFilters);
+    if (slugs.length === 0) return [];
+
+    const fieldRows = await this.prisma.assetField.findMany({
+      where: {
+        ...(layoutId ? { assetLayoutId: layoutId } : {}),
+        slug: { in: slugs },
+        archivedAt: null,
+      },
+    });
+
+    const clauses: Prisma.AssetWhereInput[] = [];
+    for (const slug of slugs) {
+      const raw = fieldFilters[slug]!;
+      const fields = fieldRows.filter((f) => f.slug === slug);
+      if (fields.length === 0) {
+        throw new BadRequestException({
+          error: 'UnknownFilterField',
+          slug,
+          message: layoutId
+            ? `No field "${slug}" exists on the selected layout.`
+            : `No field "${slug}" exists on any layout.`,
+        });
+      }
+      const filterable = fields.filter((f) => FILTERABLE_FIELD_TYPES.has(f.fieldType));
+      if (filterable.length === 0) {
+        throw new BadRequestException({
+          error: 'UnfilterableField',
+          slug,
+          fieldType: fields[0]!.fieldType,
+          message: `Field "${slug}" (${fields[0]!.fieldType}) is not filterable.`,
+        });
+      }
+
+      // A value that is not valid for one field's type (`abc` for a
+      // NUMBER field) only rules out that field. It is an error only
+      // when no field with this slug can take the value.
+      const conditions: Prisma.Sql[] = [];
+      let firstInvalid: BadRequestException | null = null;
+      for (const field of filterable) {
+        try {
+          conditions.push(this.fieldFilterCondition(field, raw));
+        } catch (err) {
+          if (!(err instanceof BadRequestException)) throw err;
+          firstInvalid ??= err;
+        }
+      }
+      if (conditions.length === 0) throw firstInvalid!;
+
+      const rows = await this.prisma.$queryRaw<Array<{ asset_id: string }>>(Prisma.sql`
+        SELECT DISTINCT asset_id FROM asset_field_values
+        WHERE company_id = ${companyId}::uuid
+          AND (${Prisma.join(conditions, ' OR ')})
+      `);
+      clauses.push({ id: { in: rows.map((r) => r.asset_id) } });
+    }
+    return clauses;
+  }
+
+  /** SQL predicate on `asset_field_values` for one field and one filter value. */
+  private fieldFilterCondition(field: AssetField, raw: string): Prisma.Sql {
+    if (field.fieldType === 'NUMBER' || field.fieldType === 'BOOLEAN') {
+      const parsed = this.coerceFilterValue(field.fieldType, raw);
+      return Prisma.sql`(asset_field_id = ${field.id}::uuid AND value = ${JSON.stringify(parsed)}::jsonb)`;
+    }
+    const value = raw.trim().toLowerCase();
+    const candidates = [value];
+    if (field.fieldType === 'DROPDOWN') {
+      const options = (field.options as Record<string, unknown> | null) ?? {};
+      // Labels need not be unique, so every choice with this label counts.
+      for (const c of choiceOptions(options)) {
+        if (c.slug.toLowerCase() === value || c.label.trim().toLowerCase() === value) {
+          candidates.push(c.slug.toLowerCase());
+        }
+      }
+    }
+    return Prisma.sql`(asset_field_id = ${field.id}::uuid
+      AND jsonb_typeof(value) = 'string'
+      AND lower(trim(value #>> '{}')) = ANY(${candidates}::text[]))`;
+  }
+
+  private coerceFilterValue(fieldType: 'NUMBER' | 'BOOLEAN', raw: string): unknown {
     switch (fieldType) {
       case 'NUMBER': {
         const n = Number(raw);
-        if (Number.isNaN(n)) {
+        // `Number('')` is 0 and `Infinity` has no JSON form, so both are rejected.
+        if (raw.trim() === '' || !Number.isFinite(n)) {
           throw new BadRequestException({
             error: 'InvalidFilterValue',
             fieldType,
@@ -2268,10 +3147,6 @@ export class AssetsService {
           fieldType,
           message: `Boolean filters accept "true" or "false".`,
         });
-      case 'EMAIL':
-        return raw.trim().toLowerCase();
-      default:
-        return raw;
     }
   }
 
@@ -2516,9 +3391,7 @@ export class AssetsService {
     rows: AssetFieldValue[],
     role: UserRole,
   ): SerializedAsset {
-    const visibleFields = layout.fields.filter(
-      (f) => f.archivedAt === null && (role !== 'CLIENT_USER' || f.visibleToClients),
-    );
+    const visibleFields = fieldsVisibleTo(layout.fields, role);
     const fieldById = new Map(visibleFields.map((f) => [f.id, f]));
     const fieldValues: Record<string, unknown> = {};
     for (const row of rows) {
@@ -2548,6 +3421,7 @@ export class AssetsService {
       syncedFieldIds: [],
       syncSources: [],
       provenance: [],
+      integrationSections: [],
       fieldValues,
       fields: visibleFields
         .sort((a, b) => a.position - b.position)

@@ -25,7 +25,7 @@ import {
   SecretEncryptionService,
   passwordVaultAad,
 } from '../crypto/secret-encryption.service.js';
-import type { AuthedUser } from '../common/current-user.decorator.js';
+import { isProgrammatic, type AuthedUser } from '../common/current-user.decorator.js';
 import { EnvService } from '../config/env.service.js';
 import { QueuesService } from '../queues/queues.service.js';
 import { StarsService } from '../stars/stars.service.js';
@@ -275,6 +275,17 @@ export class PasswordsService {
         companyId,
         input.restrictedToUserIds,
       );
+    }
+    // An entry without its own list follows the user's membership override
+    // for this company, else the global password access policy. A user
+    // without that access could not open the entry after creating it, so
+    // the create is refused (issue #110).
+    if (
+      restrictedToUserIds.length === 0 &&
+      actor.role !== 'CLIENT_USER' &&
+      !canReadPassword(actor, { companyId, visibleToClients: false, restrictedToUserIds: [] })
+    ) {
+      throw new ForbiddenException('You do not have password access');
     }
 
     // Generate the row id up front: the ciphertexts are AAD-bound to
@@ -1463,5 +1474,5 @@ export type { Password, PasswordVersion };
  * GET away from being bypassed. Interactive sessions are unaffected.
  */
 function mayReadVaultNotes(actor: AuthedUser): boolean {
-  return !actor.apiKeyId || actor.apiKeyAllowPasswordReveal === true;
+  return !isProgrammatic(actor) || actor.apiKeyAllowPasswordReveal === true;
 }

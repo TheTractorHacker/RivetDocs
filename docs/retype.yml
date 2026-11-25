@@ -6,8 +6,8 @@ favicon: static/favicon.ico
 
 branding:
   logo: ./static/logo.svg
-  logoDark: ./static/logo.svg
-  label: v1.9.10
+  logoDark: ./static/logo-dark.svg
+  label: v1.13.2
   color: '#65a30d'
 
 links:

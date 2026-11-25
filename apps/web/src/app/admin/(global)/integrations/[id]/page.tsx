@@ -4,7 +4,9 @@ import type {
   CloudflareIpListDto,
   DriverDescriptor,
   IntegrationCompanyMappingDto,
+  IntegrationDifferencesPage,
   IntegrationDto,
+  IntegrationSyncHoldDto,
   IntegrationSyncRunDto,
 } from '@rivetdocs/shared';
 import { requireMe } from '../../../../../lib/server-api/auth';
@@ -17,6 +19,7 @@ import { PageBody, PageHeader } from '../../../../../components/shell/page-heade
 import { Panel } from '../../../../../components/ui';
 import { IntegrationTabs } from './integration-tabs';
 import { SecurityIntegrationTabs } from './cloudflare/security-integration-tabs';
+import { SyncHoldsBanner } from './sync-holds-banner';
 
 /**
  * Phase 11 — integration detail.
@@ -53,21 +56,18 @@ export default async function IntegrationDetailPage({
   const driver = drivers.find((d) => d.key === integration.driver) ?? null;
   const kind = driver?.capabilities.kind ?? 'pull';
 
-  // Asset-import drivers fetch the per-tenant mappings and run history
-  // up-front; security drivers (Cloudflare) instead need the registered
-  // lists. Splitting the fetch by kind avoids hitting endpoints that
-  // 400 for the wrong driver shape.
-  const [mappingsRes, runsRes, cfListsRes, cfDomainSyncRes] = await Promise.all([
+  // Every driver has a run history (Cloudflare's runs are its domain
+  // syncs). Asset-import drivers also fetch the per-tenant mappings;
+  // security drivers (Cloudflare) instead need the registered lists.
+  // Splitting the rest by kind avoids hitting endpoints that 400 for
+  // the wrong driver shape.
+  const [mappingsRes, runsRes, cfListsRes, cfDomainSyncRes, holdsRes] = await Promise.all([
     kind === 'pull'
       ? serverApiFetch<IntegrationCompanyMappingDto[]>(
           `/admin/integrations/${id}/mappings`,
         )
       : Promise.resolve({ data: [] as IntegrationCompanyMappingDto[] }),
-    kind === 'pull'
-      ? serverApiFetch<IntegrationSyncRunDto[]>(
-          `/admin/integrations/${id}/runs`,
-        )
-      : Promise.resolve({ data: [] as IntegrationSyncRunDto[] }),
+    serverApiFetch<IntegrationSyncRunDto[]>(`/admin/integrations/${id}/runs`),
     kind === 'security'
       ? serverApiFetch<CloudflareIpListDto[]>(
           `/admin/integrations/${id}/cloudflare/lists`,
@@ -78,12 +78,25 @@ export default async function IntegrationDetailPage({
           `/admin/integrations/${id}/cloudflare/domains/sync`,
         )
       : Promise.resolve({ data: { run: null } }),
+    // Sync holds (records missing, a field no longer sent, an unknown
+    // source schema version): asset-import
+    // drivers only. The page itself requires INTEGRATION_MANAGE, which the
+    // endpoint checks again.
+    kind === 'pull'
+      ? serverApiFetch<IntegrationSyncHoldDto[]>(`/admin/integrations/${id}/holds`)
+      : Promise.resolve({ data: [] as IntegrationSyncHoldDto[] }),
   ]);
 
+  // Badge count for the Differences tab: the first page carries the total.
+  const differencesRes = (driver?.resources ?? []).some((r) => (r.standardFields?.length ?? 0) > 0)
+    ? await serverApiFetch<IntegrationDifferencesPage>(`/admin/integrations/${id}/differences?limit=1`)
+    : null;
   const mappings = mappingsRes.data ?? [];
   const runs = runsRes.data ?? [];
   const cloudflareLists = cfListsRes.data ?? [];
   const domainSyncRun = cfDomainSyncRes.data?.run ?? null;
+  const holds = holdsRes.data ?? [];
+  const sourceLabel = driver?.label ?? integration.driver;
 
   return (
     <>
@@ -100,6 +113,7 @@ export default async function IntegrationDetailPage({
         }
       />
       <PageBody>
+        <SyncHoldsBanner holds={holds} sourceLabel={sourceLabel} />
         <Panel noPad>
           {kind === 'security' ? (
             <SecurityIntegrationTabs
@@ -108,14 +122,18 @@ export default async function IntegrationDetailPage({
               driver={driver}
               cloudflareLists={cloudflareLists}
               domainSyncRun={domainSyncRun}
+              runs={runs}
             />
           ) : (
             <IntegrationTabs
-              initialTab={sp.tab ?? 'creds'}
+              initialTab={sp.tab ?? ''}
               integration={integration}
               mappings={mappings}
               runs={runs}
               driver={driver}
+              canManageLayouts={hasCapability(me, 'LAYOUT_MANAGE')}
+              differenceCount={differencesRes?.data?.total ?? null}
+              syncHoldCount={holds.length}
             />
           )}
         </Panel>

@@ -3,11 +3,13 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
+import { microsoftDomainLabel, workspaceRoleLabel } from './workspace-role';
 import type { MonitoredDomainDto } from '@rivetdocs/shared';
 import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,
+  Checkbox,
   DataTable,
   type DataColumn,
   Dialog,
@@ -364,9 +366,17 @@ function DomainDialog({
             required
             value={form.hostname}
             autoFocus
-            // The registrar sync matches on hostname; the API rejects renames.
-            disabled={initial?.source === 'CLOUDFLARE'}
-            title={initial?.source === 'CLOUDFLARE' ? 'Synced from Cloudflare' : undefined}
+            // The syncs match on hostname; the API rejects renames.
+            disabled={!!initial && (initial.source !== 'MANUAL' || initial.workspaceRole !== null || initial.microsoftDefault !== null)}
+            title={
+              initial?.source === 'CLOUDFLARE'
+                ? 'Synced from Cloudflare'
+                : initial?.source === 'GOOGLE_WORKSPACE' || initial?.workspaceRole != null
+                  ? 'Synced from Google Workspace'
+                  : initial?.source === 'MICROSOFT_365' || initial?.microsoftDefault != null
+                    ? 'Synced from Microsoft 365'
+                    : undefined
+            }
             onChange={(e) => setForm({ ...form, hostname: e.target.value })}
             style={inputStyle}
           />
@@ -376,17 +386,17 @@ function DomainDialog({
         </label>
 
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          <Toggle
+          <Checkbox
             label="WHOIS"
             checked={form.checkWhois}
             onChange={(v) => setForm({ ...form, checkWhois: v })}
           />
-          <Toggle
+          <Checkbox
             label="DNS"
             checked={form.checkDns}
             onChange={(v) => setForm({ ...form, checkDns: v })}
           />
-          <Toggle
+          <Checkbox
             label="TLS"
             checked={form.checkTls}
             onChange={(v) => setForm({ ...form, checkTls: v })}
@@ -414,11 +424,11 @@ function DomainDialog({
           </span>
         </label>
 
-        <Toggle
+        <Checkbox
           label="Visible to clients"
           checked={form.visibleToClients}
           onChange={(v) => setForm({ ...form, visibleToClients: v })}
-          description="Clients on the portal will see this domain's hostname, status, and expiry. Keep off for MSP-internal entries."
+          hint="Clients on the portal will see this domain's hostname, status, and expiry. Keep off for MSP-internal entries."
         />
 
         <label style={fieldStyle}>
@@ -452,44 +462,6 @@ function DomainDialog({
         </div>
       </form>
     </Dialog>
-  );
-}
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-  description,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  description?: string;
-}) {
-  return (
-    <label
-      style={{
-        display: 'flex',
-        alignItems: description ? 'flex-start' : 'center',
-        gap: 8,
-        fontSize: 13,
-        cursor: 'pointer',
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span>{label}</span>
-        {description && (
-          <span style={{ color: 'var(--dim)', fontSize: 11.5 }}>
-            {description}
-          </span>
-        )}
-      </span>
-    </label>
   );
 }
 
@@ -534,12 +506,14 @@ function domainColumns({
             opacity: r.archivedAt ? 0.6 : 1,
             display: 'inline-flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             gap: 8,
           }}
         >
+          {/* The name never shrinks; tags wrap under it when the column is tight. */}
           <Link
             href={`/admin/companies/${companyId}/domains/${r.id}`}
-            style={{ color: 'var(--text)', fontWeight: 500 }}
+            style={{ color: 'var(--text)', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             {r.hostname}
           </Link>
@@ -776,19 +750,45 @@ const secondaryBtn: React.CSSProperties = {
   cursor: 'pointer',
 };
 
+
 /**
  * Orange "Cloudflare" tag on registrar-synced rows, so a synced domain is
  * never mistaken for a hand-entered one, plus a warning once the sync stops
- * seeing it on the account.
+ * seeing it on the account. A "Google Workspace" tag carries the domain's
+ * Workspace role, or a warning once it left the tenant.
  */
-function SourceTags({ row }: { row: MonitoredDomainDto }) {
-  if (row.source !== 'CLOUDFLARE') return null;
+export function SourceTags({ row }: { row: MonitoredDomainDto }) {
+  const cloudflare = row.source === 'CLOUDFLARE';
+  const role = workspaceRoleLabel(row);
+  const workspaceGone = !role && row.workspaceMissingSince !== null;
+  const microsoft = microsoftDomainLabel(row);
+  const microsoftGone = !microsoft && row.microsoftMissingSince !== null;
+  if (!cloudflare && !role && !workspaceGone && !microsoft && !microsoftGone) return null;
+  // Cloudflare (the registrar) always comes first, then Google, then Microsoft.
   return (
-    <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
-      <Tag tone="cloudflare">Cloudflare</Tag>
-      {row.registrarMissingSince && (
+    <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+      {cloudflare && <SourceIcon src="/integrations/icons/cloudflare.svg" label="Synced from Cloudflare" />}
+      {cloudflare && row.registrarMissingSince && (
         <Tag tone="warn">not on account since {fmtDate(row.registrarMissingSince)}</Tag>
       )}
+      {role && <SourceIcon src="/integrations/icons/google.svg" label={`Google Workspace: ${role}`} />}
+      {workspaceGone && (
+        <Tag tone="warn">not in Google Workspace since {fmtDate(row.workspaceMissingSince)}</Tag>
+      )}
+      {microsoft && <SourceIcon src="/integrations/icons/microsoft.svg" label={`Microsoft 365: ${microsoft}`} />}
+      {microsoftGone && (
+        <Tag tone="warn">not in Microsoft 365 since {fmtDate(row.microsoftMissingSince)}</Tag>
+      )}
+    </span>
+  );
+}
+
+/** Source logo in place of a word tag; the label is the tooltip and the accessible name. */
+function SourceIcon({ src, label }: { src: string; label: string }) {
+  return (
+    <span role="img" aria-label={label} title={label} style={{ display: 'inline-flex', lineHeight: 0 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- local public SVG icons; next/image SVG needs config */}
+      <img src={src} alt="" width={16} height={16} style={{ display: 'block' }} />
     </span>
   );
 }

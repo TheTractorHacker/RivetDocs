@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import type {
   GlobalAccess,
   MembershipRole,
+  PasswordAccessScope,
   PlatformCapability,
   UserRole,
   UserSearchDefaults,
@@ -44,6 +45,13 @@ export type Me = {
   createdAt: string;
   lastLoginAt: string | null;
   memberships: Membership[];
+  /**
+   * Who this user may open entries WITHOUT their own allow-list for, per
+   * company: the global password access policy plus their membership
+   * overrides. Read it with `passwordAccessForCompany`. UI hint only — the
+   * API enforces it.
+   */
+  passwordAccess: PasswordAccessScope;
 };
 
 // `cache()` memoizes `getMe` for the duration of a single server request so

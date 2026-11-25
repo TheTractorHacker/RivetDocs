@@ -1,5 +1,14 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import type { AiSettings, UpdateAiSettingsInput } from '@rivetdocs/shared';
+import {
+  AI_DEFAULT_CONTEXT_WINDOW_TOKENS,
+  AI_DEFAULT_MAX_OUTPUT_TOKENS,
+  aiOutputTokenCap,
+  stripTrailingSlashes,
+  type AiProvider,
+  type AiReasoningEffort,
+  type AiSettings,
+  type UpdateAiSettingsInput,
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogService } from '../audit/audit.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
@@ -15,19 +24,9 @@ import { ADMIN_PRIVATE_ENDPOINT_CIDRS } from '../common/egress/private-cidrs.js'
 const SINGLETON_ID = 'singleton';
 
 /**
- * Conservative fallbacks used when an admin hasn't tuned the limits.
- * `maxOutputTokens` doubles as the reply budget reserved by the chat
- * prompt builder; `contextWindowTokens` sizes the prompt budget so the
- * reply fits. Picked low enough to be safe on small self-hosted models.
- */
-export const DEFAULT_MAX_OUTPUT_TOKENS = 8_192;
-export const DEFAULT_CONTEXT_WINDOW_TOKENS = 32_768;
-
-/**
- * Workspace-wide config for an OpenAI-compatible LLM endpoint (Ollama,
- * LMStudio, vLLM, OpenAI itself, …). Foundation only — `getConfig()`
- * exists for the connection-test endpoint and future LLM consumers, but
- * nothing in the app calls an LLM yet.
+ * Workspace-wide config for the LLM endpoint: OpenAI, Anthropic, or any
+ * OpenAI-compatible server (Ollama, LMStudio, vLLM, …). `provider`
+ * decides the wire format and auth (see `provider-http.ts`).
  *
  * The API key is encrypted with `IntegrationSecretEncryptionService`
  * (AES-GCM under `INTEGRATION_SECRET_KEY`) since an LLM endpoint is
@@ -56,11 +55,36 @@ export class AiSettingsService {
     meta: RequestMeta,
   ): Promise<AiSettings> {
     const before = await this.loadOrSeed();
+    // The saved key is bound to its endpoint, the same rule the test route
+    // applies. A new endpoint must bring its own key or remove the saved
+    // one; otherwise chat would send the old key to the new host.
+    const nextBaseUrl = input.baseUrl !== undefined ? input.baseUrl : before.baseUrl;
+    if (
+      Boolean(before.apiKeyCiphertext) &&
+      input.apiKey === undefined &&
+      !input.clearApiKey &&
+      nextBaseUrl !== null &&
+      stripTrailingSlashes(nextBaseUrl) !== stripTrailingSlashes(before.baseUrl ?? '')
+    ) {
+      throw new BadRequestException(
+        'Enter an API key for the new endpoint, or remove the saved key.',
+      );
+    }
     const data: Record<string, unknown> = { updatedBy: actor.id };
 
     if (input.enabled !== undefined) data.enabled = input.enabled;
+    if (input.provider !== undefined) data.provider = input.provider;
     if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl;
     if (input.defaultModel !== undefined) data.defaultModel = input.defaultModel;
+    if (input.backgroundModel !== undefined) {
+      data.backgroundModel = input.backgroundModel;
+    }
+    if (input.reasoningEffort !== undefined) {
+      data.reasoningEffort = input.reasoningEffort;
+    }
+    if (input.anthropicWorkspaceId !== undefined) {
+      data.anthropicWorkspaceId = input.anthropicWorkspaceId;
+    }
     if (input.clearApiKey) data.apiKeyCiphertext = null;
     if (input.apiKey !== undefined) {
       data.apiKeyCiphertext = this.crypto.encrypt(
@@ -106,7 +130,8 @@ export class AiSettingsService {
   /**
    * The auto-summaries feature gate (Phase 4), evaluated in one place
    * so producers and the worker cannot drift: AI enabled, endpoint +
-   * model configured, AND the separate `autoSummaries` opt-in. Cached
+   * a model configured (background, else default), AND the separate
+   * `autoSummaries` opt-in. Cached
    * via `loadOrSeed` (5s TTL) and NON-THROWING — article writes consult
    * this on their hot path and a misconfigured AI must never fail a
    * save.
@@ -117,7 +142,7 @@ export class AiSettingsService {
       return (
         row.enabled &&
         Boolean(row.baseUrl) &&
-        Boolean(row.defaultModel) &&
+        Boolean(row.backgroundModel ?? row.defaultModel) &&
         row.autoSummaries
       );
     } catch {
@@ -176,8 +201,8 @@ export class AiSettingsService {
       }
     }
     const contextWindowTokens =
-      row.contextWindowTokens ?? DEFAULT_CONTEXT_WINDOW_TOKENS;
-    const requestedOutput = row.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
+      row.contextWindowTokens ?? AI_DEFAULT_CONTEXT_WINDOW_TOKENS;
+    const requestedOutput = row.maxOutputTokens ?? AI_DEFAULT_MAX_OUTPUT_TOKENS;
     // Cross-field guard, applied AFTER defaults resolve (per-field schema
     // validation can't see the resolved pair, and one side may be a
     // null→default while the other is an explicit value). The reply may
@@ -185,12 +210,16 @@ export class AiSettingsService {
     // budget and that `max_tokens` never exceeds the window — so an admin
     // who saves a tiny window (or an oversized output cap) can't collapse
     // budgeting to zero or trigger upstream rejections.
-    const outputCap = Math.max(256, Math.floor(contextWindowTokens / 2));
+    const outputCap = aiOutputTokenCap(contextWindowTokens);
     const maxOutputTokens = Math.min(requestedOutput, outputCap);
     return {
+      provider: row.provider as AiProvider,
       baseUrl: row.baseUrl!,
       apiKey,
       defaultModel: row.defaultModel,
+      backgroundModel: row.backgroundModel ?? row.defaultModel,
+      reasoningEffort: row.reasoningEffort as AiReasoningEffort,
+      anthropicWorkspaceId: row.anthropicWorkspaceId,
       maxOutputTokens,
       contextWindowTokens,
       allowPrivateNetwork: row.allowPrivateNetwork,
@@ -227,9 +256,17 @@ export class AiNotConfiguredError extends BadRequestException {
 }
 
 export interface AiResolvedConfig {
+  /** Wire format, auth headers and request shaping (`provider-http.ts`). */
+  provider: AiProvider;
   baseUrl: string;
   apiKey: string | null;
   defaultModel: string | null;
+  /** Titles, prelude and summaries. Resolved: falls back to `defaultModel`. */
+  backgroundModel: string | null;
+  /** Chat reasoning target; mapped per model family by `reasoningParams`. */
+  reasoningEffort: AiReasoningEffort;
+  /** Sent as `anthropic-workspace-id` with the `anthropic` provider. */
+  anthropicWorkspaceId: string | null;
   /** Resolved (defaults applied) — never null. */
   maxOutputTokens: number;
   /** Resolved (defaults applied) — never null. */
@@ -254,9 +291,13 @@ export function aiEgressOptions(
 
 type AiSettingRow = {
   enabled: boolean;
+  provider: string;
   baseUrl: string | null;
   apiKeyCiphertext: string | null;
   defaultModel: string | null;
+  backgroundModel: string | null;
+  reasoningEffort: string;
+  anthropicWorkspaceId: string | null;
   maxOutputTokens: number | null;
   contextWindowTokens: number | null;
   allowPrivateNetwork: boolean;
@@ -267,8 +308,12 @@ type AiSettingRow = {
 function toDto(row: AiSettingRow): AiSettings {
   return {
     enabled: row.enabled,
+    provider: row.provider as AiProvider,
     baseUrl: row.baseUrl,
     defaultModel: row.defaultModel,
+    backgroundModel: row.backgroundModel,
+    reasoningEffort: row.reasoningEffort as AiReasoningEffort,
+    anthropicWorkspaceId: row.anthropicWorkspaceId,
     apiKeyConfigured: Boolean(row.apiKeyCiphertext),
     maxOutputTokens: row.maxOutputTokens,
     contextWindowTokens: row.contextWindowTokens,
@@ -281,8 +326,13 @@ function toDto(row: AiSettingRow): AiSettings {
 function stripForAudit(row: AiSettingRow) {
   return {
     enabled: row.enabled,
+    provider: row.provider,
     baseUrl: row.baseUrl,
     defaultModel: row.defaultModel,
+    backgroundModel: row.backgroundModel,
+    reasoningEffort: row.reasoningEffort,
+    // Not a secret (a workspace identifier, not a credential).
+    anthropicWorkspaceId: row.anthropicWorkspaceId,
     apiKeyConfigured: Boolean(row.apiKeyCiphertext),
     maxOutputTokens: row.maxOutputTokens,
     contextWindowTokens: row.contextWindowTokens,

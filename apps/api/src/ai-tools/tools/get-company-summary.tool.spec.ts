@@ -2,9 +2,15 @@ import { NotFoundException } from '@nestjs/common';
 import { GetCompanySummaryAiTool } from './get-company-summary.tool.js';
 import type { AiToolExecutionContext } from '../tool-registry.js';
 import type { AuthedUser } from '../../common/current-user.decorator.js';
+import {
+  FULL_PASSWORD_ACCESS,
+  NO_PASSWORD_ACCESS,
+  type PasswordAccessScope,
+} from '../../passwords/password-access-policy.js';
 
 function makeTool(overrides: {
   role?: string;
+  passwordAccess?: PasswordAccessScope;
   allowedActions?: string[];
   company?: { id: string; name: string; slug: string } | null;
 } = {}) {
@@ -36,7 +42,11 @@ function makeTool(overrides: {
    
   const tool = new GetCompanySummaryAiTool(permissions as any, prisma as any);
   const ctx: AiToolExecutionContext = {
-    actor: { id: 'u-1', role: overrides.role ?? 'OPERATOR' } as AuthedUser,
+    actor: {
+      id: 'u-1',
+      role: overrides.role ?? 'OPERATOR',
+      passwordAccess: overrides.passwordAccess ?? FULL_PASSWORD_ACCESS,
+    } as AuthedUser,
     tenant: {} as never,
     correlationId: 'req-1',
     ip: '127.0.0.1',
@@ -86,6 +96,18 @@ describe('GetCompanySummaryAiTool', () => {
           { restrictedToUserIds: { isEmpty: true } },
           { restrictedToUserIds: { has: 'u-1' } },
         ],
+      },
+    });
+  });
+
+  it('counts only own-list entries for a user outside the global password policy', async () => {
+    const { tool, ctx, prisma } = makeTool({ passwordAccess: NO_PASSWORD_ACCESS });
+    await tool.execute(ctx, {}, 'c-1');
+    expect(prisma.password.count).toHaveBeenCalledWith({
+      where: {
+        companyId: 'c-1',
+        archivedAt: null,
+        restrictedToUserIds: { has: 'u-1' },
       },
     });
   });

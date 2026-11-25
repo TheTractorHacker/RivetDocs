@@ -2,6 +2,8 @@ import {
   createIntegrationCompanyMappingSchema,
   createIntegrationSchema,
   driverDescriptorSchema,
+  driverOAuthDescriptorSchema,
+  oauthSecretExpiryWarning,
   driverResourceDescriptorSchema,
   fieldMappingDraftSchema,
   integrationProvenanceSchema,
@@ -17,11 +19,13 @@ import {
   integrationSyncOrchestratorJobSchema,
   integrationSyncDirectionSchema,
   replaceFieldMappingsSchema,
+  standardFieldTargetCompatible,
   syncRunConflictSchema,
   syncRunTotalsSchema,
   triggerSyncSchema,
   updateIntegrationCompanyMappingSchema,
   updateIntegrationSchema,
+  updateIntegrationOAuthAppSchema,
 } from '@rivetdocs/shared';
 
 /**
@@ -348,6 +352,29 @@ describe('integration zod schemas', () => {
     });
   });
 
+  describe('standardFields', () => {
+    const resource = (fieldType: string, extra: unknown[] = []) => ({
+      key: 'devices', label: 'Devices',
+      standardFields: [{ sourceField: 'hostname', label: 'Hostname', fieldType, fieldHints: ['hostname'] }, ...extra],
+    });
+    it('accepts plain fact types and refuses files, asset references and dropdowns', () => {
+      expect(driverResourceDescriptorSchema.parse(resource('IP_ADDRESS')).standardFields).toHaveLength(1);
+      for (const type of ['FILE', 'ASSET_REFERENCE', 'DROPDOWN']) {
+        expect(() => driverResourceDescriptorSchema.parse(resource(type))).toThrow();
+      }
+    });
+    it('refuses duplicate source keys', () => {
+      expect(() => driverResourceDescriptorSchema.parse(resource('TEXT', [{ sourceField: 'hostname', label: 'Other', fieldType: 'TEXT', fieldHints: [] }])))
+        .toThrow(/unique/);
+    });
+    it('treats the same type or plain text as compatible, nothing operator-owned', () => {
+      expect(standardFieldTargetCompatible('IP_ADDRESS', 'IP_ADDRESS')).toBe(true);
+      expect(standardFieldTargetCompatible('IP_ADDRESS', 'TEXT')).toBe(true);
+      expect(standardFieldTargetCompatible('TEXT', 'IP_ADDRESS')).toBe(false);
+      expect(standardFieldTargetCompatible('TEXT', 'DROPDOWN')).toBe(false);
+    });
+  });
+
   describe('replaceFieldMappingsSchema', () => {
     it('accepts an empty mappings array (clears mappings)', () => {
       const out = replaceFieldMappingsSchema.parse({ mappings: [] });
@@ -368,8 +395,10 @@ describe('integration zod schemas', () => {
 
   describe('triggerSyncSchema', () => {
     it('defaults manual requests to an incremental non-dry run', () => {
-      expect(triggerSyncSchema.parse({})).toEqual({ dryRun: false, mode: 'incremental' });
-      expect(triggerSyncSchema.parse({ mode: 'full' })).toEqual({ dryRun: false, mode: 'full' });
+      expect(triggerSyncSchema.parse({})).toEqual({ dryRun: false, mode: 'incremental', acceptSourceChanges: false });
+      expect(triggerSyncSchema.parse({ mode: 'full' })).toEqual({ dryRun: false, mode: 'full', acceptSourceChanges: false });
+      expect(triggerSyncSchema.parse({ acceptSourceChanges: true })).toMatchObject({ acceptSourceChanges: true });
+      expect(triggerSyncSchema.safeParse({ acceptSourceChanges: 'yes' }).success).toBe(false);
     });
   });
 
@@ -717,5 +746,75 @@ describe('integration zod schemas', () => {
         }),
       ).toThrow();
     });
+  });
+});
+
+describe('driver oauth descriptor', () => {
+  const oauth = {
+    provider: 'google',
+    authorizeUrl: 'https://auth.example.test/authorize',
+    tokenUrl: 'https://auth.example.test/token',
+    scopes: ['scope.read'],
+  };
+
+  it('accepts an https OAuth block, also inside a descriptor', () => {
+    expect(driverOAuthDescriptorSchema.safeParse(oauth).success).toBe(true);
+    const parsed = driverDescriptorSchema.parse({
+      key: 'fake-oauth',
+      label: 'Fake',
+      description: null,
+      iconKey: null,
+      configFields: [],
+      secretFields: [],
+      oauth,
+      capabilities: { listSourceOrgs: true, dryRun: false },
+    });
+    expect(parsed.oauth?.provider).toBe('google');
+  });
+
+  it.each([
+    ['plain-http endpoints', { ...oauth, tokenUrl: 'http://auth.example.test/token' }],
+    ['an unknown provider', { ...oauth, provider: 'other' }],
+    ['no scopes', { ...oauth, scopes: [] }],
+    ['unknown keys', { ...oauth, clientSecret: 'x' }],
+  ])('rejects %s', (_label, value) => {
+    expect(driverOAuthDescriptorSchema.safeParse(value).success).toBe(false);
+  });
+
+  it('requires a {tenant} token URL and a client-credentials scope for admin consent', () => {
+    const consent = {
+      provider: 'microsoft',
+      consentFlow: 'admin_consent',
+      authorizeUrl: 'https://login.microsoftonline.com/organizations/v2.0/adminconsent',
+      tokenUrl: 'https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token',
+      clientCredentialsScope: 'https://graph.microsoft.com/.default',
+      scopes: ['User.Read.All'],
+    };
+    expect(driverOAuthDescriptorSchema.safeParse(consent).success).toBe(true);
+    expect(driverOAuthDescriptorSchema.safeParse({ ...consent, clientCredentialsScope: undefined }).success).toBe(false);
+    expect(driverOAuthDescriptorSchema.safeParse({ ...consent, tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token' }).success).toBe(false);
+  });
+
+  it('validates the Microsoft app expiry date and tenant id', () => {
+    expect(updateIntegrationOAuthAppSchema.safeParse({ clientId: 'c', secretExpiresAt: '2027-02-30x' }).success).toBe(false);
+    expect(updateIntegrationOAuthAppSchema.safeParse({ clientId: 'c', tenantId: 'contoso.example' }).success).toBe(false);
+    expect(updateIntegrationOAuthAppSchema.safeParse({ clientId: 'c', secretExpiresAt: null, tenantId: null }).success).toBe(true);
+  });
+
+  it('warns about the client secret from 30 days before it expires', () => {
+    const now = Date.parse('2026-10-09T12:00:00Z');
+    expect(oauthSecretExpiryWarning(null, now)).toBeNull();
+    expect(oauthSecretExpiryWarning('2026-11-30', now)).toBeNull();
+    expect(oauthSecretExpiryWarning('2026-11-08', now)).toContain('expires on 2026-11-08 (in 30 days)');
+    expect(oauthSecretExpiryWarning('2026-10-10', now)).toContain('(in 1 day)');
+    expect(oauthSecretExpiryWarning('2026-10-09', now)).toContain('(today)');
+    expect(oauthSecretExpiryWarning('2026-11-09', now)).toBeNull();
+    expect(oauthSecretExpiryWarning('2026-10-01', now)).toContain('expired on 2026-10-01');
+  });
+
+  it('rejects an OAuth app update with a blank secret', () => {
+    expect(
+      updateIntegrationOAuthAppSchema.safeParse({ clientId: 'c', clientSecret: '  ' }).success,
+    ).toBe(false);
   });
 });

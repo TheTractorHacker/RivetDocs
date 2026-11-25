@@ -12,6 +12,7 @@ import {
   EmailModule,
   QueuesProducerModule,
   RbacModule,
+  SearchRefreshModule,
 } from '@rivetdocs/api/runtime';
 import { DomainsModule } from '@rivetdocs/api/domains';
 import { IntegrationsCoreModule } from '@rivetdocs/api/integrations';
@@ -35,12 +36,12 @@ import { ArticleSummaryWorker } from './article-summary/article-summary.processo
  * AuditModule, DomainsModule). No HTTP controllers — the worker
  * consumes BullMQ queues, it does not serve requests.
  *
- * We deliberately do NOT import SearchModule / FieldTypesModule /
- * QueuesModule here:
- *   - SearchModule / FieldTypesModule aren't used by the worker's
- *     code path (domain checks don't touch the search index from
- *     app code — the `monitored_domains` trigger handles that on
- *     the DB side).
+ * SearchModule / FieldTypesModule are not imported directly. They
+ * arrive through IntegrationsCoreModule / AssetsModule (integration
+ * syncs write assets, which rebuild their `search_index` rows) and
+ * SearchRefreshModule (the final pass of a queued search refresh).
+ *
+ * We deliberately do NOT import QueuesModule here:
  *   - QueuesModule contains `DomainChecksQueueRegistrar`, which
  *     registers the cron repeatable job on API boot. Running it a
  *     second time inside the worker would be redundant and could
@@ -98,6 +99,11 @@ import { ArticleSummaryWorker } from './article-summary/article-summary.processo
     // AlertsModule precedent). CryptoModule above already provides
     // the key decryptor.
     AiModule,
+    // Final pass of a queued search-text refresh (migrations 0085, 0089).
+    // Compose starts this worker only after the new api is healthy and
+    // after stopping the old worker, so no process with the old
+    // search-text code is left; only this pass may clear the markers.
+    SearchRefreshModule.forProcess('worker'),
   ],
   providers: [
     DomainChecksWorker,

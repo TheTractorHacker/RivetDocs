@@ -3,11 +3,11 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
-    "baseUrl": ".",
     "types": ["node", "jest"],
     "paths": {
       "@rivetdocs/shared": ["../../packages/shared/dist/index.d.ts"],
-      "@rivetdocs/shared/server": ["../../packages/shared/dist/server.d.ts"]
+      "@rivetdocs/shared/server": ["../../packages/shared/dist/server.d.ts"],
+      "@rivetdocs/shared/mcp-tools": ["../../packages/shared/dist/mcp-tools.d.ts"]
     }
   },
   "include": ["src/**/*.ts"],

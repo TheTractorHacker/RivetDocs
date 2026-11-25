@@ -24,6 +24,17 @@ import {
 } from '../../../../components/integrations/sync-schedule';
 import { DriverFieldsEditor } from './driver-fields-editor';
 import { safeIntegrationProblemMessage } from './integration-feedback';
+import { CustomApiCreateFields } from './custom-api/create-fields';
+import {
+  bundleComplete,
+  customApiCreatePayload,
+  issuesOf,
+  newDefinition,
+  secretKeysFor,
+  type CustomApiDraft,
+} from './custom-api/definition-draft';
+
+const newCustomApiDraft = () => newDefinition('', { method: 'bearer' });
 
 /**
  * Phase 11 — "New integration" button + dialog.
@@ -35,20 +46,32 @@ import { safeIntegrationProblemMessage } from './integration-feedback';
  */
 export function CreateIntegrationButton({
   drivers,
+  existing = [],
 }: {
   drivers: DriverDescriptor[];
+  /** Existing integrations: an OAuth provider (Google, Microsoft) is added once; the API refuses a second. */
+  existing?: Array<Pick<IntegrationDto, 'driver'>>;
 }) {
   const router = useRouter();
+  const takenProviders = useMemo(
+    () => new Set(existing.map((i) => drivers.find((d) => d.key === i.driver)?.oauth?.provider).filter(Boolean)),
+    [existing, drivers],
+  );
+  const isTaken = (d: DriverDescriptor) => Boolean(d.oauth && takenProviders.has(d.oauth.provider));
+  const firstFree = drivers.find((d) => !isTaken(d))?.key ?? '';
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [driverKey, setDriverKey] = useState<string>(drivers[0]?.key ?? '');
+  const [driverKey, setDriverKey] = useState<string>(firstFree);
   const [name, setName] = useState('');
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [secret, setSecret] = useState<Record<string, unknown>>({});
   const [syncCron, setSyncCron] = useState<string>('');
+  // Drivers configured by an API definition (Custom API).
+  const [draft, setDraft] = useState<CustomApiDraft>(newCustomApiDraft);
+  const [imported, setImported] = useState(false);
 
   const driver = useMemo(
     () => drivers.find((d) => d.key === driverKey) ?? null,
@@ -56,11 +79,13 @@ export function CreateIntegrationButton({
   );
 
   function reset() {
-    setDriverKey(drivers[0]?.key ?? '');
+    setDriverKey(firstFree);
     setName('');
     setConfig({});
     setSecret({});
     setSyncCron('');
+    setDraft(newCustomApiDraft());
+    setImported(false);
     setError(null);
   }
 
@@ -70,8 +95,11 @@ export function CreateIntegrationButton({
     reset();
   }
 
+  const apiDefinition = driver?.capabilities.apiDefinition === true;
+
   const requiredOk = useMemo(() => {
     if (!driver || !name.trim()) return false;
+    if (apiDefinition) return issuesOf(draft).size === 0 && bundleComplete(secretKeysFor(draft), secret);
     for (const f of driver.configFields) {
       if (f.required && (config[f.key] === undefined || config[f.key] === '')) {
         return false;
@@ -83,19 +111,26 @@ export function CreateIntegrationButton({
       }
     }
     return true;
-  }, [driver, name, config, secret]);
+  }, [driver, name, config, secret, apiDefinition, draft]);
 
   async function submit() {
     if (!driver) return;
     setError(null);
     setPending(true);
+    // An API definition is sent whole, with exactly the secret keys it
+    // needs; descriptor fields do not list them (secret headers).
+    const payload = apiDefinition
+      ? customApiCreatePayload(draft, secret)
+      : {
+          config: stripEmpty(config, driver.configFields),
+          ...(Object.keys(secret).length > 0
+            ? { secret: stripEmpty(secret, driver.secretFields) }
+            : {}),
+        };
     const body = {
       driver: driver.key,
       name: name.trim(),
-      config: stripEmpty(config, driver.configFields),
-      ...(Object.keys(secret).length > 0
-        ? { secret: stripEmpty(secret, driver.secretFields) }
-        : {}),
+      ...payload,
       ...(syncCron.trim() ? { syncCron: syncCron.trim() } : {}),
       status: 'PAUSED' as const,
     };
@@ -162,11 +197,13 @@ export function CreateIntegrationButton({
                 setDriverKey(e.target.value);
                 setConfig({});
                 setSecret({});
+                setDraft(newCustomApiDraft());
+                setImported(false);
               }}
             >
               {drivers.map((d) => (
-                <option key={d.key} value={d.key}>
-                  {d.label}
+                <option key={d.key} value={d.key} disabled={isTaken(d)}>
+                  {isTaken(d) ? `${d.label} (already added: connect more clients on it)` : d.label}
                 </option>
               ))}
             </Select>
@@ -197,7 +234,17 @@ export function CreateIntegrationButton({
               maxLength={100}
             />
           </Field>
-          {driver && driver.configFields.length > 0 && (
+          {driver && apiDefinition && (
+            <CustomApiCreateFields
+              draft={draft}
+              onDraftChange={setDraft}
+              secret={secret}
+              onSecretChange={setSecret}
+              imported={imported}
+              onImportedChange={setImported}
+            />
+          )}
+          {driver && !apiDefinition && driver.configFields.length > 0 && (
             <DriverFieldsEditor
               title="Configuration"
               fields={driver.configFields}
@@ -205,7 +252,7 @@ export function CreateIntegrationButton({
               onChange={setConfig}
             />
           )}
-          {driver && driver.secretFields.length > 0 && (
+          {driver && !apiDefinition && driver.secretFields.length > 0 && (
             <DriverFieldsEditor
               title="Credentials"
               help="Encrypted at rest with the workspace integration key."

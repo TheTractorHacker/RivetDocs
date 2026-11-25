@@ -10,14 +10,14 @@
     "lint": "eslint 'src/**/*.ts'",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "deps:check": "node scripts/check-worker-deps.mjs",
-    "test": "jest --passWithNoTests && node scripts/check-worker-deps.mjs --self-test && node scripts/check-worker-deps.mjs --wiring"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests && node scripts/check-worker-deps.mjs --self-test && node scripts/check-worker-deps.mjs --wiring"
   },
   "dependencies": {
-    "@nestjs/common": "^11.2.7",
-    "@nestjs/core": "^11.2.7",
+    "@nestjs/common": "^11.2.8",
+    "@nestjs/core": "^11.2.8",
     "@rivetdocs/api": "workspace:*",
     "@rivetdocs/shared": "workspace:*",
-    "bullmq": "^5.76.2",
+    "bullmq": "^5.81.5",
     "fontkit": "^2.0.4",
     "nestjs-pino": "^4.1.0",
     "pdfkit": "^0.20.2",

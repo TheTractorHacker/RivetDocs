@@ -19,10 +19,9 @@ function makeGuard(memberships: MembershipSnapshot[], companyIdFrom: string | nu
     .mockImplementation((key) =>
       key === REQUIRE_PERMISSION_KEY ? (companyIdFrom ? { companyIdFrom } : undefined) : undefined,
     );
-  const permissions = {
-    loadMemberships: jest.fn().mockResolvedValue(memberships),
-  } as unknown as PermissionService;
-  return new ContractorAccessGuard(reflector, permissions);
+  const loadMemberships = jest.fn().mockResolvedValue(memberships);
+  const permissions = { loadMemberships } as unknown as PermissionService;
+  return Object.assign(new ContractorAccessGuard(reflector, permissions), { loadMemberships });
 }
 
 describe('ContractorAccessGuard', () => {
@@ -60,6 +59,7 @@ describe('ContractorAccessGuard', () => {
         role: 'READONLY',
         expiresAt: new Date('2000-01-01'),
         revokedAt: null,
+        passwordAccess: 'inherit' as const,
       },
     ]);
     await expect(
@@ -76,6 +76,7 @@ describe('ContractorAccessGuard', () => {
         role: 'READONLY',
         expiresAt: null,
         revokedAt: new Date(),
+        passwordAccess: 'inherit' as const,
       },
     ]);
     await expect(
@@ -92,11 +93,31 @@ describe('ContractorAccessGuard', () => {
         role: 'READONLY',
         expiresAt: new Date(Date.now() + 3600_000),
         revokedAt: null,
+        passwordAccess: 'inherit' as const,
       },
     ]);
     const ok = await g.canActivate(
       makeCtx({ user: { id: 'u', role: 'CONTRACTOR' }, params: { id: COMPANY } }),
     );
     expect(ok).toBe(true);
+  });
+
+  it.each([
+    ['an interactive session', {}, false],
+    ['an API key', { apiKeyId: 'k-1' }, true],
+    ['a remote MCP connection', { mcpConnectionId: 'mc-1' }, true],
+  ])('loads memberships for %s with fresh=%s', async (_label, marker, fresh) => {
+    const live = {
+      companyId: COMPANY,
+      role: 'READONLY' as const,
+      expiresAt: null,
+      revokedAt: null,
+      passwordAccess: 'inherit' as const,
+    };
+    const g = makeGuard([live]);
+    await g.canActivate(
+      makeCtx({ user: { id: 'u', role: 'CONTRACTOR', ...marker }, params: { id: COMPANY } }),
+    );
+    expect(g.loadMemberships).toHaveBeenCalledWith('u', { fresh });
   });
 });

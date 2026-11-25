@@ -10,8 +10,9 @@ import type {
   ReconstructionGapDetails,
   ReconstructionInput,
 } from '../reconstruction/reconstruction-target.js';
-import type { ReconstructionGapKind } from '@rivetdocs/shared';
+import type { IntegrationSetupCheck, ReconstructionGapKind } from '@rivetdocs/shared';
 import type { FieldType } from '@prisma/client';
+import type { OAuthClientCredentials } from '../oauth/oauth-token.js';
 
 /**
  * Phase 11 — universal integration driver port.
@@ -62,6 +63,24 @@ export interface IntegrationContext {
    * resolves that from `IntegrationCompanyMapping`.
    */
   readonly integrationId?: string;
+  /**
+   * Instance OAuth app credentials, set by the framework only for drivers
+   * whose descriptor declares `oauth`. Drivers never read it directly:
+   * `getOAuthAccessToken` / `oauthFetch` (oauth/oauth-token.ts) do.
+   */
+  readonly oauthClient?: OAuthClientCredentials;
+  /**
+   * OAuth drivers: the connection (client tenant) whose grant is in
+   * `secret`. Keys the access-token cache; never a tenant scope.
+   */
+  readonly connectionId?: string;
+  /**
+   * Non-secret marker of the stored credential row and instance OAuth app
+   * (row ids + updatedAt). Changes on every reconnect or app save, so the
+   * OAuth access-token cache keys on it instead of hashing a secret. When
+   * absent, access tokens are not cached.
+   */
+  readonly credentialVersion?: string;
 }
 
 export interface FetchRecordsContext extends IntegrationContext {
@@ -79,6 +98,17 @@ export interface FetchRecordsContext extends IntegrationContext {
   readonly mode: 'incremental' | 'full';
   readonly updatedSince: string | null;
   readonly snapshotAt: string | null;
+  /**
+   * A source schema version an operator accepted earlier (stored on the
+   * sync checkpoint), or null. A driver that checks the source version
+   * accepts this one as well as the versions it knows.
+   */
+  readonly acceptedSourceVersion?: string | null;
+  /**
+   * The run accepts held source changes (`integration.manage`): a driver
+   * that checks the source version accepts any well-formed version.
+   */
+  readonly acceptAnySourceVersion?: boolean;
 }
 
 /**
@@ -92,8 +122,27 @@ export interface LegacyDriverRecord {
   externalId: string;
   /** Driver-side display name; used as the asset's primary name fallback. */
   displayName: string | null;
-  /** Flat map of source-field key → raw value. */
+  /**
+   * Flat map of source-field key → raw value. Drivers whose resources
+   * declare `minimalFields` put ONLY those fields here (normally the name
+   * and the match key) so a sync never writes anything else into the
+   * operator's layout fields; every other detail goes into `section`.
+   */
   fields: Record<string, unknown>;
+  /**
+   * Optional read-only detail card for the asset page, validated by the
+   * runner against `integrationSectionSchema` (shared). Plain data only,
+   * never HTML. Replaced on every sync (omit it to clear); an invalid
+   * section is dropped with a run warning and never fails the record.
+   */
+  section?: unknown;
+  /**
+   * Optional kind of the record in the source (e.g. NinjaOne `nodeClass`),
+   * for a driver whose "Open in" page depends on it. Stored on the binding
+   * and replaced on every sync; a value that is not a short token
+   * (`SOURCE_KIND_PATTERN`) is stored as null.
+   */
+  sourceKind?: string | null;
   /**
    * Optional immutable source definition key used to select exactly one
    * configured field mapping. Records without a matching mapping are skipped.
@@ -167,6 +216,43 @@ export interface DriverFetchPage {
   blockedInputs?: DriverBlockedInput[];
   sourceHighWater?: string | null;
   terminal?: boolean;
+  /**
+   * Optional field-presence report for this page, from the RAW source
+   * records: for each field path RivetDocs reads, how many objects at
+   * that location carried the key (`present`) and how many objects were at
+   * that location (`objects`). Key paths and counts only, never values;
+   * only paths the driver declares, so source-defined keys never appear.
+   * The runner keeps a baseline from clean traversals and holds a page
+   * whose records all lack a field that was always present (a rename or
+   * removal at the source), so a missing key is read as "unknown", never
+   * as "empty".
+   */
+  observedFields?: DriverObservedField[];
+  /**
+   * Records the driver synced with one or more values replaced by
+   * `[withheld]` because they looked like credentials. Record id and key
+   * paths only, never the value. The runner shows each one as a run
+   * warning; the record itself is written as usual.
+   */
+  redactions?: DriverRedaction[];
+}
+
+export interface DriverRedaction {
+  /** Namespaced external id of the source record (`org:resource:id`). */
+  externalId: string;
+  /** How many values were withheld in the record. */
+  count: number;
+  /** Where values were withheld: key names and indexes only. */
+  fieldPaths: string[];
+}
+
+export interface DriverObservedField {
+  /** Field path: dot-separated keys, `[]` for array items (`addresses[].assignment`). */
+  path: string;
+  /** Record variant the location belongs to (`device`, `site`), when records have shapes. */
+  variant?: string;
+  present: number;
+  objects: number;
 }
 
 export interface LegacyDriverFetchPage extends Omit<DriverFetchPage, 'records'> {
@@ -179,6 +265,47 @@ export class DriverAuthError extends Error {
     super(message);
     this.name = 'DriverAuthError';
   }
+}
+
+/**
+ * A whole resource whose source data this tenant cannot provide (a product
+ * not licensed, an optional permission not granted). Thrown from the first
+ * page of `fetchRecords`: the runner skips the resource with a run warning
+ * and leaves its bindings untouched (no reconciliation, no stale sweep).
+ */
+export class DriverResourceUnavailableError extends Error {
+  readonly code = 'DriverResourceUnavailableError' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'DriverResourceUnavailableError';
+  }
+}
+
+/**
+ * The source reported a schema version the driver does not know, and no
+ * operator accepted it. The runner writes and archives nothing for the
+ * resource, records a version hold on its checkpoint, and ends the resource
+ * as paused. `message` is operator text and must not carry source values
+ * other than the sanitized `sourceVersion`.
+ */
+export class DriverSourceVersionHoldError extends Error {
+  readonly code = 'DriverSourceVersionHoldError' as const;
+  constructor(
+    /** Sanitized version label (or `unrecognized`), at most 32 characters. */
+    readonly sourceVersion: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'DriverSourceVersionHoldError';
+  }
+}
+
+/** What `IntegrationDriver.readSourceVersion` reports. */
+export interface DriverSourceVersion {
+  /** Server release (Breeze `/health` `version`), or null when unknown. */
+  serverVersion: string | null;
+  /** API schema version (Breeze `schemaVersion`), or null when unknown. */
+  schemaVersion: string | null;
 }
 
 export class DriverRateLimitError extends Error {
@@ -216,11 +343,23 @@ export interface IntegrationDriver {
   /** Optional generic bootstrap metadata; drivers never write destinations directly. */
   readonly recommendedDestinations?: Readonly<Record<string, RecommendedDestination>>;
 
-  /** Optional strict persistence-boundary validation for driver-specific bundles. */
+  /**
+   * Optional strict persistence-boundary validation for driver-specific
+   * bundles. On update the service passes the effective pair: the saved
+   * config or secret where the request does not replace it, null for a
+   * cleared or absent secret.
+   */
   validateConfiguration?(
     config: Record<string, unknown> | null | undefined,
     secret: Record<string, unknown> | null | undefined,
   ): void;
+
+  /**
+   * Whether this config needs a stored secret to run. Absent means true.
+   * A driver that answers false (Custom API with no authentication) runs
+   * with an empty secret when none is saved.
+   */
+  requiresSecret?(config: Record<string, unknown>): boolean;
 
   /**
    * Validate a freshly-submitted (config, secret) pair against the
@@ -228,6 +367,14 @@ export interface IntegrationDriver {
    * unreachable host / wrong tenant.
    */
   testConnection(ctx: IntegrationContext): Promise<{ ok: true; details?: string }>;
+
+  /**
+   * Optional early warning: the version the source reports, read once per
+   * sync run and saved on the run. Must not throw for an unreachable or
+   * unexpected source: return null for what it cannot read. Labels are
+   * sanitized again by the caller; never return response bodies.
+   */
+  readSourceVersion?(ctx: IntegrationContext): Promise<DriverSourceVersion>;
 
   /** List external organisations / tenants the credentials can see. */
   listSourceOrgs(ctx: IntegrationContext): Promise<SourceOrgDto[]>;
@@ -259,7 +406,40 @@ export interface IntegrationDriver {
   ): Promise<TicketListResponse>;
 
   getTicket?(ctx: TicketContext, ticketId: string): Promise<TicketDetailDto>;
+
+  /**
+   * Optional "Check setup" for drivers that ship a `setupGuide`. `client`
+   * verifies the instance OAuth app without a customer token; `connection`
+   * probes a connected integration. Read-only, and failures carry fixed
+   * messages naming a guide step (never provider error text).
+   */
+  diagnose?(input: DriverDiagnoseInput): Promise<IntegrationSetupCheck>;
+
+  /**
+   * Admin-consent drivers: confirm, with a freshly minted app-only token,
+   * that the token's tenant is `tenantId` (never trusting the callback's
+   * tenant parameter) and return its display name. Throws on a mismatch.
+   * Read-only.
+   */
+  verifyConsentedTenant?(input: {
+    accessToken: string;
+    tenantId: string;
+    http: IntegrationContext['http'];
+    correlationId: string;
+  }): Promise<{ tenantName: string | null }>;
 }
+
+export type DriverDiagnoseInput =
+  | {
+      mode: 'client';
+      oauthClient: OAuthClientCredentials;
+      redirectUri: string;
+      /** The operator's own directory (tenant) id, when saved (Microsoft). */
+      homeTenantId?: string | null;
+      http: IntegrationContext['http'];
+      correlationId: string;
+    }
+  | { mode: 'connection'; ctx: IntegrationContext };
 
 /**
  * Type guard for drivers that advertise the optional ticket surface.

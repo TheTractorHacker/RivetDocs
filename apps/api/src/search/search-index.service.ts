@@ -1,7 +1,39 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { runInCompanyScope } from '../prisma/company-scope.js';
 import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
+import { escapeLikePattern } from '../common/like-pattern.js';
+import { validTagIds } from '../tags/tag-ids.js';
+import { refreshMarkdownPlaintext } from './markdown-plaintext-refresh.service.js';
+
+/** Most words one asset list search term may have. */
+export const MAX_SEARCH_WORDS = 8;
+/** Longest asset list search term, in characters after trimming. */
+export const MAX_SEARCH_LENGTH = 200;
+
+/**
+ * The words of one asset list search term. A term over the limits is
+ * refused with a 400, never cut: a cut term would silently drop words
+ * and return assets that do not match the whole search.
+ */
+export function assetSearchWords(term: string): string[] {
+  const trimmed = term.trim();
+  if (trimmed.length > MAX_SEARCH_LENGTH) {
+    throw new BadRequestException({
+      error: 'SearchTermTooLong',
+      message: `A search term can have at most ${MAX_SEARCH_LENGTH} characters.`,
+    });
+  }
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length > MAX_SEARCH_WORDS) {
+    throw new BadRequestException({
+      error: 'SearchTermTooLong',
+      message: `A search term can have at most ${MAX_SEARCH_WORDS} words.`,
+    });
+  }
+  return words;
+}
 
 /**
  * Phase 6 search-index writer. Responsible for keeping `search_index`
@@ -23,9 +55,12 @@ import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
  * Postgres' row-level security story.
  *
  * Field types opt out by setting `searchable = false` on their
- * strategy (FILE, VAULTWARDEN_LINK, ASSET_REFERENCE). Strategies
+ * strategy (BOOLEAN, VAULTWARDEN_LINK, ASSET_REFERENCE). Strategies
  * render via `toPlaintext`, which handles per-value canonicalisation
- * (dropdown slug → label, tiptap doc → flattened text, etc.).
+ * (dropdown slug → label, tiptap doc → flattened text, etc.). TAGS
+ * values are tag ids; `upsertAsset` resolves them to names.
+ *
+ * The same rows serve the asset list `q` search (`matchAssetIds`).
  */
 @Injectable()
 export class SearchIndexService {
@@ -41,20 +76,34 @@ export class SearchIndexService {
   // ------------------------------------------------------------------
 
   /**
-   * Rebuild the `search_index` row for a single asset. Intended to be
-   * called with a transaction client so the index update commits
-   * atomically with the asset and field-value writes it reflects.
-   * When the asset has been hard-deleted since the call was issued
-   * (rare; asset deletion is `Restrict` for layouts), we silently no-op
-   * — the trigger path will have already removed the row.
+   * Rebuild the `search_index` row for a single asset, inside the
+   * caller's transaction so the index update commits atomically with
+   * the asset and field-value writes it reflects. Reindex paths with no
+   * transaction of their own use `rebuildAsset`. When the asset has been
+   * hard-deleted since the call was issued (rare; asset deletion is
+   * `Restrict` for layouts), we silently no-op — the trigger path will
+   * have already removed the row.
+   *
+   * The first statement locks the asset row, so 2 rebuilds of one asset
+   * never interleave: the one that gets the lock last also writes last.
+   * Under READ COMMITTED every read below takes a fresh snapshot after
+   * the lock, so that rebuild sees every commit before it. Without the
+   * lock a slow rebuild (the backfill) could read a field as client
+   * visible, and then write that text into `body_public` after the
+   * layout reindex for "field hidden" had already corrected it.
+   *
+   * `companyId` scopes the read so the tenant middleware accepts it for
+   * operators pinned to their memberships (issue #109).
    */
   async upsertAsset(
-    tx: Prisma.TransactionClient | PrismaService,
+    tx: Prisma.TransactionClient,
     assetId: string,
+    companyId: string,
   ): Promise<void> {
-    const client = tx as PrismaService;
-    const asset = await client.asset.findUnique({
-      where: { id: assetId },
+    await this.lockAsset(tx, assetId, companyId);
+    const client = tx;
+    const asset = await client.asset.findFirst({
+      where: { id: assetId, companyId },
       include: {
         assetLayout: {
           include: {
@@ -66,7 +115,8 @@ export class SearchIndexService {
     });
     if (!asset) return;
 
-    const { title, bodyPublic, bodyInternal } = this.buildAssetBodies(asset);
+    const tagNames = await this.resolveTagNames(client, asset);
+    const { title, bodyPublic, bodyInternal } = this.buildAssetBodies(asset, tagNames);
 
     await client.$executeRaw`
       INSERT INTO "search_index" (
@@ -98,6 +148,56 @@ export class SearchIndexService {
   }
 
   /**
+   * `upsertAsset` in a transaction of its own. Used by every reindex
+   * path (layout, tag, backfill, full reindex) so they take the same
+   * per-asset row lock as the asset write paths.
+   */
+  async rebuildAsset(assetId: string, companyId: string): Promise<void> {
+    await this.prisma.$transaction((tx) => this.upsertAsset(tx, assetId, companyId));
+  }
+
+  /**
+   * Asset ids in one company whose name or indexed field text contains
+   * every word of `q` (case-insensitive, `%`/`_` matched literally).
+   * Backs the asset list `q` filter. Words may match different fields,
+   * so "dell 5420" finds a Dell whose model is 5420.
+   *
+   * `search_index` is not a tenant-scoped model in the Prisma
+   * middleware, so the `companyId` condition below IS the tenant scope:
+   * callers pass the company already authorized for the request.
+   * `clientVisibleOnly` (CLIENT_USER) reads `body_public`, the same
+   * rule as `SearchService.search`, so text in a field hidden from
+   * clients never makes an asset match for them.
+   */
+  async matchAssetIds(
+    companyId: string,
+    q: string,
+    opts: { clientVisibleOnly: boolean },
+  ): Promise<string[]> {
+    const words = assetSearchWords(q);
+    if (words.length === 0) return [];
+
+    const bodyField = opts.clientVisibleOnly ? 'bodyPublic' : 'bodyInternal';
+    const rows = await this.prisma.searchIndex.findMany({
+      where: {
+        entityType: 'asset',
+        companyId,
+        AND: words.map((word) => {
+          const pattern = escapeLikePattern(word);
+          return {
+            OR: [
+              { title: { contains: pattern, mode: 'insensitive' as const } },
+              { [bodyField]: { contains: pattern, mode: 'insensitive' as const } },
+            ],
+          };
+        }),
+      },
+      select: { entityId: true },
+    });
+    return rows.map((r) => r.entityId);
+  }
+
+  /**
    * Remove an asset row from the index. Used on hard delete (rare —
    * assets are almost always archived, not deleted) and as a safety
    * net in the reindex CLI when the source row has disappeared.
@@ -115,31 +215,82 @@ export class SearchIndexService {
 
   /**
    * Re-upsert every asset belonging to a layout. Called after a layout
-   * field has its `visibleToClients` flipped or a field is archived,
-   * so the stale `body_public` is rebuilt for every row. Batched to
-   * keep transactions small on layouts with thousands of assets.
+   * field has its `visibleToClients` flipped, a field is archived, or
+   * the choices of a DROPDOWN/MULTISELECT field change, so the stale
+   * text is rebuilt for every row.
    */
   async reindexLayout(layoutId: string, batchSize = 200): Promise<number> {
-    let done = 0;
-    let cursor: string | undefined;
+    return this.reindexAssetsWhere({ assetLayoutId: layoutId }, batchSize);
+  }
 
-    while (true) {
-      const batch = await this.prisma.asset.findMany({
-        where: { assetLayoutId: layoutId },
-        orderBy: { id: 'asc' },
-        take: batchSize,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        select: { id: true },
-      });
-      if (batch.length === 0) break;
-      for (const row of batch) {
-        await this.upsertAsset(this.prisma, row.id);
-        done += 1;
+  /**
+   * Re-upsert every asset that holds a tag in a TAGS field. Called after
+   * the tag is renamed or deleted, because the index holds tag names.
+   * After a delete the field values still hold the dangling id, so the
+   * same query finds the assets and the old name drops out.
+   */
+  async reindexAssetsWithTag(tagId: string, batchSize = 200): Promise<number> {
+    return this.reindexAssetsWhere(
+      {
+        fieldValues: {
+          some: {
+            assetField: { fieldType: 'TAGS' },
+            value: { array_contains: [tagId] },
+          },
+        },
+      },
+      batchSize,
+    );
+  }
+
+  /** Re-upsert every asset. Used by `reindexAll` and the boot backfill. */
+  async reindexAssets(batchSize = 200): Promise<number> {
+    return this.reindexAssetsWhere({}, batchSize);
+  }
+
+  /**
+   * Rebuild every asset matching `where`, in id-ordered batches to keep
+   * reads small on large tenants. Each asset is rebuilt in its own
+   * short transaction (`rebuildAsset`).
+   *
+   * Layouts and tags are global, so their assets span every company.
+   * The caller is authorized by a global capability
+   * (`layout.manage.global`, `tag.manage.global`) or is a system process
+   * (CLI, boot backfill) and may hold no membership, so the reads run in
+   * an explicit all-company scope (`runInCompanyScope`). Nothing read
+   * here goes back to the caller: the only output is the derived
+   * `search_index` rows.
+   */
+  private async reindexAssetsWhere(
+    where: Prisma.AssetWhereInput,
+    batchSize: number,
+  ): Promise<number> {
+    const companies = await this.prisma.company.findMany({ select: { id: true } });
+    const companyIds = companies.map((c) => c.id);
+    if (companyIds.length === 0) return 0;
+
+    return runInCompanyScope(companyIds, async () => {
+      let done = 0;
+      let cursor: string | undefined;
+
+      while (true) {
+        const batch = await this.prisma.asset.findMany({
+          where: { ...where, companyId: { in: companyIds } },
+          orderBy: { id: 'asc' },
+          take: batchSize,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          select: { id: true, companyId: true },
+        });
+        if (batch.length === 0) break;
+        for (const row of batch) {
+          await this.rebuildAsset(row.id, row.companyId);
+          done += 1;
+        }
+        cursor = batch[batch.length - 1]!.id;
+        if (batch.length < batchSize) break;
       }
-      cursor = batch[batch.length - 1]!.id;
-      if (batch.length < batchSize) break;
-    }
-    return done;
+      return done;
+    });
   }
 
   // ------------------------------------------------------------------
@@ -159,6 +310,7 @@ export class SearchIndexService {
     uploads: number;
     domains: number;
     passwords: number;
+    markdownRefreshed: number;
   }> {
     const counts = {
       assets: 0,
@@ -166,16 +318,12 @@ export class SearchIndexService {
       uploads: 0,
       domains: 0,
       passwords: 0,
+      markdownRefreshed: 0,
     };
 
-    const assetIds = await this.prisma.asset.findMany({
-      orderBy: { id: 'asc' },
-      select: { id: true },
-    });
-    for (const { id } of assetIds) {
-      await this.upsertAsset(this.prisma, id);
-      counts.assets += 1;
-    }
+    counts.assets = await this.reindexAssets();
+
+    counts.markdownRefreshed = await refreshMarkdownPlaintext(this.prisma);
 
     // Articles + uploads: touch each row so the trigger re-fires. A
     // `WHERE id = id` update is a Postgres no-op for the row itself
@@ -205,9 +353,55 @@ export class SearchIndexService {
     counts.passwords = Number(passwordCount ?? 0);
 
     this.logger.log(
-      `reindex-search: ${counts.assets} assets, ${counts.articles} articles, ${counts.uploads} uploads, ${counts.domains} domains, ${counts.passwords} passwords`,
+      `reindex-search: ${counts.assets} assets, ${counts.articles} articles (${counts.markdownRefreshed} Markdown plaintexts refreshed), ${counts.uploads} uploads, ${counts.domains} domains, ${counts.passwords} passwords`,
     );
     return counts;
+  }
+
+  /**
+   * Row lock that serializes rebuilds of one asset (see `upsertAsset`).
+   * A missing row locks nothing; the read after it then no-ops.
+   */
+  private async lockAsset(
+    tx: Prisma.TransactionClient,
+    assetId: string,
+    companyId: string,
+  ): Promise<void> {
+    await tx.$queryRaw`
+      SELECT 1 FROM "assets"
+      WHERE "id" = ${assetId}::uuid AND "company_id" = ${companyId}::uuid
+      FOR UPDATE
+    `;
+  }
+
+  /**
+   * `id -> name` for the tags held in the asset's live TAGS fields.
+   * Reads on the caller's transaction, so a tag created by the same
+   * asset write (`TagsService.upsertByName(tx)`) is found. Legacy
+   * non-UUID values are dropped first (`validTagIds`); a lookup with one
+   * of them would fail the whole rebuild.
+   */
+  private async resolveTagNames(
+    tx: Prisma.TransactionClient,
+    asset: {
+      assetLayout: { fields: Array<{ id: string; fieldType: string }> };
+      fieldValues: Array<{ assetFieldId: string; value: unknown }>;
+    },
+  ): Promise<Map<string, string>> {
+    const tagFieldIds = new Set(
+      asset.assetLayout.fields.filter((f) => f.fieldType === 'TAGS').map((f) => f.id),
+    );
+    const values = asset.fieldValues
+      .filter((v) => tagFieldIds.has(v.assetFieldId) && Array.isArray(v.value))
+      .flatMap((v) => v.value as unknown[]);
+    const ids = validTagIds(values);
+    if (ids.length === 0) return new Map();
+
+    const tags = await tx.tag.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true },
+    });
+    return new Map(tags.map((t) => [t.id, t.name]));
   }
 
   // ------------------------------------------------------------------
@@ -218,7 +412,8 @@ export class SearchIndexService {
    * Build `title`, `body_public`, `body_internal` for an asset + its
    * field rows. Exposed so unit tests can assert that fields with
    * `visibleToClients = false` stay out of `body_public`. Archived
-   * fields are excluded up front.
+   * fields are excluded up front. `tagNames` maps the tag ids stored in
+   * TAGS values to names (see `resolveTagNames`); unknown ids drop out.
    *
    * Secondary plaintext store — `body_internal` retains all searchable
    * field text incl. hidden fields (accepted, WS-004). See
@@ -237,7 +432,11 @@ export class SearchIndexService {
       }>;
     };
     fieldValues: Array<{ assetFieldId: string; value: unknown }>;
-  }): { title: string; bodyPublic: string; bodyInternal: string } {
+  }, tagNames: ReadonlyMap<string, string> = new Map()): {
+    title: string;
+    bodyPublic: string;
+    bodyInternal: string;
+  } {
     const title = asset.name ?? '';
     const fieldById = new Map(
       asset.assetLayout.fields
@@ -261,7 +460,11 @@ export class SearchIndexService {
       if (!strategy.searchable) continue;
 
       const options = (field.options as Record<string, unknown> | null) ?? {};
-      const plaintext = strategy.toPlaintext(row.value, options).trim();
+      const plaintext = (
+        field.fieldType === 'TAGS'
+          ? tagPlaintext(row.value, tagNames)
+          : strategy.toPlaintext(row.value, options)
+      ).trim();
       if (!plaintext) continue;
 
       internalChunks.push(plaintext);
@@ -274,4 +477,13 @@ export class SearchIndexService {
       bodyInternal: internalChunks.join('\n'),
     };
   }
+}
+
+/** Names of the tags in a TAGS value, space separated; unknown ids drop out. */
+function tagPlaintext(value: unknown, tagNames: ReadonlyMap<string, string>): string {
+  if (!Array.isArray(value)) return '';
+  return value
+    .map((id) => (typeof id === 'string' ? tagNames.get(id) ?? '' : ''))
+    .filter(Boolean)
+    .join(' ');
 }

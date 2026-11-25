@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { FieldTypeValues } from './field-types.js';
 import { integrationTargetProvenanceSchema } from './integration.js';
+import { assetIntegrationSectionSchema } from './integration-section.js';
 import { actorRefSchema } from './user.js';
 
 /**
@@ -22,15 +23,15 @@ export const fieldValuePrimitiveSchema: z.ZodTypeAny = z.lazy(() =>
     z.boolean(),
     z.null(),
     z.array(fieldValuePrimitiveSchema),
-    z.record(fieldValuePrimitiveSchema),
+    z.record(z.string(), fieldValuePrimitiveSchema),
   ]),
 );
 
-export const fieldValuesSchema = z.record(fieldValuePrimitiveSchema);
+export const fieldValuesSchema = z.record(z.string(), fieldValuePrimitiveSchema);
 export type FieldValues = z.infer<typeof fieldValuesSchema>;
 
 export const createAssetSchema = z.object({
-  assetLayoutId: z.string().uuid(),
+  assetLayoutId: z.guid(),
   /**
    * Optional override for `Asset.name`. If absent the service derives it
    * from the layout's primary field value — matching the "primary · will
@@ -60,13 +61,31 @@ export type UpdateAssetInput = z.infer<typeof updateAssetSchema>;
  *
  * The cap of 500 is a guardrail against accidental "select all then delete"
  * actions that would generate hundreds of audit log entries and pile DB load
- * onto a single request. UI-side limits should mirror this.
+ * onto a single request. UI-side limits should mirror this — the web asset
+ * table splits a larger selection into batches of `BULK_ASSET_IDS_MAX`.
  */
+export const BULK_ASSET_IDS_MAX = 500;
+
 export const bulkAssetIdsSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(500),
+  ids: z.array(z.guid()).min(1).max(BULK_ASSET_IDS_MAX),
 });
 
 export type BulkAssetIdsInput = z.infer<typeof bulkAssetIdsSchema>;
+
+/**
+ * Row ceiling for `GET /companies/:companyId/assets/export`. Matches the
+ * per-layout page's own ceiling (`listAllAssets`: 25 pages x 200), so the
+ * CSV holds the same rows as the table the operator is looking at.
+ */
+export const ASSET_EXPORT_MAX_ROWS = 5000;
+
+/**
+ * `table` exports the columns the per-layout table shows; `all` exports
+ * every field the caller can see on that layout.
+ */
+export const assetExportColumnsSchema = z.enum(['table', 'all']);
+
+export type AssetExportColumns = z.infer<typeof assetExportColumnsSchema>;
 
 /**
  * Copy an asset into a company (the same one, or another). Layouts are
@@ -75,7 +94,7 @@ export type BulkAssetIdsInput = z.infer<typeof bulkAssetIdsSchema>;
  */
 export const cloneAssetSchema = z
   .object({
-    targetCompanyId: z.string().uuid(),
+    targetCompanyId: z.guid(),
     archiveOriginal: z.boolean().default(false),
   })
   .strict();
@@ -83,7 +102,7 @@ export const cloneAssetSchema = z
 export type CloneAssetInput = z.infer<typeof cloneAssetSchema>;
 
 export const bulkCloneAssetsSchema = cloneAssetSchema.extend({
-  ids: z.array(z.string().uuid()).min(1).max(100),
+  ids: z.array(z.guid()).min(1).max(100),
 });
 
 export type BulkCloneAssetsInput = z.infer<typeof bulkCloneAssetsSchema>;
@@ -94,7 +113,7 @@ export type BulkCloneAssetsInput = z.infer<typeof bulkCloneAssetsSchema>;
  * `forbidden`); `reason` is the user-facing message.
  */
 export const bulkAssetFailureSchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   reason: z.string(),
   code: z.string().optional(),
 });
@@ -107,7 +126,7 @@ export type BulkAssetFailure = z.infer<typeof bulkAssetFailureSchema>;
  * (e.g. "Archived 8 of 10. 2 failed.").
  */
 export const bulkAssetResultSchema = z.object({
-  ok: z.array(z.string().uuid()),
+  ok: z.array(z.guid()),
   failed: z.array(bulkAssetFailureSchema),
 });
 
@@ -123,13 +142,13 @@ export type BulkAssetResult = z.infer<typeof bulkAssetResultSchema>;
 
 /** One layout field as embedded on an asset, for rendering its values. */
 export const assetFieldMetaSchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   slug: z.string(),
   name: z.string(),
   fieldType: z.enum(FieldTypeValues),
   isPrimary: z.boolean(),
   visibleToClients: z.boolean(),
-  options: z.record(z.unknown()),
+  options: z.record(z.string(), z.unknown()),
 });
 
 /**
@@ -139,7 +158,7 @@ export const assetFieldMetaSchema = z.object({
  * of them rather than only the "primary" one on `externalSource`.
  */
 export const assetSyncSourceSchema = z.object({
-  integrationId: z.string().uuid(),
+  integrationId: z.guid(),
   integrationName: z.string(),
   driver: z.string(),
   resourceKey: z.string(),
@@ -148,15 +167,15 @@ export const assetSyncSourceSchema = z.object({
 
 /** Server-resolved label for one ASSET_REFERENCE target. */
 export const assetReferenceEntrySchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   name: z.string(),
   archivedAt: z.string().nullable(),
 });
 
 export const assetSummarySchema = z.object({
-  id: z.string().uuid(),
-  companyId: z.string().uuid(),
-  assetLayoutId: z.string().uuid(),
+  id: z.guid(),
+  companyId: z.guid(),
+  assetLayoutId: z.guid(),
   layoutName: z.string(),
   layoutSlug: z.string(),
   layoutIcon: z.string(),
@@ -182,15 +201,20 @@ export const assetSummarySchema = z.object({
   syncSources: z.array(assetSyncSourceSchema),
   /** Always `[]` on list rows; populated on detail. */
   provenance: z.array(integrationTargetProvenanceSchema),
+  /**
+   * Driver-supplied integration sections. Always `[]` on list rows and
+   * for client users; populated on detail for staff.
+   */
+  integrationSections: z.array(assetIntegrationSectionSchema).optional(),
   archivedAt: z.string().nullable(),
-  createdBy: z.string().uuid().nullable(),
-  updatedBy: z.string().uuid().nullable(),
+  createdBy: z.guid().nullable(),
+  updatedBy: z.guid().nullable(),
   createdByUser: actorRefSchema.nullable(),
   updatedByUser: actorRefSchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   /** Keyed by field slug; visibility-filtered per role server-side. */
-  fieldValues: z.record(z.unknown()),
+  fieldValues: z.record(z.string(), z.unknown()),
   fields: z.array(assetFieldMetaSchema),
   /**
    * Server-resolved labels for ASSET_REFERENCE values, keyed by the
@@ -199,7 +223,7 @@ export const assetSummarySchema = z.object({
    * target asset's name instead of a bare uuid. Missing entries = the
    * referent was hard-deleted or is out of scope.
    */
-  references: z.record(assetReferenceEntrySchema),
+  references: z.record(z.string(), assetReferenceEntrySchema),
   /** True if the signed-in user has starred this asset (detail only). */
   isStarred: z.boolean(),
 });

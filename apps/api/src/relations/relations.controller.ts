@@ -76,7 +76,11 @@ export class RelationsController {
       });
     }
     return this.relations.listRelated({
-      actor: { id: actor.id, role: actor.role },
+      actor: {
+        id: actor.id,
+        role: actor.role,
+        passwordAccess: actor.passwordAccess,
+      },
       companyId,
       entityType,
       entityId: rawEntityId,

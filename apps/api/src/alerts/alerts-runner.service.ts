@@ -8,6 +8,8 @@ import {
 } from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueuesService } from '../queues/queues.service.js';
+import { expirationDismissalKey, parseExpiryInstant } from '@rivetdocs/shared';
+import { loadDismissalMap } from '../expirations/expiration-dismissals.service.js';
 
 /**
  * Pure evaluators for the three time/state-based alert types.
@@ -341,8 +343,10 @@ export class AlertsRunnerService {
         for (const v of values) {
           const raw = v.value;
           if (typeof raw !== 'string' || raw.length === 0) continue;
-          const dt = new Date(raw);
-          if (Number.isNaN(dt.getTime())) continue;
+          // Zone-less DATETIME values read as UTC, not in this process's
+          // zone — same rule as `ExpirationsService`.
+          const dt = parseExpiryInstant(raw);
+          if (!dt) continue;
           const daysUntil = Math.floor((dt.getTime() - now) / dayMs);
           if (daysUntil > triggerDays) continue;
           const fieldLabel = fieldById.get(v.assetFieldId) ?? 'expiry';
@@ -358,8 +362,11 @@ export class AlertsRunnerService {
       }
     }
 
-    items.sort((a, b) => a.daysUntil - b.daysUntil);
-    return items;
+    // Items the operator dismissed for this due date never alert again.
+    const dismissed = await loadDismissalMap(this.prisma, config.companyId ?? undefined);
+    const live = dismissed.size === 0 ? items : items.filter((it) => !dismissed.has(dismissalKeyOf(it)));
+    live.sort((a, b) => a.daysUntil - b.daysUntil);
+    return live;
   }
 
   // ------------------------------------------------------------------
@@ -410,7 +417,7 @@ export class AlertsRunnerService {
 type AlertConfigRow =
   import('@prisma/client').AlertConfig;
 
-interface ExpirationItem {
+export interface ExpirationItem {
   id: string;
   kind: AlertExpirationKind;
   /**
@@ -498,4 +505,13 @@ function renderExpirationListText(
     'Manage your alert configurations in the RivetDocs admin under Alerts.',
   );
   return lines.join('\n');
+}
+
+/** The Expiring-soon dismissal key for an alert item (same identity as the feed row). */
+export function dismissalKeyOf(item: ExpirationItem): string {
+  const [entityId, part] = item.id.split(':') as [string, string];
+  if (item.kind === 'asset') return expirationDismissalKey('asset-field', entityId, part, item.expiresAt);
+  if (item.kind === 'domain_registrar') return expirationDismissalKey('domain', entityId, 'registrar', item.expiresAt);
+  if (item.kind === 'domain_tls') return expirationDismissalKey('domain', entityId, 'tls', item.expiresAt);
+  return expirationDismissalKey('password', entityId, item.source ?? 'expiry', item.expiresAt);
 }

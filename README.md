@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="apps/web/public/brand/logo-mark.svg" alt="RivetDocs" height="72" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/logo-mark-dark.svg" />
+  <img src="apps/web/public/brand/logo-mark-light.svg" alt="RivetDocs" height="72" />
+</picture>
 
 </div>
 
@@ -72,7 +75,7 @@ The result is documentation that behaves like a connected system instead of a co
   and record lifecycle events with flexible scheduling.
 - **Security Center.** Admin dashboard for login activity, active sessions,
   lockouts, rate-limit blocks, and egress attempt monitoring.
-- **Integrations.** Sync inventory from external platforms (Action1, UniFi)
+- **Integrations.** Sync inventory from external platforms (Action1, NinjaOne, UniFi, Breeze, Google Workspace, Microsoft 365, Level, RivetIT, RivetMSP)
   into tenant asset records on demand or on a schedule.
 - **Invite-only user management** with per-user setup tokens, forced
   TOTP MFA, IP-based access rules, and append-only audit logging.

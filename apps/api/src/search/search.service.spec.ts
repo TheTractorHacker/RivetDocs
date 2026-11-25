@@ -1,10 +1,13 @@
 import { SearchService } from './search.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import {
+  getTenantContext,
   runWithTenantContext,
   type TenantContext,
 } from '@rivetdocs/shared/server';
+import { assertTenantScope } from '../prisma/tenant-scoped-models.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
+import { FULL_PASSWORD_ACCESS, NO_PASSWORD_ACCESS } from '../passwords/password-access-policy.js';
 
 /**
  * Unit tests for the pure helpers inside SearchService that don't
@@ -179,6 +182,7 @@ function makeActor(role: AuthedUser['role']): AuthedUser {
     sessionId: 'session-1',
     mfaEnforcementCompletedAt: null,
     mfaPending: false,
+    passwordAccess: FULL_PASSWORD_ACCESS,
   } as AuthedUser;
 }
 
@@ -252,6 +256,54 @@ describe('SearchService password allow-list filter', () => {
     const { sql } = await runSearch(actor);
     expect(sql).not.toContain('restricted_to_user_ids');
     expect(sql).toContain('si.visible_to_clients = true');
+  });
+
+  it('binds the global password policy result as a parameter (issue #110)', async () => {
+    const inside = await runSearch(makeActor('OPERATOR'));
+    expect(inside.sql).toContain("si.restricted_to_user_ids = '{}'::uuid[] AND");
+    expect(inside.sql).toContain('::boolean');
+    expect(inside.values).toContain(true);
+    expect(inside.values).not.toContain(false);
+
+    const outsider = { ...makeActor('OPERATOR'), passwordAccess: NO_PASSWORD_ACCESS };
+    const out = await runSearch(outsider);
+    expect(out.values).toContain(false);
+    // Never string-built into the SQL text.
+    expect(out.sql).not.toMatch(/\b(true|false)::boolean/);
+  });
+
+  it('binds membership override company ids as uuid arrays, never as SQL text', async () => {
+    const DENIED = '99999999-9999-4999-8999-999999999999';
+    const ALLOWED = '88888888-8888-4888-8888-888888888888';
+    const actor = {
+      ...makeActor('OPERATOR'),
+      passwordAccess: { byDefault: true, allowCompanyIds: [ALLOWED], denyCompanyIds: [DENIED] },
+    };
+    const { sql, values } = await runSearch(actor);
+    expect(sql).toContain('::uuid[]');
+    expect(sql).toContain('CASE WHEN');
+    expect(sql).toContain('si.company_id = ANY(');
+    expect(sql).toContain('p.company_id = ANY(');
+    expect(sql).not.toContain(DENIED);
+    expect(sql).not.toContain(ALLOWED);
+    // Password branch + upload branch each bind both lists.
+    expect(values.filter((v) => Array.isArray(v) && v.includes(DENIED))).toHaveLength(2);
+    expect(values.filter((v) => Array.isArray(v) && v.includes(ALLOWED))).toHaveLength(2);
+    expect(sql).not.toMatch(/\b(true|false)::boolean/);
+  });
+
+  it('hides files attached to a password entry the actor cannot open', async () => {
+    const actor = makeActor('OPERATOR');
+    const { sql, values } = await runSearch(actor);
+    expect(sql).toContain("si.entity_type <> 'upload' OR NOT EXISTS");
+    expect(sql).toContain("u.attached_to_type = 'password'");
+    expect(sql).toContain('JOIN passwords p ON p.id = u.attached_to_id');
+    expect(values.filter((v) => v === actor.id).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does not add the upload filter for super admins', async () => {
+    const { sql } = await runSearch(makeActor('SUPER_ADMIN'));
+    expect(sql).not.toContain('attached_to_type');
   });
 
   it('mentions() delegates through search() with the predicate for operators', async () => {
@@ -358,5 +410,65 @@ describe('SearchService archived-company exclusion (cross-org mode)', () => {
     );
     const { sql } = capturedSql(queryRaw);
     expect(sql).not.toContain(ARCHIVED_PREDICATE);
+  });
+});
+
+/**
+ * Hit enrichment reads Article and Upload, which are tenant-scoped
+ * models. For an operator pinned to their memberships (globalAccess
+ * NONE) the Prisma tenant middleware rejects any read without a
+ * `companyId` filter, so a search that matched an article returned 500.
+ * The stub runs the real `assertTenantScope` rule on each read.
+ */
+describe('SearchService hit enrichment under tenant scope', () => {
+  const ARTICLE_ID = '55555555-5555-5555-5555-555555555555';
+  const UPLOAD_ID = '66666666-6666-6666-6666-666666666666';
+
+  function makeEnrichService() {
+    const row = (entity_type: string, entity_id: string) => ({
+      entity_type,
+      entity_id,
+      company_id: COMPANY_ID,
+      title: entity_type,
+      snippet: '',
+      layout_id: null,
+      archived_at: null,
+      updated_at: new Date('2026-11-04T00:00:00Z'),
+      score: 1,
+    });
+    const scoped = (model: string) =>
+      jest.fn(async (args: Record<string, unknown>) => {
+        assertTenantScope({ model, action: 'findMany', args }, getTenantContext()!);
+        return [];
+      });
+    const prisma = {
+      $queryRaw: jest.fn(async () => [row('article', ARTICLE_ID), row('upload', UPLOAD_ID)]),
+      company: { findMany: jest.fn(async () => []) },
+      assetLayout: { findMany: jest.fn(async () => []) },
+      article: { findMany: scoped('Article') },
+      upload: { findMany: scoped('Upload') },
+    };
+    return { svc: new SearchService(prisma as unknown as PrismaService), prisma };
+  }
+
+  it('scopes article and upload reads by the hit company ids for a membership-pinned operator', async () => {
+    const actor = { ...makeActor('OPERATOR'), globalAccess: 'NONE' } as AuthedUser;
+    const { svc, prisma } = makeEnrichService();
+
+    const res = await runWithTenantContext(makeCtx(actor), () =>
+      svc.search(actor, { q: 'microsoft', companyId: COMPANY_ID }),
+    );
+
+    expect(res.items.map((i) => i.kind)).toEqual(['article', 'upload']);
+    expect(prisma.article.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { in: [ARTICLE_ID] }, companyId: { in: [COMPANY_ID] } },
+      }),
+    );
+    expect(prisma.upload.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { in: [UPLOAD_ID] }, companyId: { in: [COMPANY_ID] } },
+      }),
+    );
   });
 });

@@ -2,6 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { CURRENT_PASSWORD_INVALID_CODE } from '@rivetdocs/shared';
 import { MeService } from './me.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
+import { FULL_PASSWORD_ACCESS } from '../passwords/password-access-policy.js';
 
 /**
  * Phase 9b.1 — MeService.updatePreferences audits before/after, writes
@@ -20,6 +21,7 @@ const ACTOR: AuthedUser = {
   sessionId: 's-1',
   mfaEnforcementCompletedAt: new Date(),
   mfaPending: false,
+  passwordAccess: FULL_PASSWORD_ACCESS,
 };
 
 const META = { ip: '127.0.0.1', userAgent: 'jest' };
@@ -47,7 +49,7 @@ function makeAudit() {
 }
 
 /** Stub: key revocation is asserted separately; here it just must exist. */
-const apiKeys = { revokeAllForUser: jest.fn().mockResolvedValue(0) };
+const apiKeys = { revokeAllForUser: jest.fn().mockResolvedValue({ apiKeys: 0, mcpConnections: 0 }) };
 
 function makeService(
   prisma: unknown,
@@ -233,6 +235,79 @@ describe('MeService.updatePreferences', () => {
   });
 });
 
+describe('MeService.update (PATCH /me) response projection', () => {
+  // Every column, secrets included. The mock honours `select` like Prisma
+  // does, so the response is exactly what the query asks for.
+  const FULL_ROW = {
+    id: ACTOR.id,
+    email: 'a@x',
+    name: 'Before',
+    role: 'OPERATOR',
+    timezone: null,
+    searchDefaults: null,
+    mfaEnabled: true,
+    passwordHash: '$argon2id$not-a-real-hash',
+    mfaSecretEncrypted: 'not-a-real-ciphertext',
+  };
+
+  function project(row: Record<string, unknown>, select?: Record<string, boolean>) {
+    if (!select) return row;
+    return Object.fromEntries(
+      Object.keys(select)
+        .filter((k) => select[k])
+        .map((k) => [k, row[k]]),
+    );
+  }
+
+  function makeSelectPrisma(base: Record<string, unknown> = FULL_ROW) {
+    return {
+      user: {
+        findUnique: jest.fn(
+          async (args: { select?: Record<string, boolean> }) => project(base, args.select),
+        ),
+        update: jest.fn(
+          async (args: { data: Record<string, unknown>; select?: Record<string, boolean> }) =>
+            project({ ...base, ...args.data }, args.select),
+        ),
+      },
+    };
+  }
+
+  it('never returns secret columns', async () => {
+    const prisma = makeSelectPrisma();
+    const audit = makeAudit();
+    const svc = makeService(prisma, audit);
+
+    const out = await svc.update(ACTOR, { name: 'After', timezone: 'UTC' }, META);
+
+    expect(out).not.toHaveProperty('passwordHash');
+    expect(out).not.toHaveProperty('mfaSecretEncrypted');
+    const select = prisma.user.update.mock.calls[0]![0].select;
+    expect(select).not.toHaveProperty('passwordHash');
+    expect(select).not.toHaveProperty('mfaSecretEncrypted');
+    expect(out).toEqual({
+      id: ACTOR.id,
+      email: 'a@x',
+      name: 'After',
+      timezone: 'UTC',
+      searchDefaults: null,
+    });
+    // The audit diff carries only the edited fields, never the secrets.
+    const entry = audit.log.mock.calls[0]![0];
+    expect(entry.before).toEqual({ name: 'Before', timezone: null, searchDefaults: null });
+    expect(JSON.stringify(entry)).not.toContain('not-a-real');
+  });
+
+  it('runs searchDefaults through the shared Zod schema on the way out', async () => {
+    const prisma = makeSelectPrisma({ ...FULL_ROW, searchDefaults: { defaultGlobal: 'yes' } });
+    const svc = makeService(prisma, makeAudit());
+
+    const out = await svc.update(ACTOR, { name: 'After' }, META);
+
+    expect(out.searchDefaults).toBeNull();
+  });
+});
+
 describe('MeService.changePassword', () => {
   function makeChangePasswordPrisma() {
     return {
@@ -384,7 +459,7 @@ describe('MeService.changePassword', () => {
 
     // Reports how many API keys the change revoked, so the caller can tell the
     // user their integrations just died rather than discovering it later.
-    expect(out).toEqual({ ok: true, apiKeysRevoked: 0 });
+    expect(out).toEqual({ ok: true, apiKeysRevoked: 0, mcpConnectionsRevoked: 0 });
     expect(lockout.clearChangePasswordFailures).toHaveBeenCalledWith(ACTOR.id);
     expect(lockout.recordChangePasswordFailure).not.toHaveBeenCalled();
     expect(audit.log).toHaveBeenCalledWith(

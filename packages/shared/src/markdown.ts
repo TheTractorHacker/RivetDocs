@@ -6,6 +6,11 @@
 
 export const MAX_MARKDOWN_SOURCE = 500_000;
 
+/** Private-use marker around a parked code slot; stripped from input first. */
+const CODE_SLOT = '';
+const CODE_SLOT_STRIP = //g;
+const CODE_SLOT_REF = /(\d+)/g;
+
 export interface MarkdownPlaintextOptions {
   /**
    * Drop `![alt](url)` image references entirely instead of preserving
@@ -27,11 +32,16 @@ export function markdownToPlaintext(
   options: MarkdownPlaintextOptions = {},
 ): string {
   if (!src || typeof src !== 'string') return '';
-  let s = src.replace(/\r\n?/g, '\n');
+  let s = src.replace(/\r\n?/g, '\n').replace(CODE_SLOT_STRIP, '');
 
-  // Fenced code blocks (non-greedy, multiline)
-  s = s.replace(/^```[\w-]*\n[\s\S]*?^```/gm, '\n');
-  s = s.replace(/```[^`]*```/g, ' ');
+  // Code is searchable text (commands, paths, error codes), so keep its
+  // contents verbatim: park each block or span in a slot the syntax
+  // stripping below cannot touch, then restore it at the end.
+  const code: string[] = [];
+  const park = (text: string) => `${CODE_SLOT}${code.push(text) - 1}${CODE_SLOT}`;
+  s = s.replace(/^```[^\n]*\n([\s\S]*?)^```[ \t]*$/gm, (_m, body: string) => `\n${park(body)}\n`);
+  s = s.replace(/```([^`]*)```/g, (_m, body: string) => ` ${park(body)} `);
+  s = s.replace(/`([^`\n]+)`/g, (_m, body: string) => park(body));
 
   // Footnote / reference link definitions: [^id]: url
   s = s.replace(/^\[[^\]]+\]:\s*.+$/gm, ' ');
@@ -72,20 +82,21 @@ export function markdownToPlaintext(
   s = s.replace(/\|\s*$/gm, '');
   s = s.replace(/\|/g, ' ');
 
-  // Emphasis / strikethrough (repeat for nested patterns)
+  // Emphasis / strikethrough (repeat for nested patterns). Emphasis never
+  // spans lines, and `_` never opens or closes inside a word (CommonMark),
+  // so `create_article` and `my_file_name` keep their underscores.
   for (let i = 0; i < 3; i++) {
-    s = s.replace(/~~([^~]+)~~/g, '$1');
-    s = s.replace(/\*\*([^*]+)\*\*/g, '$1');
-    s = s.replace(/\*([^*]+)\*/g, '$1');
-    s = s.replace(/__([^_]+)__/g, '$1');
-    s = s.replace(/_([^_]+)_/g, '$1');
+    s = s.replace(/~~([^~\n]+)~~/g, '$1');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '$1');
+    s = s.replace(/\*([^*\n]+)\*/g, '$1');
+    s = s.replace(/(^|[^\p{L}\p{N}_])__([^_\n]+)__(?![\p{L}\p{N}_])/gu, '$1$2');
+    s = s.replace(/(^|[^\p{L}\p{N}_])_([^_\n]+)_(?![\p{L}\p{N}_])/gu, '$1$2');
   }
-
-  // Inline code
-  s = s.replace(/`([^`]+)`/g, '$1');
 
   // HTML tags
   s = s.replace(/<[^>]+>/g, ' ');
+
+  s = s.replace(CODE_SLOT_REF, (_m, i: string) => code[Number(i)] ?? '');
 
   s = s
     .split('\n')
@@ -182,6 +193,169 @@ function cleanMarkdownTitle(s: string): string {
     end--;
   }
   return s.slice(start, end).replace(/`/g, '').trim();
+}
+
+/** Mirrors `articleTitleSchema` / `articleSlugSchema` max lengths. */
+const ARTICLE_TITLE_MAX = 200;
+const ARTICLE_SLUG_MAX = 80;
+
+export type MarkdownImportResult =
+  | { ok: true; title: string; markdownSource: string }
+  | { ok: false; reason: string };
+
+/**
+ * Turn one imported `.md` file into an article title and Markdown body.
+ *
+ * Title order: the first `#` heading outside code fences (else the first
+ * heading of any level) → a front-matter `title:` line → the file name →
+ * `'Untitled article'`. The heading line is removed from the body only
+ * when it is the first content line, so the article does not show its
+ * title twice; a heading lower down stays where the author put it.
+ *
+ * Unlike `splitMarkdownTitleAndBody` (which only looks at the leading
+ * line), this scans the whole file, because exported docs often open
+ * with a badge or an intro paragraph.
+ */
+export function parseMarkdownImport(src: string, fileName: string): MarkdownImportResult {
+  let text = (src ?? '').replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  let frontMatterTitle: string | null = null;
+  const fm = splitFrontMatter(text);
+  if (fm) {
+    text = fm.rest;
+    frontMatterTitle = fm.title;
+  }
+  if (!text.trim()) return { ok: false, reason: 'File is empty.' };
+
+  const lines = text.split('\n');
+  let firstContent = -1;
+  let firstAny: { index: number; title: string } | null = null;
+  let firstH1: { index: number; title: string } | null = null;
+  let fence: { ch: string; len: number } | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (firstContent === -1 && line.trim() !== '') firstContent = i;
+    const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence) {
+      if (
+        fenceMatch &&
+        fenceMatch[1]![0] === fence.ch &&
+        fenceMatch[1]!.length >= fence.len &&
+        line.slice(fenceMatch[0].length).trim() === ''
+      ) {
+        fence = null;
+      }
+      continue;
+    }
+    if (fenceMatch) {
+      fence = { ch: fenceMatch[1]![0]!, len: fenceMatch[1]!.length };
+      continue;
+    }
+    // Prefix-only match; the text after it is cleaned separately so the
+    // regex has no overlapping quantifiers.
+    const heading = /^ {0,3}(#{1,6})[ \t]/.exec(line);
+    if (!heading) continue;
+    const raw = line
+      .slice(heading[0].length)
+      .trim()
+      .replace(/\s+#+$/, '')
+      .replace(/^#+$/, '');
+    const title = cleanMarkdownTitle(raw).slice(0, ARTICLE_TITLE_MAX).trim();
+    if (!title) continue;
+    if (!firstAny) firstAny = { index: i, title };
+    if (heading[1]!.length === 1) {
+      firstH1 = { index: i, title };
+      break;
+    }
+  }
+
+  const selected = firstH1 ?? firstAny;
+  let body = text;
+  if (selected && selected.index === firstContent) {
+    let j = selected.index + 1;
+    while (j < lines.length && lines[j]!.trim() === '') j++;
+    const rest = lines.slice(j).join('\n');
+    if (rest.trim()) body = rest;
+  }
+  if (body.length > MAX_MARKDOWN_SOURCE) {
+    return { ok: false, reason: 'File is too large to import.' };
+  }
+
+  const title =
+    selected?.title ||
+    cleanTitleCandidate(frontMatterTitle) ||
+    cleanTitleCandidate(titleFromFileName(fileName)) ||
+    'Untitled article';
+  return { ok: true, title, markdownSource: body };
+}
+
+/** A leading `---` … `---` YAML block, read for `title:` only (no YAML parser). */
+function splitFrontMatter(text: string): { title: string | null; rest: string } | null {
+  const lines = text.split('\n');
+  if (lines[0]?.trimEnd() !== '---') return null;
+  let end = -1;
+  for (let i = 1; i < lines.length; i++) {
+    const l = lines[i]!.trimEnd();
+    if (l === '---' || l === '...') {
+      end = i;
+      break;
+    }
+  }
+  if (end === -1) return null;
+  let title: string | null = null;
+  for (const l of lines.slice(1, end)) {
+    const m = /^title:(.*)$/.exec(l);
+    if (m) {
+      title = m[1]!.trim().replace(/^(["'])(.*)\1$/, '$2');
+      break;
+    }
+  }
+  return { title, rest: lines.slice(end + 1).join('\n') };
+}
+
+function titleFromFileName(fileName: string): string {
+  return fileName
+    .replace(/\.(md|markdown)$/i, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanTitleCandidate(s: string | null): string {
+  if (!s) return '';
+  return cleanMarkdownTitle(s).slice(0, ARTICLE_TITLE_MAX).trim();
+}
+
+/**
+ * The slug the API derives from a title when the client sends none.
+ * Shared so a client retry can build a free slug the same way.
+ */
+export function slugifyArticleTitle(title: string): string {
+  return (
+    title
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .slice(0, ARTICLE_SLUG_MAX) || 'untitled'
+  );
+}
+
+/**
+ * Title and slug for the `n`th copy of a title (`n` ≥ 2), used after a
+ * `SlugTaken` conflict. Room for the suffix is reserved in both values,
+ * so a long title still yields a distinct slug ≤ 80 and a title ≤ 200.
+ */
+export function suffixedArticleIdentity(title: string, n: number): { title: string; slug: string } {
+  const slugSuffix = `-${n}`;
+  const base =
+    slugifyArticleTitle(title)
+      .slice(0, ARTICLE_SLUG_MAX - slugSuffix.length)
+      .replace(/-+$/, '') || 'untitled';
+  const titleSuffix = ` ${n}`;
+  const head = title.slice(0, ARTICLE_TITLE_MAX - titleSuffix.length).trimEnd() || 'Untitled article';
+  return { title: `${head}${titleSuffix}`, slug: `${base}${slugSuffix}` };
 }
 
 /**

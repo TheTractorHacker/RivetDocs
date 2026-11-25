@@ -1,3 +1,10 @@
+import { Logger } from '@nestjs/common';
+import {
+  driverDescriptorSchema,
+  integrationSetupCheckSchema,
+  setupGuideSchema,
+  type IntegrationSetupCheck,
+} from '@rivetdocs/shared';
 import {
   DriverAuthError,
   DriverRateLimitError,
@@ -5,9 +12,16 @@ import {
   type IntegrationContext,
 } from '../integration-driver.js';
 import {
+  NINJAONE_MIN_REQUEST_INTERVAL_MS,
   NinjaOneDriver,
   __resetNinjaOneTokenCacheForTests,
+  __setNinjaOneRequestIntervalForTests,
 } from './ninjaone.driver.js';
+import { __resetRunCacheForTests } from '../run-cache.js';
+import { __resetRequestPaceForTests } from '../driver-utils.js';
+import { NinjaOneRequestError } from './ninjaone.diagnose.js';
+import { NINJAONE_SETUP_GUIDE } from './ninjaone.setup-guide.js';
+import { ORGANIZATIONS_UNVERIFIED_NOTE } from './ninjaone.diagnose.js';
 import {
   setDefaultFetchForTests,
   setDefaultResolveForTests,
@@ -21,6 +35,10 @@ import {
 // scripted data frame would be returned with no caller).
 beforeEach(() => {
   __resetNinjaOneTokenCacheForTests();
+  __resetRunCacheForTests();
+  __resetRequestPaceForTests();
+  // Pacing is covered on its own below; the scripted flows run unspaced.
+  __setNinjaOneRequestIntervalForTests(0);
 });
 
 /**
@@ -54,8 +72,25 @@ interface RecordedCall {
   headers?: Record<string, string>;
 }
 
-function installFetchScript(script: ScriptedResponse[]) {
+/** Section report endpoints, answered from `lookups` instead of the main script. */
+function isLookupPath(pathname: string): boolean {
+  return pathname.startsWith('/v2/queries/') || pathname === '/v2/alerts';
+}
+
+/**
+ * `script` answers the main calls in order. Report calls (`/v2/queries/*`,
+ * `/v2/alerts`) are recorded in `lookupCalls` and answered from `lookups`
+ * by pathname (a list is consumed in order); an unlisted report is empty.
+ */
+function installFetchScript(
+  script: ScriptedResponse[],
+  lookups: Record<string, ScriptedResponse | ScriptedResponse[]> = {},
+) {
   const calls: RecordedCall[] = [];
+  const lookupCalls: RecordedCall[] = [];
+  const lookupQueues = new Map(
+    Object.entries(lookups).map(([path, r]) => [path, Array.isArray(r) ? [...r] : [r]]),
+  );
   let i = 0;
   const shim = (async (
     input: string | URL | Request,
@@ -67,13 +102,26 @@ function installFetchScript(script: ScriptedResponse[]) {
         : input instanceof URL
           ? input.toString()
           : (input as Request).url;
-    calls.push({
+    const call = {
       url,
       method: init?.method ?? 'GET',
       body: typeof init?.body === 'string' ? init.body : undefined,
       headers: init?.headers as Record<string, string> | undefined,
-    });
-    const next = script[i++];
+    };
+    const pathname = new URL(url).pathname;
+    let next: ScriptedResponse | undefined;
+    if (isLookupPath(pathname)) {
+      lookupCalls.push(call);
+      const queue = lookupQueues.get(pathname);
+      next = queue && queue.length > 1 ? queue.shift() : queue?.[0];
+      next ??= {
+        kind: 'json',
+        body: pathname === '/v2/alerts' ? [] : { cursor: null, results: [] },
+      };
+    } else {
+      calls.push(call);
+      next = script[i++];
+    }
     if (!next) {
       throw new Error(`NinjaOne driver test: unscripted fetch to ${url}`);
     }
@@ -94,6 +142,7 @@ function installFetchScript(script: ScriptedResponse[]) {
   setDefaultResolveForTests(async () => ['1.2.3.4']);
   return {
     calls,
+    lookupCalls,
     restore: () => {
       setDefaultFetchForTests(null);
       setDefaultResolveForTests(null);
@@ -603,6 +652,8 @@ describe('NinjaOneDriver.fetchRecords', () => {
           externalId: '99',
           displayName: 'x.lan',
           fields: { id: 99, systemName: 'x.lan', deviceType: 'AgentDevice' },
+          section: expect.objectContaining({ title: 'NinjaOne' }),
+          sourceKind: null,
           updatedAt: null,
         },
       ]);
@@ -1271,5 +1322,523 @@ describe('NinjaOneDriver.fetchRecords', () => {
     } finally {
       fx.restore();
     }
+  });
+});
+
+describe('NinjaOneDriver descriptor', () => {
+  it('validates against the shared schema with a setup guide', () => {
+    const parsed = driverDescriptorSchema.parse(new NinjaOneDriver().descriptor);
+    expect(parsed.setupGuide?.map((s) => s.id)).toEqual([
+      'api-client',
+      'region',
+      'credentials',
+      'organizations',
+      'fields',
+      'sync',
+      'tickets',
+    ]);
+    expect(setupGuideSchema.safeParse(NINJAONE_SETUP_GUIDE).success).toBe(true);
+    // The Client ID / Client Secret pair and the base URL stay as they were.
+    expect(parsed.secretFields.map((f) => [f.key, f.kind])).toEqual([
+      ['apiKey', 'text'],
+      ['apiSecret', 'password'],
+    ]);
+    expect(parsed.configFields.map((f) => f.key)).toEqual(['baseUrl']);
+  });
+});
+
+describe('NinjaOneDriver Check setup', () => {
+  /** Provider error text that must never reach a Check setup message. */
+  const PROVIDER_TEXT = 'PROVIDER-ERROR-TEXT-do-not-echo';
+  const TOKEN_OK: ScriptedResponse = { kind: 'json', body: { access_token: 'tok-1' } };
+  const ORGS: ScriptedResponse = { kind: 'json', body: [{ id: 1, name: 'Acme' }] };
+  const fail = (status: number): ScriptedResponse => ({
+    kind: 'text',
+    status,
+    body: PROVIDER_TEXT,
+  });
+  const invalidScope: ScriptedResponse = {
+    kind: 'json',
+    status: 400,
+    body: { error: 'invalid_scope', error_description: PROVIDER_TEXT },
+  };
+
+  async function check(
+    script: ScriptedResponse[],
+    ctx: IntegrationContext = makeCtx(),
+  ): Promise<{ result: IntegrationSetupCheck; calls: RecordedCall[] }> {
+    const fx = installFetchScript(script);
+    try {
+      const result = await new NinjaOneDriver().diagnose({ mode: 'connection', ctx });
+      expect(integrationSetupCheckSchema.parse(result)).toEqual(result);
+      expect(JSON.stringify(result)).not.toContain(PROVIDER_TEXT);
+      return { result, calls: fx.calls };
+    } finally {
+      fx.restore();
+    }
+  }
+
+  it('passes every step it can verify with one token exchange and a read-only GET', async () => {
+    const { result, calls } = await check([TOKEN_OK, ORGS]);
+    // Mappings are not checked, so the Organizations step stays unverified.
+    expect(result).toEqual({
+      ok: true,
+      passedStepIds: ['api-client', 'region', 'credentials'],
+      failures: [],
+      notes: [{ stepId: 'organizations', message: ORGANIZATIONS_UNVERIFIED_NOTE }],
+    });
+    expect(calls.map((c) => [c.method, new URL(c.url).pathname])).toEqual([
+      ['POST', '/ws/oauth/token'],
+      ['GET', '/v2/organizations'],
+    ]);
+  });
+
+  it('exchanges a fresh token even when one is cached', async () => {
+    const fx = installFetchScript([TOKEN_OK, ORGS]);
+    try {
+      await new NinjaOneDriver().testConnection(makeCtx());
+    } finally {
+      fx.restore();
+    }
+    const { result, calls } = await check([fail(401)]);
+    expect(calls.map((c) => new URL(c.url).pathname)).toEqual(['/ws/oauth/token']);
+    expect(result.failures).toEqual([
+      { stepId: 'api-client', message: expect.stringMatching(/does not accept this Client ID/) },
+    ]);
+  });
+
+  it('passes without the ticketing scope (monitoring-only fallback)', async () => {
+    const { result, calls } = await check([invalidScope, TOKEN_OK, ORGS]);
+    expect(result.ok).toBe(true);
+    expect(result.passedStepIds).not.toContain('organizations');
+    expect(calls.map((c) => c.body ?? '')).toEqual([
+      expect.stringContaining('scope=monitoring+ticketing'),
+      expect.stringContaining('scope=monitoring'),
+      '',
+    ]);
+  });
+
+  it('points a refused Monitoring scope at the client app in step 1', async () => {
+    const { result } = await check([invalidScope, invalidScope]);
+    expect(result).toEqual({
+      ok: false,
+      passedStepIds: [],
+      failures: [{ stepId: 'api-client', message: expect.stringMatching(/does not have the Monitoring scope/) }],
+    });
+  });
+
+  it('points zero organizations at the Organizations step', async () => {
+    const { result } = await check([TOKEN_OK, { kind: 'json', body: [] }]);
+    expect(result).toEqual({
+      ok: false,
+      passedStepIds: ['api-client', 'region', 'credentials'],
+      failures: [{ stepId: 'organizations', message: expect.stringMatching(/returned no organizations/) }],
+    });
+  });
+
+  it.each([
+    ['a token 401', [fail(401)]],
+    ['a token 403', [fail(403)]],
+    ['a token 400 without invalid_scope', [fail(400)]],
+    ['a monitoring-only token 400 without invalid_scope', [invalidScope, fail(400)]],
+    ['an organization list 401', [TOKEN_OK, fail(401)]],
+  ] as Array<[string, ScriptedResponse[]]>)('points %s at the credentials', async (_name, script) => {
+    const { result } = await check(script);
+    expect(result.failures).toEqual([
+      { stepId: 'api-client', message: expect.stringMatching(/does not accept this Client ID/) },
+    ]);
+    expect(result.failures[0]!.message).toMatch(/step 3/);
+  });
+
+  it('points an unknown Client ID (token 404) at the region and the Client ID', async () => {
+    const { result } = await check([fail(404)]);
+    expect(result.failures).toEqual([
+      { stepId: 'region', message: expect.stringMatching(/does not know this Client ID/) },
+    ]);
+  });
+
+  it('points a 403 on the organization list at the Monitoring scope', async () => {
+    const { result } = await check([TOKEN_OK, fail(403)]);
+    expect(result).toEqual({
+      ok: false,
+      passedStepIds: ['region', 'credentials'],
+      failures: [{ stepId: 'api-client', message: expect.stringMatching(/does not have the Monitoring scope/) }],
+    });
+  });
+
+  it.each([
+    ['an organization list 404', [TOKEN_OK, fail(404)]],
+    ['an HTML token page', [{ kind: 'text', status: 200, body: `<html>${PROVIDER_TEXT}</html>` }]],
+    ['a token response without access_token', [{ kind: 'json', body: { error: PROVIDER_TEXT } }]],
+  ] as Array<[string, ScriptedResponse[]]>)('points %s at the API base URL', async (_name, script) => {
+    const { result } = await check(script);
+    expect(result.failures).toEqual([
+      { stepId: 'region', message: expect.stringMatching(/does not point to the NinjaOne API/) },
+    ]);
+  });
+
+  it.each([
+    ['does not resolve', async (): Promise<string[]> => { throw new Error(`getaddrinfo ENOTFOUND ${PROVIDER_TEXT}`); }],
+    ['resolves to a private address', async (): Promise<string[]> => ['10.0.0.5']],
+  ])('points a host that %s at the API base URL', async (_name, resolve) => {
+    const fx = installFetchScript([]);
+    setDefaultResolveForTests(resolve);
+    try {
+      const result = await new NinjaOneDriver().diagnose({ mode: 'connection', ctx: makeCtx() });
+      expect(result.failures).toEqual([
+        { stepId: 'region', message: expect.stringMatching(/cannot connect to the saved API base URL/) },
+      ]);
+      expect(JSON.stringify(result)).not.toContain(PROVIDER_TEXT);
+      expect(fx.calls).toEqual([]);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('asks to retry on a rate limit', async () => {
+    const limited: ScriptedResponse = { kind: 'text', status: 429, body: PROVIDER_TEXT, headers: { 'Retry-After': '0' } };
+    const { result } = await check([TOKEN_OK, limited, limited, limited]);
+    expect(result.failures).toEqual([{ stepId: null, message: expect.stringMatching(/rate limiting/) }]);
+  });
+
+  it.each([
+    ['the token exchange', [fail(500), fail(500), fail(500)]],
+    ['the organization list', [TOKEN_OK, fail(500), fail(500), fail(500)]],
+  ] as Array<[string, ScriptedResponse[]]>)('reports a server error on %s as a general failure', async (_name, script) => {
+    const { result } = await check(script);
+    expect(result.failures).toEqual([{ stepId: null, message: expect.stringMatching(/did not answer as expected/) }]);
+  });
+
+  it('reports a network failure as unreachable without the error text', async () => {
+    setDefaultFetchForTests((async () => {
+      throw new TypeError(`fetch failed: ${PROVIDER_TEXT}`);
+    }) as typeof fetch);
+    setDefaultResolveForTests(async () => ['1.2.3.4']);
+    try {
+      const result = await new NinjaOneDriver().diagnose({ mode: 'connection', ctx: makeCtx() });
+      expect(result.failures).toEqual([{ stepId: null, message: expect.stringMatching(/could not reach NinjaOne/) }]);
+      expect(JSON.stringify(result)).not.toContain(PROVIDER_TEXT);
+    } finally {
+      setDefaultFetchForTests(null);
+      setDefaultResolveForTests(null);
+    }
+  });
+
+  it('asks for the credentials before any request when none are saved', async () => {
+    const { result, calls } = await check([], { ...makeCtx(), secret: {} });
+    expect(result.failures).toEqual([{ stepId: 'credentials', message: expect.stringMatching(/No Client ID and Client Secret/) }]);
+    expect(calls).toEqual([]);
+  });
+
+  it('flags an invalid API base URL before any request', async () => {
+    const { result, calls } = await check([], { ...makeCtx(), config: { baseUrl: 'not a url' } });
+    expect(result.failures).toEqual([{ stepId: 'region', message: expect.stringMatching(/not a valid URL/) }]);
+    expect(calls).toEqual([]);
+  });
+
+  it('has no OAuth app to check', async () => {
+    const result = await new NinjaOneDriver().diagnose({
+      mode: 'client',
+      oauthClient: {} as never,
+      redirectUri: 'https://rivetdocs.test/cb',
+      http: HTTP,
+      correlationId: 'test-corr',
+    });
+    expect(result).toEqual({
+      ok: false,
+      passedStepIds: [],
+      failures: [{ stepId: null, message: 'NinjaOne has no OAuth app to check.' }],
+    });
+  });
+});
+
+describe('NinjaOneDriver never echoes provider response text', () => {
+  /** Provider body text that must never reach an error message or a log line. */
+  const MARKER = 'PROVIDER-BODY-MARKER-do-not-echo';
+  const TOKEN_OK: ScriptedResponse = { kind: 'json', body: { access_token: 'tok-1' } };
+  const fail = (status: number): ScriptedResponse => ({
+    kind: 'text',
+    status,
+    body: `{"error":"${MARKER}","echo":"${MARKER}"}`,
+  });
+  /** fetchWithRetry retries 5xx, so a terminal 5xx needs maxRetries + 1 frames. */
+  const fail5xx = (status: number): ScriptedResponse[] =>
+    Array.from({ length: HTTP.maxRetries + 1 }, () => fail(status));
+  const invalidScope: ScriptedResponse = {
+    kind: 'json',
+    status: 400,
+    body: { error: 'invalid_scope', error_description: MARKER },
+  };
+
+  let spies: jest.SpyInstance[] = [];
+  beforeEach(() => {
+    spies = (['log', 'warn', 'error', 'debug', 'verbose'] as const).map((m) =>
+      jest.spyOn(Logger.prototype, m).mockImplementation(() => undefined),
+    );
+  });
+  afterEach(() => {
+    for (const s of spies) s.mockRestore();
+  });
+
+  function expectNoMarkerLogged(): void {
+    for (const s of spies) {
+      expect(JSON.stringify(s.mock.calls)).not.toContain(MARKER);
+    }
+  }
+
+  async function rejection(
+    script: ScriptedResponse[],
+    run: (d: NinjaOneDriver) => Promise<unknown>,
+  ): Promise<Error> {
+    const fx = installFetchScript(script);
+    try {
+      const err = await run(new NinjaOneDriver()).then(
+        () => {
+          throw new Error('expected a rejection');
+        },
+        (e: unknown) => e as Error,
+      );
+      expect(err.message).not.toContain(MARKER);
+      expectNoMarkerLogged();
+      return err;
+    } finally {
+      fx.restore();
+    }
+  }
+
+  it('keeps a token 400 body out of the DriverAuthError', async () => {
+    const err = await rejection([fail(400)], (d) => d.testConnection(makeCtx()));
+    expect(err).toBeInstanceOf(DriverAuthError);
+    expect(err.message).toContain('HTTP 400');
+  });
+
+  it('keeps a token 500 body out of the error', async () => {
+    const err = await rejection(fail5xx(500), (d) => d.testConnection(makeCtx()));
+    expect(err).toBeInstanceOf(NinjaOneRequestError);
+    expect(err.message).toContain('HTTP 500');
+  });
+
+  it('still detects invalid_scope, without echoing error_description', async () => {
+    const err = await rejection([invalidScope, invalidScope], (d) =>
+      d.testConnection(makeCtx()),
+    );
+    expect(err).toBeInstanceOf(NinjaOneRequestError);
+    expect((err as NinjaOneRequestError).invalidScope).toBe(true);
+    expect(err.message).toContain('invalid_scope');
+  });
+
+  it('falls back to monitoring-only on invalid_scope and logs no body text', async () => {
+    const fx = installFetchScript([
+      invalidScope,
+      TOKEN_OK,
+      { kind: 'json', body: [{ id: 1, name: 'Acme' }] },
+    ]);
+    try {
+      await expect(new NinjaOneDriver().testConnection(makeCtx())).resolves.toEqual({
+        ok: true,
+        details: 'Reached NinjaOne (1 organisations).',
+      });
+      expect(fx.calls[1]?.body).toContain('scope=monitoring');
+      expect(fx.calls[1]?.body).not.toContain('ticketing');
+      expectNoMarkerLogged();
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('keeps a ticketing list 500 body out of the error and the log', async () => {
+    const err = await rejection(
+      [TOKEN_OK, { kind: 'json', body: [{ id: 3, name: 'Board' }] }, ...fail5xx(500)],
+      (d) => d.listTickets({ ...makeCtx(), externalOrgId: null }, {}, null),
+    );
+    expect(err.message).toBe('NinjaOne ticketing list returned HTTP 500.');
+    expect(spies[1]).toHaveBeenCalledWith(
+      'NinjaOne ticketing list returned HTTP 500 for board 3 (corr=test-corr).',
+    );
+  });
+
+  it('logs a fixed failure category when ticket enrichment returns non-JSON', async () => {
+    const fx = installFetchScript([
+      TOKEN_OK,
+      { kind: 'json', body: [{ id: 3, name: 'Board' }] },
+      { kind: 'json', body: { data: [{ id: 42 }] } },
+      { kind: 'text', status: 200, body: `<html>${MARKER}</html>` },
+    ]);
+    try {
+      await new NinjaOneDriver().listTickets({ ...makeCtx(), externalOrgId: null }, {}, null);
+      expect(spies[1]).toHaveBeenCalledWith(
+        expect.stringContaining('enrichment failures: invalid_json=1'),
+      );
+      expectNoMarkerLogged();
+    } finally {
+      fx.restore();
+    }
+  });
+});
+
+describe('NinjaOneDriver asset-page section', () => {
+  const TOKEN = { kind: 'json' as const, body: { access_token: 'tok-1' } };
+  const devices = (...ids: number[]) => ({
+    kind: 'json' as const,
+    body: ids.map((id) => agent({ id, organizationId: 7, systemName: `host-${id}` })),
+  });
+  const results = (rows: Record<string, unknown>[], cursor: string | null = null) => ({
+    kind: 'json' as const,
+    body: { cursor: cursor ? { name: cursor, offset: 0, count: rows.length, expires: 0 } : null, results: rows },
+  });
+  const status = (code: number) => ({ kind: 'text' as const, status: code, body: 'provider text' });
+  const pathsOf = (calls: RecordedCall[]) => calls.map((c) => new URL(c.url).pathname);
+  const fetchCtx = (overrides: Partial<FetchRecordsContext> = {}) =>
+    ({ ...makeFetchCtx(), snapshotAt: '2026-10-14T12:00:00.000Z', ...overrides }) as FetchRecordsContext;
+  const rows = (section: unknown, groupKey: string) =>
+    (section as { groups: Array<{ key: string; rows: Array<{ label: string; value: unknown }> }> }).groups
+      .find((g) => g.key === groupKey)?.rows ?? [];
+
+  it('loads each agent report once per run, scoped to the mapped organisation', async () => {
+    const fx = installFetchScript([TOKEN, { ...devices(1, 2), body: [...devices(1, 2).body, ...Array.from({ length: 198 }, (_, i) => agent({ id: 10 + i }))] }, devices(300)], {
+      '/v2/queries/device-health': results([{ deviceId: 1, healthStatus: 'HEALTHY' }]),
+      '/v2/alerts': { kind: 'json', body: [{ deviceId: 2, severity: 'CRITICAL', subject: 'CPU' }] },
+    });
+    try {
+      const driver = new NinjaOneDriver();
+      const page1 = await driver.fetchRecords(fetchCtx(), null);
+      expect(page1.snapshotAt).toBe('2026-10-14T12:00:00.000Z');
+      expect(pathsOf(fx.lookupCalls)).toEqual([
+        '/v2/queries/device-health',
+        '/v2/alerts',
+        '/v2/queries/os-patches',
+        '/v2/queries/software-patches',
+        '/v2/queries/antivirus-status',
+        '/v2/queries/network-interfaces',
+        '/v2/queries/disks',
+      ]);
+      for (const call of fx.lookupCalls) expect(new URL(call.url).searchParams.get('df')).toBe('org=7');
+      expect(new URL(fx.lookupCalls[0]!.url).searchParams.get('pageSize')).toBe('1000');
+
+      const byId = new Map(page1.records.map((r) => [r.externalId, r]));
+      expect(rows(byId.get('1')!.section, 'status')).toContainEqual(expect.objectContaining({ label: 'Health', value: 'Healthy' }));
+      expect(rows(byId.get('2')!.section, 'alerts')).toContainEqual(expect.objectContaining({ label: 'Active alerts', value: '1' }));
+
+      // The next page of the same run reuses the reports.
+      await driver.fetchRecords(fetchCtx(), page1.cursor);
+      expect(fx.lookupCalls).toHaveLength(7);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('loads only health and alerts for non-agent devices', async () => {
+    const fx = installFetchScript([TOKEN, { kind: 'json', body: [{ id: 5, organizationId: 7, deviceType: 'NMSTarget', nodeClass: 'NMS_SWITCH' }] }]);
+    try {
+      const page = await new NinjaOneDriver().fetchRecords(fetchCtx({ resourceKey: 'nms' }), null);
+      expect(pathsOf(fx.lookupCalls)).toEqual(['/v2/queries/device-health', '/v2/alerts']);
+      // The node class picks the device's "Open in NinjaOne" page.
+      expect(page.records[0]).toMatchObject({ externalId: '5', sourceKind: 'NMS_SWITCH' });
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('loads no report when the page has no devices', async () => {
+    const fx = installFetchScript([TOKEN, { kind: 'json', body: [] }]);
+    try {
+      const page = await new NinjaOneDriver().fetchRecords(fetchCtx(), null);
+      expect(page.records).toEqual([]);
+      expect(fx.lookupCalls).toEqual([]);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('follows the report cursor until an empty page', async () => {
+    const fx = installFetchScript([TOKEN, devices(1)], {
+      '/v2/queries/os-patches': [
+        results([{ deviceId: 1, name: 'First', status: 'PENDING' }], 'cur-1'),
+        results([{ deviceId: 1, name: 'Second', status: 'PENDING' }], 'cur-1'),
+        results([], 'cur-1'),
+      ],
+    });
+    try {
+      const page = await new NinjaOneDriver().fetchRecords(fetchCtx(), null);
+      const patchCalls = fx.lookupCalls.filter((c) => c.url.includes('/os-patches'));
+      expect(patchCalls.map((c) => new URL(c.url).searchParams.get('cursor'))).toEqual([null, 'cur-1', 'cur-1']);
+      expect(rows(page.records[0]!.section, 'patches')).toContainEqual(
+        expect.objectContaining({ label: 'Pending OS patches', value: ['First', 'Second'] }),
+      );
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('never shows report rows of a device outside this organisation page', async () => {
+    const fx = installFetchScript([TOKEN, devices(1)], {
+      // As if NinjaOne ignored df=org=7: another tenant's device is in the report.
+      '/v2/queries/device-health': results([{ deviceId: 999, healthStatus: 'UNHEALTHY' }]),
+      '/v2/alerts': { kind: 'json', body: [{ deviceId: 999, subject: 'Other tenant secret project' }] },
+    });
+    try {
+      const page = await new NinjaOneDriver().fetchRecords(fetchCtx(), null);
+      expect(page.records.map((r) => r.externalId)).toEqual(['1']);
+      expect(JSON.stringify(page.records)).not.toContain('Other tenant');
+      expect(JSON.stringify(page.records)).not.toContain('Unhealthy');
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('turns a refused or failed report into a note and still syncs the device', async () => {
+    const fx = installFetchScript([TOKEN, devices(1), TOKEN, TOKEN], {
+      '/v2/queries/device-health': status(403),
+      '/v2/alerts': status(404),
+      '/v2/queries/antivirus-status': status(500),
+    });
+    try {
+      const page = await new NinjaOneDriver().fetchRecords(fetchCtx(), null);
+      expect(page.records).toHaveLength(1);
+      const section = page.records[0]!.section;
+      expect(rows(section, 'status')).toContainEqual(expect.objectContaining({
+        label: 'Health',
+        value: 'Not available: your NinjaOne API client or plan does not include this data.',
+      }));
+      expect(rows(section, 'alerts')).toContainEqual(expect.objectContaining({
+        label: 'Alerts',
+        value: 'Not available: your NinjaOne API client or plan does not include this data.',
+      }));
+      expect(rows(section, 'security')).toContainEqual(expect.objectContaining({
+        label: 'Antivirus',
+        value: 'Not available: NinjaOne did not return this data. It is retried on the next sync.',
+      }));
+      expect(JSON.stringify(section)).not.toContain('provider text');
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('lets a rate limit on a report stop the page so the runner retries it', async () => {
+    const limited = { kind: 'text' as const, status: 429, body: '', headers: { 'Retry-After': '0' } };
+    const fx = installFetchScript([TOKEN, devices(1)], {
+      '/v2/queries/device-health': [limited, limited, limited, limited],
+    });
+    try {
+      await expect(new NinjaOneDriver().fetchRecords(fetchCtx(), null)).rejects.toBeInstanceOf(DriverRateLimitError);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('spaces its requests at the NinjaOne pace', async () => {
+    __setNinjaOneRequestIntervalForTests(40);
+    const fx = installFetchScript([TOKEN, { kind: 'json', body: [{ id: 5, organizationId: 7, deviceType: 'NMSTarget' }] }]);
+    try {
+      const started = Date.now();
+      await new NinjaOneDriver().fetchRecords(fetchCtx({ resourceKey: 'nms' }), null);
+      const elapsed = Date.now() - started;
+      // Token, devices, health, alerts: three gaps of at least 40 ms.
+      expect(fx.calls.length + fx.lookupCalls.length).toBe(4);
+      expect(elapsed).toBeGreaterThanOrEqual(3 * 40 - 5);
+    } finally {
+      fx.restore();
+    }
+    expect(NINJAONE_MIN_REQUEST_INTERVAL_MS).toBeGreaterThanOrEqual(200);
   });
 });
