@@ -2,11 +2,12 @@ import { Logger } from '@nestjs/common';
 import { z } from 'zod';
 import type {
   DriverDescriptor,
+  IntegrationSetupCheck,
   SourceFieldDto,
   SourceOrgDto,
 } from '@rivetdocs/shared';
 import {
-  DriverAuthError,
+  type DriverDiagnoseInput,
   type LegacyDriverFetchPage,
   type LegacyDriverRecord,
   type FetchRecordsContext,
@@ -15,10 +16,20 @@ import {
 } from '../integration-driver.js';
 import {
   fetchWithRetry,
+  httpsBaseUrlSchema,
   humanizeKey,
   inferHintType,
   sortByLabel,
+  type RequestPace,
 } from '../driver-utils.js';
+import {
+  Action1AuthError,
+  Action1RequestError,
+  diagnoseAction1,
+} from './action1.diagnose.js';
+import { ACTION1_SETUP_GUIDE } from './action1.setup-guide.js';
+import { buildEndpointSection } from './action1.sections.js';
+import { evictRun, runCached } from '../run-cache.js';
 
 /**
  * Phase 11 — Action1 RMM driver.
@@ -49,7 +60,7 @@ const ACTION1_DEFAULT_BASE_URL = 'https://app.action1.com/api/3.0';
 const ACTION1_OAUTH_PATH = '/oauth2/token';
 
 const action1ConfigSchema = z.object({
-  baseUrl: z.string().url().default(ACTION1_DEFAULT_BASE_URL),
+  baseUrl: httpsBaseUrlSchema.default(ACTION1_DEFAULT_BASE_URL),
 });
 
 const action1SecretSchema = z.object({
@@ -60,6 +71,34 @@ const action1SecretSchema = z.object({
 const action1FilterSchema = z.object({
   groups: z.array(z.string()).optional(),
 });
+
+/**
+ * Minimum spacing between Action1 requests per API client: 24 per minute.
+ * Action1 recommends fewer than 30 requests per minute per enterprise,
+ * counting every API call (https://www.action1.com/api-documentation/how-action1-api-works/),
+ * so this leaves room for the MSP's own scripts. A Client ID belongs to one
+ * enterprise; two integrations on one enterprise each get this pace. A 429
+ * still backs off on its Retry-After.
+ */
+export const ACTION1_MIN_REQUEST_INTERVAL_MS = 2_500;
+let requestIntervalMs = ACTION1_MIN_REQUEST_INTERVAL_MS;
+
+/** @internal only `*.spec.ts` should call this (0 = no spacing). */
+export function __setAction1RequestIntervalForTests(ms: number = ACTION1_MIN_REQUEST_INTERVAL_MS): void {
+  requestIntervalMs = ms;
+}
+
+/** Requests of one API client (instance + Client ID) share one pace, whichever integration sends them. */
+function action1Pace(ctx: IntegrationContext): RequestPace {
+  const parsed = action1SecretSchema.safeParse(ctx.secret ?? {});
+  const client = parsed.success ? parsed.data.apiKey : (ctx.integrationId ?? '');
+  return { key: `action1:${apiBase(ctx)}::${client}`, minIntervalMs: requestIntervalMs };
+}
+
+/** The configured API base, normalised (lower-case host, no trailing slash). */
+function apiBase(ctx: IntegrationContext): string {
+  return new URL(parseConfig(ctx.config).baseUrl).href.replace(/\/$/, '');
+}
 
 /**
  * Every Action1 collection endpoint returns a `ResultPage` envelope:
@@ -124,7 +163,8 @@ export class Action1Driver implements IntegrationDriver {
         label: 'API Base URL',
         kind: 'url',
         required: false,
-        description: 'Override only if Action1 has provisioned a custom region.',
+        description:
+          'The API base URL for the region of your Action1 account. Leave the default for North America; the setup guide lists the other regions.',
         default: ACTION1_DEFAULT_BASE_URL,
       },
     ],
@@ -135,7 +175,7 @@ export class Action1Driver implements IntegrationDriver {
         kind: 'text',
         required: true,
         description:
-          'Action1 OAuth2 Client ID. Generate it under Settings → API & Integrations.',
+          'Action1 OAuth2 Client ID. Create it under Configuration → Users & API Credentials.',
       },
       {
         key: 'apiSecret',
@@ -146,6 +186,9 @@ export class Action1Driver implements IntegrationDriver {
           'Action1 OAuth2 Client Secret. Stored AES-256-GCM encrypted; never returned to the UI.',
       },
     ],
+    setupGuide: ACTION1_SETUP_GUIDE,
+    // The key goes to baseUrl: moving it to a new host needs the key again.
+    secretBoundConfigKeys: ['baseUrl'],
     resources: [
       {
         key: 'records',
@@ -166,6 +209,22 @@ export class Action1Driver implements IntegrationDriver {
       reconstructionCompleteness: false,
     },
   };
+
+  diagnose(input: DriverDiagnoseInput): Promise<IntegrationSetupCheck> {
+    if (input.mode !== 'connection') {
+      return Promise.resolve({
+        ok: false,
+        passedStepIds: [],
+        failures: [{ stepId: null, message: 'Action1 has no OAuth app to check.' }],
+      });
+    }
+    const { ctx } = input;
+    return diagnoseAction1({
+      secretSaved: action1SecretSchema.safeParse(ctx.secret ?? {}).success,
+      baseUrlValid: action1ConfigSchema.safeParse(ctx.config ?? {}).success,
+      probe: async () => (await this.fetchAllOrgs(ctx)).length,
+    });
+  }
 
   async testConnection(
     ctx: IntegrationContext,
@@ -348,7 +407,6 @@ export class Action1Driver implements IntegrationDriver {
     cursor: string | null,
   ): Promise<LegacyDriverFetchPage> {
     const { baseUrl } = parseConfig(ctx.config);
-    const token = await this.getAccessToken(ctx);
     const filter = action1FilterSchema.parse(ctx.filter ?? {});
 
     const limit = 200;
@@ -357,6 +415,18 @@ export class Action1Driver implements IntegrationDriver {
       throw new Error(`Invalid Action1 fetch cursor: ${cursor}`);
     }
 
+    // Stable across the pages of one traversal, so they share one token.
+    const snapshotAt = ctx.snapshotAt ?? new Date().toISOString();
+    // Action1 tokens live an hour (`expires_in` 3600) and a run-cache entry
+    // at most 15 minutes, so a cached token never expires mid-use. It stays
+    // in process memory only, and a failed exchange is not cached. The name
+    // carries the credential version and the API base, so a resumed run
+    // after new credentials or a new host never reuses (or sends) the old
+    // token; without a credential version nothing is cached.
+    const token = ctx.credentialVersion
+      ? await runCached(ctx, snapshotAt, `token:${ctx.credentialVersion}:${apiBase(ctx)}`, () => this.getAccessToken(ctx))
+      : await this.getAccessToken(ctx);
+
     const url = new URL(
       `${baseUrl}/endpoints/managed/${encodeURIComponent(ctx.externalOrgId)}`,
     );
@@ -364,10 +434,17 @@ export class Action1Driver implements IntegrationDriver {
     url.searchParams.set('from', String(from));
     url.searchParams.set('limit', String(limit));
 
-    const body = await this.callJson<Action1ResultPage<Action1Endpoint>>(
-      url.toString(),
-      { token, ctx },
-    );
+    let body: Action1ResultPage<Action1Endpoint>;
+    try {
+      body = await this.callJson<Action1ResultPage<Action1Endpoint>>(
+        url.toString(),
+        { token, ctx },
+      );
+    } catch (e) {
+      // A rejected token must not be reused when the runner retries the page.
+      if (e instanceof Action1AuthError) evictRun(ctx, snapshotAt);
+      throw e;
+    }
 
     const raw = Array.isArray(body?.items) ? body.items : [];
 
@@ -385,6 +462,7 @@ export class Action1Driver implements IntegrationDriver {
         // Action1 schema, so it always fell through to `name` anyway.
         displayName: e.name ? String(e.name) : null,
         fields,
+        section: buildEndpointSection(fields),
         updatedAt: typeof fields.last_seen === 'string' ? fields.last_seen : null,
       };
     });
@@ -393,10 +471,12 @@ export class Action1Driver implements IntegrationDriver {
     const total = parseIntOrNull(body?.total_items) ?? fetchedSoFar;
     const hasMore = raw.length >= limit && fetchedSoFar < total;
 
+    if (!hasMore) evictRun(ctx, snapshotAt);
     return {
       records,
       hasMore,
       cursor: hasMore ? String(fetchedSoFar) : null,
+      snapshotAt,
     };
   }
 
@@ -434,21 +514,30 @@ export class Action1Driver implements IntegrationDriver {
       backoffMs: ctx.http.backoffMs,
       correlationId: ctx.correlationId,
       serviceName: 'Action1',
+      pace: action1Pace(ctx),
     });
 
     if (res.status === 401 || res.status === 403) {
-      throw new DriverAuthError(
+      throw new Action1AuthError(
         `Action1 token exchange failed (${res.status}). Check the Client ID and Client Secret.`,
+        'token',
+        res.status,
       );
     }
     if (!res.ok) {
-      throw new Error(`Action1 token exchange returned HTTP ${res.status}`);
+      throw new Action1RequestError(
+        `Action1 token exchange returned HTTP ${res.status}`,
+        'token',
+        res.status,
+      );
     }
 
     const json = (await res.json()) as { access_token?: string };
     if (!json.access_token) {
-      throw new DriverAuthError(
+      throw new Action1AuthError(
         'Action1 token exchange did not return access_token.',
+        'token',
+        res.status,
       );
     }
     return json.access_token;
@@ -469,15 +558,22 @@ export class Action1Driver implements IntegrationDriver {
       backoffMs: opts.ctx.http.backoffMs,
       correlationId: opts.ctx.correlationId,
       serviceName: 'Action1',
+      pace: action1Pace(opts.ctx),
     });
 
     if (res.status === 401 || res.status === 403) {
-      throw new DriverAuthError(
+      throw new Action1AuthError(
         `Action1 GET ${url} returned ${res.status}. Token rejected.`,
+        'api',
+        res.status,
       );
     }
     if (!res.ok) {
-      throw new Error(`Action1 GET ${url} returned HTTP ${res.status}`);
+      throw new Action1RequestError(
+        `Action1 GET ${url} returned HTTP ${res.status}`,
+        'api',
+        res.status,
+      );
     }
     return (await res.json()) as T;
   }
@@ -571,6 +667,7 @@ const ACTION1_KNOWN_FIELDS: SourceFieldDto[] = [
   { key: 'agent_version', label: 'Agent version', hintType: 'TEXT', alwaysPresent: false },
   { key: 'status', label: 'Status', hintType: 'TEXT', alwaysPresent: false },
   { key: 'user', label: 'Logged-in user', hintType: 'TEXT', alwaysPresent: false },
-  { key: 'reboot_required', label: 'Reboot required', hintType: 'BOOLEAN', alwaysPresent: false },
+  // Action1 sends "Yes" / "No", not a boolean.
+  { key: 'reboot_required', label: 'Reboot required', hintType: 'TEXT', alwaysPresent: false },
   { key: 'group', label: 'Endpoint group', hintType: 'TEXT', alwaysPresent: false },
 ];

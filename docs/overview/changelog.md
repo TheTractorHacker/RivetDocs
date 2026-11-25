@@ -13,6 +13,292 @@ All notable changes to RivetDocs are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
+## [1.13.2] - 2026-11-16
+
+### Added
+
+- **Save articles without publishing.** Open the arrow next to **Publish** and select **Save draft** to save a new or existing article and stay in the editor. New articles saved this way show **not published** on the article and **draft** in the article list. They stay hidden from client users until **Publish** applies the chosen **Visible to clients** setting. A draft on an already published article still shares its text with other users, including clients when the article is visible to them.
+- **Discard a saved article draft.** On a published article, **Discard draft** in the same menu removes the draft and restores the published version. To remove an article that has never been published, archive it instead; its draft is kept if you restore it later.
+
+### Changed
+
+- **Sidebar item counts are on by default for new users.** New accounts see the counts next to sidebar entries. Existing accounts keep their current setting. To change it, go to **Your profile → Appearance**.
+
+### Fixed
+
+- **Cancel keeps saved article drafts.** **Cancel** only discards unsaved changes; a draft saved manually or by autosave stays available. Saves run in order, edits made during a save keep their **unsaved** marker, and the editor prevents further edits while a save that leaves the page completes.
+- **Backup schedule actions fit on laptop screens.** Removed the **Timezone** and **Notify** columns so **Run now**, **Edit**, and **Delete** stay in view. The timezone remains in the cron tooltip and mobile card, and notification recipients remain in the **Edit** dialog.
+- **Backup schedule validation errors are visible.** A name is required before saving or opening the MFA prompt. Validation errors appear under the affected field, other errors appear at the top of the dialog, and a failed save scrolls the first error into view instead of appearing to hang.
+- **Claude Code and other local MCP apps can sign in with a changing callback port.** With **Any MCP app**, apps described by a client metadata document can now use any port on an allowed HTTP loopback callback, fixing `invalid_redirect_uri` during sign-in. The callback host and path must still match; **Claude and ChatGPT only** continues to refuse loopback callbacks.
+
+### Upgrade notes
+
+- Migration `0095_user_show_item_counts_default_on` applies automatically and changes the sidebar item count default for new accounts only. Existing preferences are preserved.
+
+## [1.13.1] - 2026-11-07
+
+### Added
+
+- **Breeze: the Breeze version on each sync run.** Each run saves the Breeze release (from `GET /health`) and the partner API schema version. Open a run on the **Runs** tab to see them. A run whose Breeze release differs from the previous run shows a **new version** tag and names both versions. **Test connection** names both versions too. A failed version read never fails or slows the sync. See [Breeze: Breeze version on each run](/integrations/breeze/#breeze-version-on-each-run).
+- **Breeze: weekly early warning for new Breeze releases.** A scheduled check compares the newest Breeze release with the partner API fields, endpoints, and schema version RivetDocs reads, and fails with a list of the changes. It reads the Breeze source as text and needs no secrets. See [Breeze: Early warning for new Breeze releases](/integrations/breeze/#early-warning-for-new-breeze-releases).
+
+### Changed
+
+- **Integrations archive a record only after two missed full syncs.** A record a full sync does not see is noted, not archived. It is archived when a full sync at least 12 hours later also misses it. The Runs tab shows records that were missed but not archived as **not seen**. Nothing is archived on the first full sync after the upgrade.
+- **Sync holds instead of mass archiving.** When a full sync would archive at least 3 records and at least 10% of a resource for one company, nothing is archived and the integration page shows a hold. When Breeze stops sending a field that was always present, the affected pages write nothing and the page shows a field hold, so a renamed field never blanks synced data. Select **Accept changes from Breeze RMM** next to **Run sync now** to accept an expected change. See [Breeze: Sync holds](/integrations/breeze/#sync-holds).
+- **Breeze: a new partner API schema version pauses the sync.** RivetDocs does not read a response with a schema version it does not know. The run shows **paused**, nothing is written or archived, and the integration page shows an **Unknown source version** hold. Select **Accept changes from Breeze RMM** to continue with the new version, or wait for a RivetDocs release that knows it. Before, the run failed.
+- **Breeze: one bad record no longer stops the run.** Two records with one identity but different content, records that give one subnet different facts or gateways, a gateway that is not valid, and a "blocked" notice RivetDocs cannot read now skip only the records concerned, with a gap that names the reason. Last-known-good data is kept and nothing is archived. A run stops only for a cursor that repeats or for data from a Breeze organization other than the one requested.
+- **Mass-removal holds show as warnings.** A run whose full sync held a mass removal now shows **warnings** and the number of records **held for review** on the Runs tab, instead of a plain **succeeded**.
+- **Breeze: backup articles no longer show an empty "Restore capabilities" section.** Breeze stopped sending restore capabilities on backup configurations (at least since Breeze v0.111.1), so the section was always empty. Each backup article is updated once on the next sync.
+- **Breeze: a dependency sets the order only.** A resource now runs even when a resource it depends on failed. Each record whose parent is not synced becomes a missing-dependency gap for that record.
+- **Breeze: RivetDocs withholds a value, not a record.** When a value looks like a credential, RivetDocs replaces it with `[withheld]` and syncs the rest of the record. In a script, only the matched part is replaced. The run shows **warnings** with the record, the count, and the field paths, never the value. Records that were withheld before now sync on the next run, in place, with no duplicate. See [Breeze: values withheld in place](/integrations/breeze/#missing-dependency-or-blocked-definition).
+
+### Fixed
+
+- **Breeze: passwords passed as command-line flags in scripts are withheld.** A script line such as `--password=value`, `--password value`, `-Password:value`, or `/password:value` now shows `[withheld]` in place of the password (also when the value starts with a dash, as in `--password=-value`, and for a number assigned with spaces, as in `$Password = 123456`). A quoted password that contains an escaped quote, such as `'a''b'` or `"a\"b"`, is now withheld in full. When languages read a backslash before a quote differently, as in PowerShell `$Password = 'a\'; $Token = 'b'`, both values are withheld, and the run shows a warning.
+- **Breeze: an accepted schema version stays accepted for incremental syncs.** After **Accept changes from Breeze RMM**, the next incremental sync no longer pauses again on the same version.
+- **Breeze: a disabled resource no longer skips Device relationships.** Device relationships depends only on sites, devices, virtual machines, and network equipment, not on every other Breeze resource. ([#111](https://github.com/TheTractorHacker/RivetDocs/issues/111))
+- **Breeze: one withheld or unreadable record no longer fails the run.** The resource finishes, its dependents run, and the Runs tab shows **warnings** with the records that were not written. Last-known-good data is kept and nothing is marked stale, as before.
+- **Breeze: plain names and script text are no longer read as credentials.** RivetDocs no longer withholds a value because it contains a word such as "password", or because a name reads like a passphrase. It withholds only credential-named fields with a value, credential assignments, and values with a known credential shape. An empty credential field (for example an empty S3 destination form) shows as empty. ([#112](https://github.com/TheTractorHacker/RivetDocs/issues/112))
+
+### Security
+
+- **Breeze credential values are withheld in place.** Breeze removes credential fields before it exports a record. RivetDocs also replaces a value that looks like a credential with `[withheld]` before it writes the record. Before, RivetDocs withheld the full record. Withheld values are never stored, logged, or shown in run warnings.
+- **Accepting source changes needs `integration.manage`.** **Accept changes from Breeze RMM** archives held removals and accepts a new schema version or a missing field. It runs as a full sync, cannot be a dry run, and is audited as `integration.sync.accept_source_changes`.
+- **The Breeze version read sends no credentials.** Each sync run reads `GET /health` on the configured Breeze URL without the API key, through the same outbound request checks as other integration calls.
+
+### Upgrade notes
+
+- Update the **API, web, and worker together**. Migrations `0092_integration_sync_holds`, `0093_integration_source_version_hold`, and `0094_integration_sync_run_source_version` apply automatically. They only add columns. No new environment variables are required.
+- Nothing is archived on the first full sync after the upgrade. Records a full sync does not see are archived only when a second full sync, at least 12 hours later, also misses them.
+- Breeze records that were withheld as secrets sync on the next run, with only the matched values withheld, and do not create duplicates. Breeze backup articles change once, because the empty **Restore capabilities** section is removed.
+
+## [1.13.0] - 2026-11-05
+
+### Added
+
+- **Custom API integration.** Read records from a JSON-over-HTTPS API that has no built-in integration. In **Admin → Integrations → New integration**, pick **Custom API** and describe the API in a form: authentication (none, bearer token, header, basic, or OAuth client credentials), extra headers, where the organizations are, where the records are, how pages work, and which path in each record holds each field. The driver is read-only and pull only. See [Custom API Integration](/integrations/custom-api/).
+- **One Items resource for any kind of record.** Items can be devices, users, licenses, or anything else. On **Items fields**, pick the **Target asset layout**, map each field to a layout field, and set the match keys. On the first sync, an item links to an asset you already have when the match value is equal. One integration fills one layout; add a second Custom API integration for a second kind of record.
+- **Test each part of a definition.** Each section has a **Test** button that reads the first page and shows the parsed records, the value each path found, and the keys of the first record. Click a key to fill the path input you selected last. Each test is audited as `integration.custom_api.test`, without values, headers, or secrets.
+- **Import and export definitions.** **Import definition** and **Export definition** move a definition between instances as JSON. The file never holds a secret. The browser checks an imported file and lists each problem with its path before anything is saved.
+- **Open records in the source app.** An optional link template gives each synced record an **Open in** link.
+
+### Changed
+
+- **Integrations that need no credentials show it.** The integration list shows **not needed** in the Credentials column, and the Organizations tab allows mappings, when the definition uses no authentication.
+
+### Security
+
+- **Saved credentials do not follow a host change.** Changing the base URL (or the Custom API token URL) to a different host for Action1, Breeze, NinjaOne, UniFi, or Custom API requires the credentials again in the same save. RivetDocs refuses to send saved credentials to a new host.
+- **Custom API requests stay on the configured host.** Every request path is joined to the HTTPS base URL and cannot leave its host or path prefix. Redirects are refused, the timeout covers the whole response body, and response size is limited.
+- **Credentials stay write-only.** Custom API credentials are stored encrypted and are never shown again, logged, or exported. Test results hide values under keys that name a credential.
+- **Each Custom API integration has its own asset identity.** Records from 2 Custom API integrations with the same record ID never share an asset.
+
+### Upgrade notes
+
+- Update the **API, web, and worker together**. No migrations and no new environment variables are required.
+
+## [1.12.0] - 2026-11-04
+
+### Added
+
+- **Import Markdown files as articles.** The company Articles page has an **Import** action for `.md` and `.markdown` files. Review titles, destination folder, and client visibility before importing up to 100 files. Titles come from headings, front matter, or filenames; conflicts receive numbered suffixes without overwriting existing articles. Progress and per-file results identify failures and uncertain outcomes. See [Importing Markdown Files](/guides/writing-articles/#importing-markdown-files).
+- **Export a layout's assets to CSV.** **Export → Visible columns (CSV)** or **All fields (CSV)** downloads the current search, archive, and tag-filtered list, up to 5,000 rows. Read-only staff can export. Files, tags, references, and rich text become readable cell values; Vaultwarden links are excluded, spreadsheet formulas are escaped, and each export is audited. See [CSV Export](/features/assets/#csv-export).
+- **Global password access policy.** Under **Settings → Passwords → Password access**, choose **All internal users** (the default) or **Selected users only** for credentials without their own access list. **Manage users** opens a searchable selection dialog; **Apply** returns to settings and **Save password access** saves with step-up authentication. Super admins retain access, client users follow **Visible to clients**, and selecting a user never grants company access.
+- **Password access per company member.** Set **Use global policy**, **Allow**, or **Deny** on the company Members page or a user's Companies list. An active override applies to credentials without their own access list in that company and ends when the membership expires or is revoked. Changing an override or its lifecycle requires step-up authentication. A credential with its own list uses that list first. See [Password Access Restrictions](/features/passwords/#access-restrictions).
+
+### Changed
+
+- **Asset search includes field values.** Company and layout lists, including portal lists, match names and indexed field text such as serial numbers, IP addresses, choice labels, numbers, dates, file names, and tag names. Press **Enter** to stack removable search pills; every term must match, and words may match different fields. Searches accept up to 10 terms, each with up to 8 words and 200 characters. The mobile asset-reference picker and MCP `list_assets` use the expanded matching too.
+- **Consistent radio and checkbox controls.** Settings and account preferences share option cards with visible native indicators, accent borders, and soft accent fills for selected choices. Inline checkboxes also use the shared control.
+
+### Fixed
+
+- **Asset field filters match what users enter.** Text filters trim whitespace and ignore case, dropdowns accept labels or slugs, and a shared field slug matches across layouts when no layout is selected. Invalid filters and over-limit searches show a removable-filter banner instead of silently appearing as an empty result.
+- **Asset search text stays current.** Choice-label changes and tag renames or deletions rebuild affected index rows. Numbers, dates, file names, and tag names are indexed, with automatic background refresh for existing assets. Rebuilds take an asset row lock so a concurrent older rebuild cannot overwrite corrected client-visible text.
+- **Company-scoped reads work for membership-only operators.** Search-hit enrichment, starring records, asset indexing, company-logo validation, and alert entity-name lookups now supply explicit company scope where required.
+- **Markdown editor dependency copies are aligned.** CodeMirror and Lezer core packages are pinned to one version each, preventing extension-identity errors and missing highlighting from duplicate copies.
+- **Membership edits preserve expiry times.** Edit dialogs use local date-time input values and submit only changed fields, avoiding UTC shifts, validation failures on unchanged expired dates, and unnecessary step-up challenges on role-only edits.
+
+### Security
+
+- **Password access is enforced across read paths.** Global policy and membership overrides apply to lists, details, reveals, attachment access and search, stars, related items, PDF exports, and API keys or MCP acting as the user. Creating a credential without its own list is refused when the creator could not read it.
+- **PDF exports belong to their requester.** Only the requester or a super admin may read a job's status or download its file. The worker checks current password policy and membership overrides before gathering credentials, their attachments, and related-item links; missing or inactive requesters receive no password entries.
+- **Membership override changes cannot race past step-up.** Updates and revocations check the locked membership row before writing. Reactivation succeeds only while the row is still revoked, and concurrent membership creation returns a conflict instead of overwriting another request's access settings.
+
+### Upgrade notes
+
+- Update the **API, web, and worker together**. Migrations `0089_asset_search_reindex`, `0090_password_access_policy`, and `0091_membership_password_access` apply automatically. Existing password access is preserved: the global policy starts at **All internal users** and memberships at **Use global policy**. No new environment variables are required.
+- Existing asset search text refreshes in the background. The API runs an early pass; the updated worker logs **Asset search text refreshed (final pass)** when finished. Newly indexed values on old assets may not match until then. A failed refresh retries on the next service start; no manual reindex is normally needed.
+- PDF jobs queued before requester tracking omit password entries and their attachments when processed by the updated worker, and only super admins can retrieve those legacy jobs. Request a new export if needed. See [Upgrades](/deployment/upgrades/).
+
+## [1.11.1] - 2026-11-01
+
+### Changed
+
+- **Asset lists load beyond the first 200 records.** The company Assets page and layout lists in admin and the client portal now follow every API page, up to 5,000 matching assets. Tag filters, sorting, and selection work across the loaded list. If more records exist, the count shows a **+** and a warning says how many are shown.
+- **Bulk asset actions support larger selections.** Archive, restore, and permanent delete now split selections into requests of up to 500 assets. If a request fails or the connection drops, completed actions are reported and failed or unprocessed assets stay selected for retry.
+- **TypeScript path configuration is consistent across apps.** Removed redundant `baseUrl` settings and made local path aliases explicitly relative in application and test configurations.
+
+### Fixed
+
+- **Timestamps follow the viewer's configured timezone.** User last login, company creation, article activity, asset activity, integration sync dates, and the portal access-expiry message now use the effective timezone instead of the server's timezone.
+- **Asset date-time fields no longer shift between server and browser.** Values saved without a timezone display exactly as entered; values with `Z` or an explicit offset display in the viewer's timezone. Layout columns sort by the displayed time, and date-only fields keep their calendar day.
+- **Asset expiry calculations no longer depend on the server's timezone.** **Expiring soon**, expiry email alerts, and dismissal checks now interpret date-time values without a timezone as UTC. Date-only values remain midnight UTC, and values with an explicit timezone keep their stated instant. Existing dismissals on UTC deployments remain valid.
+
+## [1.11.0] - 2026-10-28
+
+### Added
+
+- **Choose your AI provider.** **Admin → Settings → AI** now has a **Provider** choice: **OpenAI**, **Anthropic**, or **OpenAI-compatible** (Ollama, LM Studio, vLLM, OpenRouter and similar). OpenAI and Anthropic use their standard endpoints automatically; a custom endpoint for a proxy or gateway is under **Advanced**. Migration `0088_ai_provider_settings` sets the provider for existing installs from the saved URL: `api.openai.com` becomes OpenAI, `api.anthropic.com` becomes Anthropic, and every other URL stays OpenAI-compatible with no change in behavior.
+- **Native Anthropic support.** With the Anthropic provider, "Ask anything" uses Anthropic's Messages API: the system prompt is cached, strict tool schemas are used where the model supports them, and a model keeps its reasoning between tool calls in the same reply. An optional **Anthropic workspace ID** is available for keys that are not limited to one workspace.
+- **Background model and reasoning effort.** A **Background model** handles chat titles, proposal introductions, and article summaries, so a small, fast model can do that work. **Reasoning effort** (under **Advanced**) defaults to **Provider default**; other settings map to the nearest value each model supports.
+- **Reply check on Test connection.** **Test connection** now also sends one short prompt to the selected model and shows whether it replied, with the reason when it did not (for example a timeout or a reply cut off by the output limit).
+
+### Changed
+
+- **Redesigned AI settings page.** Provider cards, grouped Connection, Models, and Features sections, sliders for the token limits with a **Use default** action, and a fixed Save and Reset bar. The form shows when the server caps the reply budget and blocks an output limit at or above the context window.
+- **Higher default reply budget for "Ask anything".** When **Max output tokens** is blank, RivetDocs now requests up to 16,384 output tokens (was 8,192), which leaves reasoning models room to think. With the default 32,768-token context window, the prompt budget falls from 24,576 to 16,384 tokens. Custom values are unchanged. If your model accepts fewer than 16,384 output tokens (for example older GPT-4 Turbo or Claude 3.x models, or some local servers), set **Max output tokens** under **Admin → Settings → AI → Advanced**.
+- **Clearer errors for cut-off or refused replies.** Chat, titles, and summaries now report a reply that hit the output limit or that the model refused as an error, and chat shows a clear message for each case.
+
+### Security
+
+- **Saved AI API key stays with its endpoint.** Saving a different endpoint URL now requires a new API key or removal of the saved key, so the saved key is never sent to a new host. Connection tests already followed this rule.
+
+## [1.10.5] - 2026-10-26
+
+### Added
+
+- **Open in Action1 or NinjaOne from the asset page.** Synced Action1 endpoints and NinjaOne devices now have an **Open in** button in their integration section. Action1 links use the integration's configured region. NinjaOne links open the matching dashboard for agent devices, network devices, virtual machines, and cloud monitors. Existing non-agent NinjaOne devices need one sync to store their device kind before the link appears; agent devices and Action1 endpoints need no resync.
+
+### Fixed
+
+- **Worker development mode on Node 26.** Updated `thread-stream` so the worker no longer crashes at startup under `node --watch` on Node 26.12.1 or later.
+
+### Security
+
+- **Updated application and transitive dependencies.** Updated Next.js, Nodemailer, Undici, DOMPurify, `body-parser`, `multer`, `happy-dom`, `ip-address`, and `fast-uri` to address published advisories. Dependabot now keeps Node type definitions on the runtime's major version.
+- **Pinned the Node runtime.** API, web, and worker images use Node 24.22.1 Alpine by version and digest, and CI uses the same Node patch release.
+
+## [1.10.4] - 2026-10-22
+
+### Fixed
+
+- **MCP apps behind Cloudflare could not sign in.** With **Any MCP app**, signing in from an app whose client metadata document is behind Cloudflare or a similar firewall failed with `invalid_client` and `client_id metadata document fetch failed`. RivetDocs sent the request with an empty User-Agent, and the firewall answered with a challenge page. It now sends `rivetdocs-oauth/1.0 (+https://github.com/TheTractorHacker/RivetDocs)` when it fetches a client's metadata document or signing keys. Nothing else about which apps can connect has changed.
+
+## [1.10.3] - 2026-10-22
+
+### Added
+
+- **Connect any MCP app.** A new choice under **Admin → Settings → API & MCP → Which AI apps can connect**: **Claude and ChatGPT only** (the default, unchanged) or **Any MCP app**. With **Any MCP app**, Claude Code, Gemini CLI, Cursor, self-hosted assistants and other apps connect with only the `/mcp` address: each user signs in with MFA and approves the connection, as before. Apps that register themselves are marked **Not verified** on the consent page and in the connection lists. Changing the choice needs MFA step-up and is audited; changing back refuses other apps' connections without deleting them. See [MCP Server](/integrations/mcp/#which-ai-apps-can-connect).
+- **Open in Level from the asset page.** The Level RMM section on a device now has an **Open in Level** button next to its title that opens the device in Level's web app in a new tab. The link is built from the synced device id when the page loads, so nothing new is stored and no resync is needed.
+
+## [1.10.2] - 2026-10-14
+
+### Changed
+
+- **Smaller MCP tool results.** Every tool now returns compact JSON, and `list_layouts` returns each layout's id, name, slug, status and field count instead of every field definition (about 2 KB instead of about 100 KB on a stock install). Use `get_layout` for a layout's fields. `list_layouts` also accepts an optional `q` filter.
+- **Field formats in the MCP tool descriptions.** `create_asset` and `update_asset` now tell the AI app the value format for each field type, for example E.164 for phone numbers and plain text for rich-text fields.
+
+### Fixed
+
+- **Worker fails to start after upgrading to 1.10.1.** The `worker` container restarted in a loop with `Nest can't resolve dependencies of the PermissionService`. It now starts normally. If you kept the 1.10.0 worker as a workaround, upgrade it with the other containers.
+- **Search in Markdown articles.** Words with underscores (`my_script.ps1`, `update_article`) lost their underscores in search text and excerpts, and code blocks were left out of search. Both are now indexed as written, as they already were for rich-text articles. **After you upgrade, existing Markdown articles are refreshed automatically** in the background: the `api` container runs a first pass when it starts, and the `worker` container runs the final pass when it starts (its log shows `Markdown article search text refreshed (final pass)`). Nothing to run by hand.
+- **Discarding a draft or archiving an article** no longer restores the search text the published version had when it was saved; it is derived again from that version's body.
+- **Duplicate dropdown option slugs.** A dropdown or multiselect field could end up with two options sharing one slug, which made a stored value show the wrong label. The layout editor now gives a new option a free slug and marks a duplicate in red, and saving a layout with one is refused. If an existing field has duplicates, change the slug of the newer option before you next save that layout, then re-select the value on affected assets.
+- **Remote MCP behind a firewall.** [TLS & Reverse Proxy](/deployment/tls/#bot-protection-challenges-and-waf-rules) now explains how bot protection, challenges and WAF rules block ChatGPT and Claude, and which paths to exempt.
+
+## [1.10.1] - 2026-10-14
+
+### Added
+
+- **Connect ChatGPT and Claude.** A remote MCP endpoint at `https://<your-instance>/mcp` lets ChatGPT on the web and claude.ai use RivetDocs's MCP tools without a local process or an API key. A user adds the address in the AI app, signs in with their normal RivetDocs login and MFA, and approves the connection with a fresh MFA step-up. A connection acts only as that user, is **read-only** unless they allow changes, can never see passwords, TOTP codes or vault notes, and cannot delete anything. Its token works only on `/mcp`. Only ChatGPT and Claude can connect; no external identity provider is needed. See [MCP Server](/integrations/mcp/).
+- **Allow remote AI connections.** A new instance switch under **Admin → Settings → API & MCP**, off by default. Changing it needs MFA step-up and is audited; off refuses every connection without deleting them.
+- **AI connections lists.** **Account → AI connections** lists your connections and revokes them. **Security center → AI connections** lists every user's connections; an administrator with the user-management permission revokes any of them (MFA step-up). Approving and revoking are audited, and every change made through a connection records the connection's id (`mcpConnectionId`) next to the user.
+
+### Changed
+
+- **Settings tabs.** The **Security** tab under **Admin → Settings** is split: password generator defaults are under **Passwords**, and the API key and remote AI connection switches are under **API & MCP**. Old links to the Security tab open **API & MCP**.
+- **Revoking access revokes AI connections too.** Changing your password, signing out other sessions, an MFA reset, a re-invite, deactivation, and the `reset-password`, `reset-mfa` and `rotate-sessions` CLI commands now revoke remote AI connections along with API keys, and the warnings and confirmations say so.
+- **Local MCP server.** The local (stdio) server and the remote endpoint share one tool catalogue, and the local server now uses MCP SDK 1.32.1. Build it with `pnpm --filter @rivetdocs/mcp... build`, which also builds the shared package it now depends on.
+
+### Fixed
+
+- **401 responses to `POST` requests.** The web tier returned `500` instead of `401` when the API refused a `POST` with a body (for example after a session ended). It now passes the `401` and its `WWW-Authenticate` header through.
+- **Clean API shutdown.** The API now closes the Redis connections it gives its job queues when it stops.
+
+## [1.10.0] - 2026-10-13
+
+### Added
+
+- **Level RMM integration.** Read-only sync of Level RMM devices with a pasted Read-only API key. Each top-level Level group maps to a company; devices match existing assets by serial number. Hostname, manufacturer, model, operating system, CPU, RAM, storage, MAC address, IP address and role fill the layout's own fields; a **Level RMM** section on each asset shows status, storage per partition, network, security, available patches, active alerts and memory and disk detail. The setup guide and **Check setup** are shown on the integration. See [Level RMM](/integrations/level/).
+- **Integration sections on assets.** A driver can attach a read-only detail card to a synced asset, with grouped values, icons and usage bars that turn amber at 80% and red at 95%. Sections are replaced on every sync and never shown to client users.
+- **Map layouts and match-first.** Drivers that suggest layouts add a **Map layouts** tab to pick a layout and match field per resource. On sync, a record whose match value equals exactly one unlinked asset you created adopts it (ignoring upper and lower case) instead of creating a duplicate; several candidates are reported and nothing is linked. Adopted assets keep your name; assets the integration created follow the source name. When the picked layout has no field for the match value, **Create field** adds it to the layout on save (audited like any layout field change).
+- **Integrations fill layout fields, and your edits win.** Drivers can declare standard facts (hostname, OS, RAM, ...). **Map layouts** shows one row per fact, pre-set to a fitting layout field, **Create field** or **Don't sync**. A sync writes every mapped field the first time, then fills empty fields and follows the source while a field still holds the value the integration wrote last. A field someone changed is never overwritten: it is listed as a **difference** at the bottom of the integration section on the asset and on the integration's new **Differences** tab, with **Use <source> value** and **Keep ours** (one at a time or in bulk). Resolving needs permission to edit assets in that company and is audited.
+- **Several integrations on one asset.** Match-first also links a record to exactly one asset another integration already syncs (same email or serial number), so the same laptop from two RMMs, or the same person from two directories, is one asset with one section per integration. Two or more matches are reported and nothing is linked; an asset is never shared within one integration, and assets from integrations that do not fill layout fields are never shared. An **integration priority order** under **Admin → Settings → Integrations** (drag, or **Up** and **Down**; saving needs MFA step-up and is audited) decides whose values fill each standard field: lower integrations only fill empty fields and list a different value as a difference in their own section. See [Several integrations on one asset](/integrations/#several-integrations-on-one-asset).
+- **Unavailable resources are skipped, not failed.** When a tenant cannot provide a whole resource (for example devices it is not licensed or permitted to read), or a mapping still has a resource enabled that its driver no longer offers, that resource is skipped with a warning on the run. The run succeeds, the other resources sync, and assets already linked to it are not marked stale or archived.
+- **Google Workspace integration.** Read-only sync of customer tenants, connected by OAuth: one Google Workspace integration per install, whose **App** tab holds the OAuth client (secret encrypted and write-only, saving needs MFA step-up and is audited) and whose **Connections** tab lists one connection per customer with **Connect a client**, **Reconnect**, **Disconnect**, last sync and status. Each grant is encrypted bound to its connection, a sync only loads the connection of the mapping's own tenant, and the flow uses a single-use state bound to the signed-in user and PKCE. Syncs the tenant, users with licences and mailbox, Drive and total storage, groups, and Chrome and mobile devices. A step-by-step setup guide with copy buttons is shown in the app, and **Check setup** points to the step that needs fixing. Security alerts are not synced: Google's Alert Center API requires a service account with domain-wide delegation. See [Google Workspace](/integrations/google-workspace/).
+- **Google Workspace domains feed Domains monitoring.** A mapped tenant's verified domains and domain aliases go to the company's built-in **Domains** monitoring. A domain the company already monitors (added by hand or from Cloudflare) is matched by name and only gains a **Google Workspace** tag and card showing its role (primary domain, secondary domain, or domain alias of its parent); a new one is added with the default checks and checked right away. Archived domains are left alone, Google's default `test-google-a.com` domains and unverified domains are skipped, and a domain removed from Workspace is flagged, never deleted. Cloudflare wins on anything both provide.
+- **Domains list shows source icons.** Synced domains show the Cloudflare and Google icons (Cloudflare first) instead of words, and hostnames stay on one line.
+- **Microsoft 365 integration.** Read-only sync of customer tenants, connected by admin consent: one Microsoft 365 integration per install, whose **App** tab holds one multi-tenant Entra app (client secret encrypted and write-only, with its expiry date and a warning from 30 days before), and whose **Connections** tab lists one connection per customer, each approved by a Global Administrator or Privileged Role Administrator. RivetDocs verifies the tenant through the token and Microsoft Graph, stores no user or refresh token, and mints app-only tokens per tenant. Syncs users (licences, mailbox and OneDrive storage, last sign-in and MFA with Entra ID P1, admin roles, shared mailbox, on-premises sync, wasted licence), mail-enabled groups, Intune computers and mobile devices (skipped with a warning when Intune is not licensed or not permitted), and the tenant (licences purchased vs assigned, subscriptions, Secure Score, MFA coverage, admins, storage, recent security alerts); verified domains feed Domains monitoring with a Microsoft icon and a **Microsoft 365** card. Check setup maps Entra AADSTS errors to fixed steps and lists permissions a tenant has not granted. The only write is optional and explicit: per connection, an admin can turn the tenant's "Conceal user, group, and site names in all reports" setting off (and back on) so storage can be matched to people; every choice is audited. See [Microsoft 365](/integrations/microsoft-365/).
+
+- **Setup guides and connection checks for Action1, NinjaOne, and UniFi.** Each integration now includes provider-specific credential instructions and **Check setup**, with fixed messages identifying missing credentials, a wrong API base URL, refused access, rate limits, or an unreachable provider. See [Action1](/integrations/action1/), [NinjaOne](/integrations/ninjaone/), and [UniFi](/integrations/unifi/).
+- **Dismiss items on Expiring soon.** Dismiss a domain, asset date, or password expiry for its current due date, with an optional note. Dismissed items stop sending expiry emails; dismissed domain expiries also leave dashboard alerts unless the domain has a low security score. **Show dismissed** lets you review and restore items. A changed due date makes the item appear again, and the underlying record is unchanged. Dismiss and restore require the item's manage permission and are audited; dismissal notes are visible to staff only.
+
+### Changed
+
+- **Integration run history is easier to inspect.** Run details show totals by resource and company, the trigger, timestamps, warnings, and failures. Cloudflare domain syncs use the same run-history view with domain-specific totals.
+- **Available integrations are easier to find.** The integration administration page shows the available-provider gallery first. Integration detail cards and Differences use consistent panels, and setup-guide bullets and step labels display correctly.
+- **A shared standard for integration drivers.** Level RMM, Google Workspace, and Microsoft 365 share standard field definitions, match keys, and layout suggestions, with conformance checks for new drivers. See [Integration driver development](/development/integration-drivers/).
+
+### Fixed
+
+- **The domain page fits on phones.** The header tags wrap, and the Security posture panel stacks each label above its value instead of widening the page.
+- **Setup checks no longer mark company mappings as complete.** Action1, NinjaOne, Level RMM, and UniFi confirm that credentials can see organizations, groups, or consoles, but leave the mapping step unverified with a reminder to check **Organizations**.
+- **Ambiguous asset matches no longer adopt the wrong asset.** Match-first considers all case-insensitive matches together, including manually created assets and assets from other integrations. An exact-case match does not bypass an ambiguous result.
+- **Integration priority changes apply correctly.** Promoting an integration lets its values replace the previous provider's values on the next sync while preserving manual edits and **Keep ours** choices. **Use source value** also records the choice against other providers so they do not immediately overwrite it.
+- **Phone matching no longer suggests IMEI as the serial-number field.** Serial matching and IMEI facts keep separate destinations.
+
+### Security
+
+- **Integration requests refuse redirects by default.** API keys and bearer tokens are not forwarded to unexpected redirect targets. Requests that explicitly follow redirects strip sensitive headers across origins and apply the correct method and body handling for each redirect status.
+- **OAuth changes and their audit records commit together.** Saving an OAuth app and connecting, reconnecting, or disconnecting a tenant roll back if the audit write fails. Creating a layout field through integration mapping also commits with its audit record.
+- **Integration errors expose less upstream data.** NinjaOne token and ticket-list failures no longer include provider response bodies in errors or logs, and ticket-enrichment parse failures use a fixed category. Bulk difference-resolution failures log a sanitized summary instead of raw database errors that may contain field values.
+
+## [1.9.12] - 2026-10-08
+
+### Added
+
+- **API keys for programmatic access.** A new **API keys** tab on the account page lists, creates, and revokes keys. A key authenticates as the user who created it and can only narrow that user's authority, never widen it. Permissions, tenant scoping, and the audit trail apply as for a browser session. Creating a key requires step-up, and the token is shown once in a copy dialog and is never stored in the browser. Keys can have an expiry date, and expired keys are tagged. A key cannot reach password, MFA, session, or key-management routes.
+- **Keys are read-only by default.** A key can change data only if it was created with **Allow changes**. A read-only key is refused on every request other than `GET`, `HEAD`, and `OPTIONS`.
+- **Administrator controls for API keys.** The new **Allow API keys** instance switch in Admin → Settings → Security is off by default. While it is off, no key can be created and every existing key is refused, but keys are not revoked. A new **API keys** tab in the security center lists the keys of all users, and an administrator can revoke any of them. The switch and administrator revoke are audited and need step-up.
+- **MCP server for AI agents.** A new stdio server in `apps/mcp` lets an AI agent act as a user through the REST API with an API key. It has read and write tools for companies, search, layouts, assets, domains, password metadata, and Markdown articles. It has no delete, archive, or purge tools, and no tool that reveals a password. Notes in the password vault are removed from `get_password`, and `create_article` always sets `visibleToClients: false`. A missing tool is not a permission boundary: the server enforces access.
+- **Sync Cloudflare registrar domains into Domains.** Every domain on the Cloudflare account is added to Domains with its registrar, expiry date, auto-renew, lock, statuses, and nameservers. Synced rows get an orange Cloudflare tag, a **Renews** column, and a **Registrar** panel. Domain sync is opt-in per integration and runs on the drift-sweep schedule. **Sync domains now** starts a manual sync as a worker job. Domains that leave the account are flagged and are never deleted. The user who saves the configuration must hold `domain.manage` on the target company, and the company is chosen from a dropdown.
+- **Copy or move assets into another company.** **Copy to…** in the asset bulk bar and the asset menu copies assets, or moves them, to another company. You need read access to the source and write access to the target. A move archives the original and never purges it. A move keeps the original if any attachment fails to copy. Moves are refused for integration-synced assets, assets with linked passwords, and assets with fields hidden from you. The copy carries visible field values, tags the asset page shows, and its own files. It does not carry links to other companies or the external identity of the asset.
+- **New domains are checked right away.** A domain you add, and each domain the registrar sync creates, is queued for one check at once instead of showing "never checked" until the nightly sweep. If the queue is unavailable, the failure is logged and the domain is still created.
+- **Parked domains show a grey "No site" status.**
+
+### Changed
+
+- **One Cloudflare integration.** The driver is now named "Cloudflare", and IP lists and domain sync are equal, independent features. All Cloudflare integrations show in one table, with a dash in the Companies and Resources columns. **Last run** is stamped once per Cloudflare job. **Test connection** checks the features the integration uses, so a token that has only domain access passes when domain sync is on.
+- **Cloudflare domain sync uses the supported registrar API.** Cloudflare ended support for the `/registrar/domains` endpoints on 2026-09-27. RivetDocs now reads the Registrar registrations API with cursor pagination. It reads zones and registrations in full before any write, and any Cloudflare error fails the run, so a failed request cannot erase stored registrar facts.
+- **Domain sync runs are recorded.** Each run, manual or scheduled, is stored with counts or a failure reason, and a failed run is audited as `integration.cloudflare.registrar_sync.failed`. The Domains tab shows the latest run and updates until it ends. Each hostname is locked across all Cloudflare integrations, so two integrations cannot import the same domain.
+- **Changing a password, revoking other sessions, or resetting MFA revokes all API keys of the user.** The web and mobile apps warn about this before you submit and report the number of keys revoked.
+- **Asset bulk actions are clearer.** Read-only users can select assets to copy, and archive, restore, and delete need write access. A bulk copy that fails part-way removes the completed assets from the selection, so a retry copies only the rest.
+
+### Fixed
+
+- **A DNS lookup failure no longer marks a domain as having no site.** An uncertain A or AAAA lookup is now treated as unknown, not as proof that the domain has no site.
+- **Tab strips no longer show a vertical scrollbar.** The settings, account, and integration tab strips draw their baseline as an inset shadow, so they do not overflow by 1px.
+- **Asset copy and move errors no longer expose raw messages.** Bulk actions return a generic reason with a reference, and details go to the server log. A file with missing stored content marks the copy incomplete, and a missing thumbnail no longer blocks a copy. The copy dialog names the field that failed.
+- **The worker started without `PermissionService`.** It now boots because `RbacModule` is provided.
+
+### Security
+
+- **Dependency updates clear 10 advisories published after 1.9.11** (1 critical, 2 high, 5 moderate, 2 low). `next` and `eslint-config-next` move from 16.3.7 to 16.3.8, which fixes 6 `next` advisories including the image-optimizer SSRF (GHSA-cjq9-62q9-8jv4). Overrides pin `proxy-addr` 2.0.8 (critical, GHSA-jqcg-44mw-7w3h), `source-map-js` 1.2.2, `fast-copy` 4.1.0, and `katex` 0.18.2.
+- **Removing think tags from AI output is now linear-time.** A backtracking expression is replaced by a linear scan, which removes a ReDoS risk. Output is unchanged.
+- **Migration `0072_api_key_controls`** adds `api_keys.allow_write` and `system_settings.api_keys_enabled`. Both default to false.
+
 ## [1.9.11] - 2026-10-05
 
 ### Added
@@ -834,7 +1120,15 @@ Initial public release.
 
 ---
 
-[Unreleased]: https://github.com/TheTractorHacker/RivetDocs/compare/v1.9.10...HEAD
+[Unreleased]: https://github.com/TheTractorHacker/RivetDocs/compare/v1.13.2...HEAD
+[1.13.2]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.13.2
+[1.11.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.11.0
+[1.10.5]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.10.5
+[1.10.4]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.10.4
+[1.10.3]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.10.3
+[1.10.2]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.10.2
+[1.10.1]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.10.1
+[1.10.0]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.10.0
 [1.9.10]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.10
 [1.9.9]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.9
 [1.9.8]: https://github.com/TheTractorHacker/RivetDocs/releases/tag/v1.9.8

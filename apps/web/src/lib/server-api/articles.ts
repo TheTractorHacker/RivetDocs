@@ -5,7 +5,7 @@ import type {
   FolderNode,
   IntegrationTargetProvenance,
 } from '@rivetdocs/shared';
-import { serverApiFetch } from './core';
+import { collectAllPages, serverApiFetch } from './core';
 
 // ───────────────────────────────────────────────────────────────────
 // Phase 4: folders and articles
@@ -21,9 +21,12 @@ export async function listFolderTree(
 }
 
 // The shared detail omits `provenance` on purpose (see `articleDetailSchema`);
-// the web reader renders it, so the web type adds it back.
+// the web reader renders it, so the web type adds it back. `isPublished`
+// (false while the only version is a "Save draft" draft) is read only by
+// the web editor and header, so it lives here too.
 export type ArticleDetail = SharedArticleDetail & {
   provenance: IntegrationTargetProvenance[];
+  isPublished: boolean;
 };
 
 export type ArticlePage = { items: ArticleSummary[]; nextCursor: string | null };
@@ -80,19 +83,10 @@ export async function listAllArticles(
   const PAGE_SIZE = 200;
   /** 50 x 200 = 10,000 articles in one company, then `truncated`. */
   const MAX_PAGES = 50;
-  const items: ArticleSummary[] = [];
-  let cursor: string | undefined;
-  for (let page = 0; page < MAX_PAGES; page += 1) {
-    const res = await listArticles(companyId, {
-      ...params,
-      limit: PAGE_SIZE,
-      cursor,
-    });
-    items.push(...res.items);
-    if (!res.nextCursor) return { items, truncated: false };
-    cursor = res.nextCursor;
-  }
-  return { items, truncated: true };
+  return collectAllPages(
+    (cursor) => listArticles(companyId, { ...params, limit: PAGE_SIZE, cursor }),
+    MAX_PAGES,
+  );
 }
 
 export async function getArticle(

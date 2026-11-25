@@ -122,8 +122,8 @@ function optionalSection<T extends z.ZodRawShape>(shape: T) {
 }
 
 export const breezeRecordBaseSchema = z.object({
-  id: z.string().uuid(),
-  orgId: z.string().uuid(),
+  id: z.guid(),
+  orgId: z.guid(),
   siteId: optionalText,
   sourceUpdatedAt: timestamp,
   revision: z.string().min(1).max(256),
@@ -312,7 +312,7 @@ export const breezeDeviceSoftwareSchema = record({
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 const json: z.ZodType<JsonValue> = z.lazy(() => z.union([
-  z.null(), z.boolean(), z.number().finite(), z.string(), z.array(json), z.record(json),
+  z.null(), z.boolean(), z.number().finite(), z.string(), z.array(json), z.record(z.string(), json),
 ]));
 const optionalJson = json.optional().transform((value) => value ?? null);
 
@@ -375,7 +375,8 @@ const backupCommon = {
   schedule: optionalJson,
   retention: optionalJson,
   exclusions: list(z.string()),
-  restore: optionalJson,
+  // Breeze dropped `restore` (at least since v0.111.1); restore procedures
+  // are reported as `completenessGaps`, which RivetDocs does not read.
 } as const;
 const backupDestination = record({
   kind: z.literal('destination'), ...backupCommon,
@@ -518,7 +519,7 @@ const SAFE_FIELD_PATH = /^[A-Za-z0-9_$.[\]-]{1,256}$/u;
 export const breezeBlockedRecordSchema = z.object({
   resource: text,
   id: sourceId,
-  orgId: z.string().uuid(),
+  orgId: z.guid(),
   reason: z.string().transform((value) => value.slice(0, 64)),
   fieldPaths: z
     .array(z.string())
@@ -536,7 +537,8 @@ export type BreezeRecordBase = z.infer<typeof breezeRecordBaseSchema>;
  */
 export const breezeEnvelopeSchema = z
   .object({
-    schemaVersion: z.literal('1'),
+    // Checked (and labelled) by the client before this schema runs.
+    schemaVersion: z.unknown(),
     snapshotAt: timestamp,
     data: z.array(z.unknown()).max(500),
     nextCursor: z
@@ -547,7 +549,9 @@ export const breezeEnvelopeSchema = z
       .nullish()
       .transform((value) => value ?? null),
     hasMore: z.boolean(),
-    blocked: z.array(breezeBlockedRecordSchema).max(500).optional(),
+    // Each notice is read on its own by the driver, so one notice
+    // RivetDocs cannot read costs that notice, not the page.
+    blocked: z.array(z.unknown()).max(500).optional(),
   })
   .refine((value) => !value.hasMore || value.nextCursor !== null, {
     path: ['nextCursor'],
@@ -558,12 +562,14 @@ export const breezeEnvelopeSchema = z
   .transform((value) => (value.hasMore ? value : { ...value, nextCursor: null }));
 
 export interface BreezePartnerEnvelope<T> {
-  schemaVersion: '1';
+  /** Version label from `breezeSchemaVersionLabel` (the client sets it). */
+  schemaVersion: string;
   snapshotAt: string;
   data: T[];
   nextCursor: string | null;
   hasMore: boolean;
-  blocked?: BreezeBlockedRecord[];
+  /** Raw withheld-record notices; read with `breezeBlockedRecordSchema`. */
+  blocked?: unknown[];
 }
 
 // Matches the depth bound of the desired-configuration inspection, so nested

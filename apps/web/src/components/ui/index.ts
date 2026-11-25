@@ -20,7 +20,7 @@ export {
   RailTagRow,
 } from './folder-rail';
 export { Tag, type TagTone } from './tag';
-export { Toggle } from './toggle';
+export { RadioOption, CheckboxOption } from './choice-option';
 export { Checkbox } from './checkbox';
 export { Kbd } from './kbd';
 export { Panel } from './panel';
@@ -44,7 +44,9 @@ export { Dialog } from './dialog';
 export { Sheet, type SheetSide } from './sheet';
 export { StarButton, StarGlyph, useStarToggle } from './star-button';
 export { OverflowMenu, MenuItem, MenuDivider } from './overflow-menu';
+export { SplitBtn } from './split-btn';
 export { UserPicker, type UserPickerValue } from './user-picker';
 export { CompanyPicker, type CompanyPickerValue } from './company-picker';
 export { ErrorBanner } from './error-banner';
+export { FilterChip, FilterChipRow, type FilterChipItem } from './filter-chips';
 export { ToastProvider, useToast } from './toast';

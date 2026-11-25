@@ -18,14 +18,17 @@ import { apiFetch } from '../../../../lib/api';
 import { FormattedDateTime } from '../../../../lib/timezone-context';
 import { ApiKeyAccessTags } from '../../../me/api-keys-list';
 import { ADMIN_API_KEY_PAGE_SIZES } from '@rivetdocs/shared';
+import { AiConnectionsPane } from './ai-connections-pane';
 import type {
   AdminApiKeyPage,
   AdminApiKeyRow,
+  AdminMcpConnectionPage,
   ConnectionDiagnostics,
   EgressBlockRow,
   EgressBlocksResponse,
   LockoutsResponse,
   LoginActivity,
+  McpClientPolicy,
   SecuritySessionRow,
   ThrottleBlockEntry,
 } from '@rivetdocs/shared';
@@ -36,6 +39,7 @@ type TabId =
   | 'blocks'
   | 'sessions'
   | 'api-keys'
+  | 'ai-connections'
   | 'egress'
   | 'diagnostics';
 
@@ -45,6 +49,7 @@ const TABS: Array<{ id: TabId; label: string; icon: keyof typeof Icon }> = [
   { id: 'blocks', label: 'Rate-limit blocks', icon: 'clock' },
   { id: 'sessions', label: 'Active sessions', icon: 'users' },
   { id: 'api-keys', label: 'API keys', icon: 'key' },
+  { id: 'ai-connections', label: 'AI connections', icon: 'plug' },
   { id: 'egress', label: 'Egress blocks', icon: 'globe' },
   { id: 'diagnostics', label: 'Connection', icon: 'network' },
 ];
@@ -67,6 +72,9 @@ export function SecurityCenterClient({
   egress,
   apiKeys,
   apiKeysEnabled,
+  connections,
+  mcpRemoteEnabled,
+  mcpClientPolicy,
   canRevoke,
   currentUserId,
 }: {
@@ -79,6 +87,9 @@ export function SecurityCenterClient({
   egress: EgressBlocksResponse | null;
   apiKeys: AdminApiKeyPage | null;
   apiKeysEnabled: boolean;
+  connections: AdminMcpConnectionPage | null;
+  mcpRemoteEnabled: boolean;
+  mcpClientPolicy: McpClientPolicy;
   canRevoke: boolean;
   currentUserId: string;
 }) {
@@ -200,6 +211,15 @@ export function SecurityCenterClient({
           <ApiKeysPane
             apiKeys={apiKeys}
             enabled={apiKeysEnabled}
+            canRevoke={canRevoke}
+            onRefresh={refresh}
+          />
+        )}
+        {tab === 'ai-connections' && (
+          <AiConnectionsPane
+            connections={connections}
+            enabled={mcpRemoteEnabled}
+            policy={mcpClientPolicy}
             canRevoke={canRevoke}
             onRefresh={refresh}
           />
@@ -1103,7 +1123,7 @@ function ApiKeysPane({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {!enabled && (
         <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-          API keys are turned off in Settings → Security, so every key below is refused until
+          API keys are turned off in Settings → API & MCP, so every key below is refused until
           they are turned back on.
         </div>
       )}

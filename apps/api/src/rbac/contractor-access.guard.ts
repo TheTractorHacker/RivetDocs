@@ -6,13 +6,13 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import type { AuthedUser } from '../common/current-user.decorator.js';
+import { isProgrammatic, type AuthedUser } from '../common/current-user.decorator.js';
 import {
   REQUIRE_PERMISSION_KEY,
   type CompanyIdSource,
   type RequirePermissionMetadata,
 } from './require-permission.decorator.js';
-import { PermissionService } from './permission.service.js';
+import { PermissionService, isActiveMembership } from './permission.service.js';
 
 /**
  * Defense-in-depth: even if a permission rule permits a CONTRACTOR read,
@@ -43,13 +43,12 @@ export class ContractorAccessGuard implements CanActivate {
     const companyId = await this.resolveCompanyId(req, meta.companyIdFrom);
     if (!companyId) return true;
 
-    const memberships = await this.permissions.loadMemberships(user.id);
+    const memberships = await this.permissions.loadMemberships(user.id, {
+      fresh: isProgrammatic(user),
+    });
     const now = new Date();
     const match = memberships.find(
-      (m) =>
-        m.companyId === companyId &&
-        m.revokedAt === null &&
-        (m.expiresAt === null || m.expiresAt > now),
+      (m) => m.companyId === companyId && isActiveMembership(m, now),
     );
     if (!match) {
       throw new ForbiddenException('Contractor membership is expired or revoked');

@@ -1,14 +1,37 @@
 import {
+  driverDescriptorSchema,
+  integrationSectionSchema,
+  integrationSetupCheckSchema,
+  setupGuideSchema,
+  type IntegrationSection,
+  type IntegrationSetupCheck,
+} from '@rivetdocs/shared';
+import {
   DriverAuthError,
   DriverRateLimitError,
   type FetchRecordsContext,
   type IntegrationContext,
 } from '../integration-driver.js';
-import { Action1Driver } from './action1.driver.js';
+import {
+  ACTION1_MIN_REQUEST_INTERVAL_MS,
+  Action1Driver,
+  __setAction1RequestIntervalForTests,
+} from './action1.driver.js';
+import { ORGANIZATIONS_UNVERIFIED_NOTE } from './action1.diagnose.js';
+import { ACTION1_SETUP_GUIDE } from './action1.setup-guide.js';
 import {
   setDefaultFetchForTests,
   setDefaultResolveForTests,
 } from '../../../common/egress/safe-fetch.js';
+import { __resetRunCacheForTests, __runCacheSizeForTests } from '../run-cache.js';
+import { __resetRequestPaceForTests } from '../driver-utils.js';
+
+beforeEach(() => {
+  __resetRunCacheForTests();
+  __resetRequestPaceForTests();
+  // Pacing is covered on its own below; the scripted flows run unspaced.
+  __setAction1RequestIntervalForTests(0);
+});
 
 /**
  * Phase 11 — Action1 driver behavioural tests.
@@ -103,6 +126,7 @@ function makeCtx(): IntegrationContext {
     integrationId: 'int-1',
     config: { baseUrl: 'https://app.action1.com/api/3.0' },
     secret: { apiKey: 'k', apiSecret: 's' },
+    credentialVersion: 'sec-1@2026-10-14T00:00:00.000Z|no-app',
     correlationId: 'test-corr',
     http: HTTP,
   } as IntegrationContext;
@@ -382,7 +406,7 @@ describe('Action1Driver.fetchRecords', () => {
         kind: 'json',
         body: { items: firstPage, total_items: '220' },
       },
-      { kind: 'json', body: { access_token: 'tok-1' } },
+      // No second token: the pages of one run share it.
       {
         kind: 'json',
         body: {
@@ -409,15 +433,28 @@ describe('Action1Driver.fetchRecords', () => {
       });
       expect(page1.hasMore).toBe(true);
       expect(page1.cursor).toBe('200');
+      expect(page1.snapshotAt).toEqual(expect.any(String));
 
-      const page2 = await driver.fetchRecords(makeFetchCtx(), page1.cursor);
+      // The runner hands the page's snapshot back on the next page.
+      const page2 = await driver.fetchRecords(
+        { ...makeFetchCtx(), snapshotAt: page1.snapshotAt } as FetchRecordsContext,
+        page1.cursor,
+      );
       expect(page2.records).toHaveLength(20);
       expect(page2.hasMore).toBe(false);
       expect(page2.cursor).toBeNull();
+      expect(page2.snapshotAt).toBe(page1.snapshotAt);
 
+      expect(fx.calls.map((c) => new URL(c.url).pathname)).toEqual([
+        '/api/3.0/oauth2/token',
+        '/api/3.0/endpoints/managed/o-1',
+        '/api/3.0/endpoints/managed/o-1',
+      ]);
       expect(fx.calls[1]!.url).toContain('from=0');
       expect(fx.calls[1]!.url).toContain('limit=200');
-      expect(fx.calls[3]!.url).toContain('from=200');
+      expect(fx.calls[2]!.url).toContain('from=200');
+      // The last page drops the run's cached token.
+      expect(__runCacheSizeForTests()).toBe(0);
     } finally {
       fx.restore();
     }
@@ -451,13 +488,12 @@ describe('Action1Driver.fetchRecords', () => {
   });
 
   it('rejects an invalid cursor before issuing any HTTP call', async () => {
-    const fx = installFetchScript([
-      { kind: 'json', body: { access_token: 'tok-1' } },
-    ]);
+    const fx = installFetchScript([]);
     try {
       await expect(
         new Action1Driver().fetchRecords(makeFetchCtx(), 'banana'),
       ).rejects.toThrow(/Invalid Action1 fetch cursor/);
+      expect(fx.calls).toEqual([]);
     } finally {
       fx.restore();
     }
@@ -484,6 +520,8 @@ describe('Action1Driver.fetchRecords', () => {
           externalId: 'x',
           displayName: 'x.lan',
           fields: { id: 'x', name: 'x.lan' },
+          // Nothing the section shows: no section, so a stale one is cleared.
+          section: undefined,
           updatedAt: null,
         },
       ]);
@@ -521,5 +559,390 @@ describe('Action1Driver.fetchRecords', () => {
     } finally {
       fx.restore();
     }
+  });
+});
+
+describe('Action1Driver section', () => {
+  const TOKEN: ScriptedResponse = { kind: 'json', body: { access_token: 'tok-1' } };
+  const page = (items: unknown[], total = items.length): ScriptedResponse => ({
+    kind: 'json',
+    body: { items, total_items: String(total) },
+  });
+  /** A full page with more to come, so the run (and its cached token) stays open. */
+  const fullPage = (prefix: string): ScriptedResponse =>
+    page(Array.from({ length: 200 }, (_, i) => ({ id: `${prefix}-${i}`, name: `${prefix}-${i}` })), 1_000);
+
+  it('builds the section from the endpoint record, with Action1 dates read as UTC', async () => {
+    const fx = installFetchScript([
+      TOKEN,
+      page([
+        {
+          id: 'e-1',
+          name: 'WS-1',
+          OS: 'Windows 11 (24H2)',
+          serial: 'SER-1',
+          status: 'Connected',
+          online_status: 'WARNING',
+          last_seen: '2026-10-01_08-30-00',
+          last_boot_time: '2026-09-30_07-00-00',
+          reboot_required: 'No',
+          missing_updates: { critical: 1, other: 0 },
+          vulnerabilities: { critical: 0, other: 0 },
+          AD_security_groups: ['Domain Computers'],
+        },
+      ]),
+    ]);
+    try {
+      const out = await new Action1Driver().fetchRecords(makeFetchCtx(), null);
+      const section = out.records[0]!.section as IntegrationSection;
+      expect(integrationSectionSchema.parse(section)).toEqual(section);
+      expect(section.groups.map((g) => g.key)).toEqual(['status', 'security', 'updates', 'directory']);
+      expect(section.groups[0]!.rows).toEqual(
+        expect.arrayContaining([
+          { kind: 'badge', label: 'Check-in', value: '8 to 30 days ago', tone: 'warning' },
+          { kind: 'datetime', label: 'Last seen', value: '2026-10-01T08:30:00.000Z' },
+          { kind: 'datetime', label: 'Last boot', value: '2026-09-30T07:00:00.000Z' },
+        ]),
+      );
+      // Mapped facts stay in the field mapping only.
+      expect(JSON.stringify(section)).not.toMatch(/SER-1|Windows 11/);
+      expect(out.records[0]!.fields).toMatchObject({ serial: 'SER-1', OS: 'Windows 11 (24H2)' });
+      // The section costs no request beyond the token and the endpoint page.
+      expect(fx.calls).toHaveLength(2);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('never shares a cached token between integrations', async () => {
+    const fx = installFetchScript([
+      TOKEN,
+      fullPage('a'),
+      { kind: 'json', body: { access_token: 'tok-2' } },
+      fullPage('b'),
+    ]);
+    try {
+      const snapshotAt = '2026-10-14T12:00:00.000Z';
+      const driver = new Action1Driver();
+      const first = await driver.fetchRecords({ ...makeFetchCtx(), snapshotAt } as FetchRecordsContext, null);
+      // The first integration's token is still cached when the second one runs.
+      expect(first.hasMore).toBe(true);
+      expect(__runCacheSizeForTests()).toBe(1);
+      await driver.fetchRecords(
+        { ...makeFetchCtx(), integrationId: 'int-2', snapshotAt } as FetchRecordsContext,
+        null,
+      );
+      expect(__runCacheSizeForTests()).toBe(2);
+      expect(fx.calls.map((c) => new URL(c.url).pathname)).toEqual([
+        '/api/3.0/oauth2/token',
+        '/api/3.0/endpoints/managed/o-1',
+        '/api/3.0/oauth2/token',
+        '/api/3.0/endpoints/managed/o-1',
+      ]);
+      expect(fx.calls[3]!.headers?.Authorization).toBe('Bearer tok-2');
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('never reuses a token after new credentials or a new API base URL', async () => {
+    const fx = installFetchScript([
+      TOKEN,
+      fullPage('a'),
+      { kind: 'json', body: { access_token: 'tok-2' } },
+      fullPage('b'),
+      { kind: 'json', body: { access_token: 'tok-3' } },
+      fullPage('c'),
+    ]);
+    try {
+      // One interrupted run resumed twice under the same snapshot.
+      const snapshotAt = '2026-10-14T12:00:00.000Z';
+      const base = { ...makeFetchCtx(), snapshotAt } as FetchRecordsContext;
+      const driver = new Action1Driver();
+      const first = await driver.fetchRecords(base, null);
+      // tok-1 is still cached when the credentials change.
+      expect(first.hasMore).toBe(true);
+      expect(__runCacheSizeForTests()).toBe(1);
+      await driver.fetchRecords({ ...base, credentialVersion: 'sec-1@2026-10-14T12:05:00.000Z|no-app' } as FetchRecordsContext, '200');
+      expect(__runCacheSizeForTests()).toBe(2);
+      await driver.fetchRecords(
+        {
+          ...base,
+          credentialVersion: 'sec-1@2026-10-14T12:05:00.000Z|no-app',
+          config: { baseUrl: 'https://app.eu.action1.com/api/3.0' },
+        } as FetchRecordsContext,
+        '400',
+      );
+      expect(__runCacheSizeForTests()).toBe(3);
+      expect(fx.calls.map((c) => [new URL(c.url).host, new URL(c.url).pathname, c.headers?.Authorization])).toEqual([
+        ['app.action1.com', '/api/3.0/oauth2/token', undefined],
+        ['app.action1.com', '/api/3.0/endpoints/managed/o-1', 'Bearer tok-1'],
+        ['app.action1.com', '/api/3.0/oauth2/token', undefined],
+        ['app.action1.com', '/api/3.0/endpoints/managed/o-1', 'Bearer tok-2'],
+        // The new host gets its own token; the old one is never sent there.
+        ['app.eu.action1.com', '/api/3.0/oauth2/token', undefined],
+        ['app.eu.action1.com', '/api/3.0/endpoints/managed/o-1', 'Bearer tok-3'],
+      ]);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('does not cache a token without a credential version', async () => {
+    const fx = installFetchScript([
+      TOKEN,
+      fullPage('a'),
+      { kind: 'json', body: { access_token: 'tok-2' } },
+      fullPage('b'),
+    ]);
+    try {
+      const ctx = { ...makeFetchCtx(), credentialVersion: undefined, snapshotAt: '2026-10-14T12:00:00.000Z' } as FetchRecordsContext;
+      const driver = new Action1Driver();
+      const first = await driver.fetchRecords(ctx, null);
+      // The run is still open, yet nothing was cached.
+      expect(first.hasMore).toBe(true);
+      expect(__runCacheSizeForTests()).toBe(0);
+      await driver.fetchRecords(ctx, '200');
+      expect(fx.calls.filter((c) => c.url.endsWith('/oauth2/token'))).toHaveLength(2);
+      expect(fx.calls[3]!.headers?.Authorization).toBe('Bearer tok-2');
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('does not cache a failed token exchange', async () => {
+    const fx = installFetchScript([
+      { kind: 'text', status: 500, body: 'x' },
+      { kind: 'text', status: 500, body: 'x' },
+      { kind: 'text', status: 500, body: 'x' },
+      TOKEN,
+      page([{ id: 'a', name: 'a' }]),
+    ]);
+    try {
+      const ctx = { ...makeFetchCtx(), snapshotAt: '2026-10-14T12:00:00.000Z' } as FetchRecordsContext;
+      const driver = new Action1Driver();
+      await expect(driver.fetchRecords(ctx, null)).rejects.toThrow(/HTTP 500/);
+      const out = await driver.fetchRecords(ctx, null);
+      expect(out.records.map((r) => r.externalId)).toEqual(['a']);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('drops a token Action1 rejects, so a retried page gets a new one', async () => {
+    const fx = installFetchScript([
+      TOKEN,
+      { kind: 'text', status: 401, body: 'no' },
+      { kind: 'json', body: { access_token: 'tok-2' } },
+      page([{ id: 'a', name: 'a' }]),
+    ]);
+    try {
+      const ctx = { ...makeFetchCtx(), snapshotAt: '2026-10-14T12:00:00.000Z' } as FetchRecordsContext;
+      const driver = new Action1Driver();
+      await expect(driver.fetchRecords(ctx, null)).rejects.toBeInstanceOf(DriverAuthError);
+      await driver.fetchRecords(ctx, null);
+      expect(fx.calls[3]!.headers?.Authorization).toBe('Bearer tok-2');
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('spaces its requests at the Action1 pace', async () => {
+    __setAction1RequestIntervalForTests(40);
+    const fx = installFetchScript([TOKEN, page([{ id: 'a', name: 'a' }])]);
+    try {
+      const started = Date.now();
+      await new Action1Driver().fetchRecords(makeFetchCtx(), null);
+      const elapsed = Date.now() - started;
+      // Token, then the endpoint page: one gap of at least 40 ms.
+      expect(fx.calls).toHaveLength(2);
+      expect(elapsed).toBeGreaterThanOrEqual(40 - 5);
+    } finally {
+      fx.restore();
+    }
+    // Action1 recommends fewer than 30 requests per minute per enterprise.
+    expect(60_000 / ACTION1_MIN_REQUEST_INTERVAL_MS).toBeLessThan(30);
+  });
+});
+
+describe('Action1Driver descriptor', () => {
+  it('validates against the shared schema with a setup guide', () => {
+    const driver = new Action1Driver();
+    const parsed = driverDescriptorSchema.parse(driver.descriptor);
+    expect(parsed.setupGuide?.map((s) => s.id)).toEqual([
+      'api-credential',
+      'region',
+      'credentials',
+      'organizations',
+      'fields',
+      'sync',
+    ]);
+    expect(setupGuideSchema.safeParse(ACTION1_SETUP_GUIDE).success).toBe(true);
+    // The Client ID / Client Secret pair stays as it was.
+    expect(parsed.secretFields.map((f) => [f.key, f.kind])).toEqual([
+      ['apiKey', 'text'],
+      ['apiSecret', 'password'],
+    ]);
+  });
+});
+
+describe('Action1Driver Check setup', () => {
+  /** Provider error text that must never reach a Check setup message. */
+  const PROVIDER_TEXT = 'PROVIDER-ERROR-TEXT-do-not-echo';
+  const TOKEN_OK: ScriptedResponse = { kind: 'json', body: { access_token: 'tok-1' } };
+  const ORGS: ScriptedResponse = {
+    kind: 'json',
+    body: { items: [{ id: 'o-1', name: 'Acme' }], total_items: '1' },
+  };
+  const fail = (status: number): ScriptedResponse => ({
+    kind: 'text',
+    status,
+    body: PROVIDER_TEXT,
+  });
+
+  async function check(
+    script: ScriptedResponse[],
+    ctx: IntegrationContext = makeCtx(),
+  ): Promise<{ result: IntegrationSetupCheck; calls: RecordedCall[] }> {
+    const fx = installFetchScript(script);
+    try {
+      const result = await new Action1Driver().diagnose({ mode: 'connection', ctx });
+      expect(integrationSetupCheckSchema.parse(result)).toEqual(result);
+      expect(JSON.stringify(result)).not.toContain(PROVIDER_TEXT);
+      return { result, calls: fx.calls };
+    } finally {
+      fx.restore();
+    }
+  }
+
+  it('passes the steps it can verify with one token exchange and read-only GETs, and leaves mapping unverified', async () => {
+    const { result, calls } = await check([TOKEN_OK, ORGS]);
+    expect(result).toEqual({
+      ok: true,
+      passedStepIds: ['api-credential', 'region', 'credentials'],
+      failures: [],
+      // Seeing organizations is not mapping them: the step stays unverified.
+      notes: [{ stepId: 'organizations', message: ORGANIZATIONS_UNVERIFIED_NOTE }],
+    });
+    expect(calls.map((c) => [c.method, new URL(c.url).pathname])).toEqual([
+      ['POST', '/api/3.0/oauth2/token'],
+      ['GET', '/api/3.0/organizations'],
+    ]);
+  });
+
+  it('points zero organizations at the role in step 1', async () => {
+    const { result } = await check([TOKEN_OK, { kind: 'json', body: { items: [], total_items: '0' } }]);
+    expect(result).toEqual({
+      ok: false,
+      passedStepIds: ['region', 'credentials'],
+      failures: [{ stepId: 'api-credential', message: expect.stringMatching(/no organizations/) }],
+    });
+  });
+
+  it.each([400, 401, 403])('points a token HTTP %s at the credentials and region', async (status) => {
+    const { result } = await check([fail(status)]);
+    expect(result.failures).toEqual([
+      { stepId: 'api-credential', message: expect.stringMatching(/does not accept this Client ID/) },
+    ]);
+    expect(result.failures[0]!.message).toMatch(/region/);
+  });
+
+  it('points a 403 on the organization list at a missing permission', async () => {
+    const { result } = await check([TOKEN_OK, fail(403)]);
+    expect(result).toEqual({
+      ok: false,
+      passedStepIds: ['region', 'credentials'],
+      failures: [{ stepId: 'api-credential', message: expect.stringMatching(/role cannot list organizations/) }],
+    });
+  });
+
+  it('points a 401 on the organization list at the credentials', async () => {
+    const { result } = await check([TOKEN_OK, fail(401)]);
+    expect(result.failures).toEqual([
+      { stepId: 'api-credential', message: expect.stringMatching(/does not accept/) },
+    ]);
+  });
+
+  it.each([
+    ['a token 404', [fail(404)]],
+    ['an organization list 404', [TOKEN_OK, fail(404)]],
+    ['an HTML token page', [{ kind: 'text', status: 200, body: `<html>${PROVIDER_TEXT}</html>` }]],
+    ['a token response without access_token', [{ kind: 'json', body: { error: PROVIDER_TEXT } }]],
+  ] as Array<[string, ScriptedResponse[]]>)('points %s at the API base URL', async (_name, script) => {
+    const { result } = await check(script);
+    expect(result.failures).toEqual([
+      { stepId: 'region', message: expect.stringMatching(/does not point to the Action1 API/) },
+    ]);
+  });
+
+  it.each([
+    ['does not resolve', async (): Promise<string[]> => { throw new Error(`getaddrinfo ENOTFOUND ${PROVIDER_TEXT}`); }],
+    ['resolves to a private address', async (): Promise<string[]> => ['10.0.0.5']],
+  ])('points a host that %s at the API base URL', async (_name, resolve) => {
+    const fx = installFetchScript([]);
+    setDefaultResolveForTests(resolve);
+    try {
+      const result = await new Action1Driver().diagnose({ mode: 'connection', ctx: makeCtx() });
+      expect(result.failures).toEqual([
+        { stepId: 'region', message: expect.stringMatching(/cannot connect to the saved API base URL/) },
+      ]);
+      expect(JSON.stringify(result)).not.toContain(PROVIDER_TEXT);
+      expect(fx.calls).toEqual([]);
+    } finally {
+      fx.restore();
+    }
+  });
+
+  it('asks to retry on a rate limit', async () => {
+    const limited: ScriptedResponse = { kind: 'text', status: 429, body: PROVIDER_TEXT, headers: { 'Retry-After': '0' } };
+    const { result } = await check([TOKEN_OK, limited, limited, limited]);
+    expect(result.failures).toEqual([{ stepId: null, message: expect.stringMatching(/rate limiting/) }]);
+  });
+
+  it('reports a server error as a general failure', async () => {
+    const { result } = await check([TOKEN_OK, fail(500), fail(500), fail(500)]);
+    expect(result.failures).toEqual([{ stepId: null, message: expect.stringMatching(/did not answer as expected/) }]);
+  });
+
+  it('reports a network failure as unreachable without the error text', async () => {
+    setDefaultFetchForTests((async () => {
+      throw new TypeError(`fetch failed: ${PROVIDER_TEXT}`);
+    }) as typeof fetch);
+    setDefaultResolveForTests(async () => ['1.2.3.4']);
+    try {
+      const result = await new Action1Driver().diagnose({ mode: 'connection', ctx: makeCtx() });
+      expect(result.failures).toEqual([{ stepId: null, message: expect.stringMatching(/could not reach Action1/) }]);
+      expect(JSON.stringify(result)).not.toContain(PROVIDER_TEXT);
+    } finally {
+      setDefaultFetchForTests(null);
+      setDefaultResolveForTests(null);
+    }
+  });
+
+  it('asks for the credentials before any request when none are saved', async () => {
+    const { result, calls } = await check([], { ...makeCtx(), secret: {} });
+    expect(result.failures).toEqual([{ stepId: 'credentials', message: expect.stringMatching(/No Client ID and Client Secret/) }]);
+    expect(calls).toEqual([]);
+  });
+
+  it('flags an invalid API base URL before any request', async () => {
+    const { result, calls } = await check([], { ...makeCtx(), config: { baseUrl: 'not a url' } });
+    expect(result.failures).toEqual([{ stepId: 'region', message: expect.stringMatching(/not a valid URL/) }]);
+    expect(calls).toEqual([]);
+  });
+
+  it('has no OAuth app to check', async () => {
+    const result = await new Action1Driver().diagnose({
+      mode: 'client',
+      oauthClient: {} as never,
+      redirectUri: 'https://rivetdocs.test/cb',
+      http: HTTP,
+      correlationId: 'test-corr',
+    });
+    expect(result).toEqual({
+      ok: false,
+      passedStepIds: [],
+      failures: [{ stepId: null, message: 'Action1 has no OAuth app to check.' }],
+    });
   });
 });

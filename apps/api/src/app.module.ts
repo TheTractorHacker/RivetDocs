@@ -32,7 +32,10 @@ import { UploadsModule } from './uploads/uploads.module.js';
 import { FoldersModule } from './folders/folders.module.js';
 import { ArticlesModule } from './articles/articles.module.js';
 import { SearchModule } from './search/search.module.js';
+import { SearchRefreshModule } from './search/search-refresh.service.js';
 import { SettingsModule } from './settings/settings.module.js';
+import { McpOAuthModule } from './mcp-oauth/mcp-oauth.module.js';
+import { McpModule } from './mcp/mcp.module.js';
 import { QueuesModule } from './queues/queues.module.js';
 import { DomainsModule } from './domains/domains.module.js';
 import {
@@ -74,12 +77,14 @@ import { TenantContextInterceptor } from './auth/interceptors/tenant-context.int
 import { AuditInterceptor } from './audit/audit.interceptor.js';
 import { ProblemExceptionFilter } from './common/problem-exception.filter.js';
 import { RedisThrottlerStorage } from './redis/redis-throttler.storage.js';
+import { pathOnly } from './common/redact-url.js';
 
 /** Compact access logs: avoid logging full req/res headers on every line. */
 const httpSerializers = {
   req: (req: IncomingMessage) => {
     const id = (req as IncomingMessage & { id?: string }).id;
-    return { id, method: req.method, url: req.url };
+    // Never the query string: /oauth/callback carries the code and state in it.
+    return { id, method: req.method, url: pathOnly(req.url) };
   },
   res: (res: ServerResponse) => ({ statusCode: res.statusCode }),
 };
@@ -159,7 +164,11 @@ const httpSerializers = {
     FoldersModule,
     ArticlesModule,
     SearchModule,
+    // Early pass of a queued search-text refresh; the worker finishes it.
+    SearchRefreshModule.forProcess('api'),
     SettingsModule,
+    McpOAuthModule,
+    McpModule,
     QueuesModule,
     DomainsModule,
     PasswordsModule,

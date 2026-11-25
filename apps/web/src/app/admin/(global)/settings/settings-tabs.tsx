@@ -2,18 +2,24 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { AiSettings, EmailSettings } from '@rivetdocs/shared';
+import type {
+  AiSettings,
+  EmailSettings,
+  IntegrationPriorityDto,
+  PasswordAccessPolicy,
+} from '@rivetdocs/shared';
 import type { Settings } from '../../../../lib/server-api/settings';
 import {
   ArticleSettingsForm,
   GeneralSettingsForm,
-  SecuritySettingsForm,
+  PasswordSettingsForm,
 } from './settings-form';
 import { EmailSettingsForm } from './email-settings-form';
 import { AiSettingsForm } from './ai-settings-form';
-import { ApiKeysSwitch } from './api-keys-switch';
-
-type TabId = 'general' | 'security' | 'articles' | 'email' | 'ai';
+import { ApiKeysSwitch, McpClientPolicyChoice, McpRemoteSwitch } from './api-keys-switch';
+import { IntegrationPriorityList } from './integration-priority-list';
+import { PasswordAccessPolicySection } from './password-access-policy-section';
+import type { TabId } from './tab-ids';
 
 const TABS: Array<{ id: TabId; label: string; help: string }> = [
   {
@@ -22,9 +28,9 @@ const TABS: Array<{ id: TabId; label: string; help: string }> = [
     help: 'Workspace branding and tenant terminology.',
   },
   {
-    id: 'security',
-    label: 'Security',
-    help: 'Password generator defaults and security-related settings.',
+    id: 'passwords',
+    label: 'Passwords',
+    help: 'Password access policy and password generator defaults.',
   },
   {
     id: 'articles',
@@ -39,7 +45,17 @@ const TABS: Array<{ id: TabId; label: string; help: string }> = [
   {
     id: 'ai',
     label: 'AI',
-    help: 'OpenAI-compatible LLM endpoint (Ollama, LMStudio, …).',
+    help: 'LLM provider for Ask anything: OpenAI, Anthropic, or an OpenAI-compatible server (Ollama, LMStudio, …).',
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    help: 'Which integration wins when several fill one asset. Google and Microsoft apps are set up on their integration.',
+  },
+  {
+    id: 'api',
+    label: 'API & MCP',
+    help: 'Programmatic access: API keys, and remote AI connections from AI apps.',
   },
 ];
 
@@ -48,12 +64,16 @@ export function SettingsTabs({
   settings,
   emailSettings,
   aiSettings,
+  integrationPriority = null,
+  passwordAccessPolicy = null,
   currentUserEmail,
 }: {
   initialTab: TabId;
   settings: Settings;
   emailSettings: EmailSettings;
   aiSettings: AiSettings;
+  integrationPriority?: IntegrationPriorityDto | null;
+  passwordAccessPolicy?: PasswordAccessPolicy | null;
   currentUserEmail: string;
 }) {
   const router = useRouter();
@@ -68,12 +88,21 @@ export function SettingsTabs({
   }
 
   return (
-    <div>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
       <div
         role="tablist"
         aria-label="Settings sections"
         style={{
           display: 'flex',
+          flexShrink: 0,
           gap: 2,
           padding: '6px 6px 0',
           // Draw the baseline inside the strip and keep tabs in it. A border plus
@@ -112,12 +141,25 @@ export function SettingsTabs({
           );
         })}
       </div>
-      <div style={{ padding: 18 }}>
+      <div
+        key={tab}
+        role="tabpanel"
+        aria-label={TABS.find((t) => t.id === tab)?.label}
+        tabIndex={0}
+        style={{
+          padding: tab === 'ai' ? 0 : 18,
+          display: tab === 'ai' ? 'flex' : undefined,
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflowY: tab === 'ai' ? 'hidden' : 'auto',
+        }}
+      >
         {tab === 'general' && <GeneralSettingsForm initial={settings} />}
-        {tab === 'security' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <ApiKeysSwitch enabled={settings.apiKeysEnabled} />
-            <SecuritySettingsForm initial={settings} />
+        {tab === 'passwords' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            <PasswordAccessPolicySection initial={passwordAccessPolicy} />
+            <PasswordSettingsForm initial={settings} />
           </div>
         )}
         {tab === 'articles' && <ArticleSettingsForm initial={settings} />}
@@ -128,6 +170,18 @@ export function SettingsTabs({
           />
         )}
         {tab === 'ai' && <AiSettingsForm initial={aiSettings} />}
+        {tab === 'integrations' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            {integrationPriority && <IntegrationPriorityList initial={integrationPriority.order} />}
+          </div>
+        )}
+        {tab === 'api' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            <ApiKeysSwitch enabled={settings.apiKeysEnabled} />
+            <McpRemoteSwitch enabled={settings.mcpRemoteEnabled} />
+            <McpClientPolicyChoice policy={settings.mcpClientPolicy} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -25,6 +25,7 @@ import {
 } from '../common/public.decorator.js';
 import { AuthedOnly } from '../rbac/require-permission.decorator.js';
 import { CurrentUser, type AuthedUser } from '../common/current-user.decorator.js';
+import { NO_PASSWORD_ACCESS } from '../passwords/password-access-policy.js';
 import {
   acceptInviteSchema,
   setupTokenSchema,
@@ -140,6 +141,8 @@ export class AuthController {
       sessionId: payload.sid,
       mfaEnforcementCompletedAt: null,
       mfaPending: true,
+      // Deny by default: this stub never reaches a password read path.
+      passwordAccess: NO_PASSWORD_ACCESS,
     };
     // AuthService.verifyMfa re-fetches the user row; we only need id/sessionId here.
     const result = await this.auth.verifyMfa(asUser, dto.token, ipOf(req), userAgentOf(req));

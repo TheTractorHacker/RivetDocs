@@ -5,7 +5,13 @@ import type {
   ExpirationRow,
   PasswordExpiration,
 } from '@rivetdocs/shared';
+import {
+  expirationDismissalKey,
+  expirationRowIdentity,
+  parseExpiryInstant,
+} from '@rivetdocs/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ExpirationDismissalsService } from './expiration-dismissals.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 import { canReadPassword } from '../passwords/password-access-policy.js';
 
@@ -30,6 +36,8 @@ interface ComputeOptions {
   companyId?: string;
   /** Viewer's role — drives CLIENT_USER domain visibility filtering. */
   actor: AuthedUser;
+  /** Return dismissed rows too, annotated with `dismissal`. Default: hide them. */
+  includeDismissed?: boolean;
 }
 
 /**
@@ -55,7 +63,10 @@ interface ComputeOptions {
  */
 @Injectable()
 export class ExpirationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dismissals: ExpirationDismissalsService,
+  ) {}
 
   async list(options: ComputeOptions): Promise<ExpirationRow[]> {
     const [assetRows, domainRows, passwordRows] = await Promise.all([
@@ -65,11 +76,26 @@ export class ExpirationsService {
     ]);
     // Merge and order by imminence. Stable tiebreaker on company name
     // + row kind keeps the output deterministic for snapshot tests.
-    const merged: ExpirationRow[] = [
-      ...assetRows,
-      ...domainRows,
-      ...passwordRows,
-    ];
+    const dismissed = await this.dismissals.loadMap(options.companyId);
+    const merged: ExpirationRow[] = [];
+    for (const row of [...assetRows, ...domainRows, ...passwordRows]) {
+      const { entityId, source } = expirationRowIdentity(row);
+      const d = dismissed.get(expirationDismissalKey(row.kind, entityId, source, row.expiresAt));
+      if (!d) {
+        merged.push(row);
+      } else if (options.includeDismissed) {
+        merged.push({
+          ...row,
+          dismissal: {
+            id: d.id,
+            // The note and who dismissed it are MSP-internal.
+            note: options.actor.role === 'CLIENT_USER' ? null : d.note,
+            dismissedAt: d.createdAt.toISOString(),
+            dismissedBy: options.actor.role === 'CLIENT_USER' ? null : d.dismissedBy,
+          },
+        });
+      }
+    }
     merged.sort((a, b) => {
       if (a.daysUntil !== b.daysUntil) return a.daysUntil - b.daysUntil;
       if (a.companyName !== b.companyName)
@@ -179,13 +205,15 @@ export class ExpirationsService {
       const co = companyById.get(v.asset.companyId);
       if (!co) continue;
       const raw = v.value;
-      // DATE is stored as "YYYY-MM-DD", DATETIME as an ISO timestamp.
+      // DATE is stored as "YYYY-MM-DD", DATETIME as an ISO timestamp that
+      // may have no zone (`datetime-local` input). `parseExpiryInstant` reads
+      // a zone-less value as UTC, never in this process's zone — see its doc.
       // Null / malformed / non-string values are silently skipped — the
       // page's purpose is to surface actionable rows, not to report
       // malformed data (that's the layout builder's job at write time).
       if (typeof raw !== 'string' || raw.length === 0) continue;
-      const expires = new Date(raw);
-      if (Number.isNaN(expires.getTime())) continue;
+      const expires = parseExpiryInstant(raw);
+      if (!expires) continue;
 
       const daysUntil = Math.floor((expires.getTime() - now) / dayMs);
       if (daysUntil > meta.warnWithinDays) continue;

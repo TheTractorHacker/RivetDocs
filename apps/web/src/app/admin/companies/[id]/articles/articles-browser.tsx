@@ -26,6 +26,7 @@ import { useIsMobile } from '../../../../../lib/hooks/use-is-mobile';
 import { useRailCollapse } from '../../../../../lib/hooks/use-rail-collapse';
 import { FolderSettingsDialog } from './folder-settings-dialog';
 import { ArticleActions } from './article-actions';
+import { ArticleImportButton, isSlugTaken } from './article-import';
 import { articleCounts, scopeArticles } from './article-scope';
 
 type ArticleCounts = ReturnType<typeof articleCounts>;
@@ -65,7 +66,7 @@ export function ArticlesBrowser({
   canManage: boolean;
   /**
    * The account's "Show item counts in the sidebar" preference, same
-   * switch the passwords rail reads. Off by default.
+   * switch the passwords rail reads. On by default for new users.
    */
   showCounts: boolean;
 }) {
@@ -300,6 +301,13 @@ export function ArticlesBrowser({
         <Icon.archive size={12} />
         {includeArchived ? 'Hide archived' : 'Show archived'}
       </button>
+      {canManage && (
+        <ArticleImportButton
+          companyId={companyId}
+          folderId={selectedFolder ? selectedFolder.id : null}
+          folderName={selectedFolder?.name ?? null}
+        />
+      )}
     </div>
   );
 
@@ -484,6 +492,11 @@ function articleColumns({
             >
               {a.title}
             </Link>
+            {a.hasDraft && (
+              <Tag tone="warn" style={{ fontSize: 10, flexShrink: 0 }}>
+                draft
+              </Tag>
+            )}
             {!a.visibleToClients && (
               <Tag tone="outline" style={{ fontSize: 10, flexShrink: 0 }}>
                 internal
@@ -626,8 +639,9 @@ function ArticleMobileBody({
         <Icon.chevron size={12} style={{ color: 'var(--dim)' }} />
       </Link>
 
-      {(!row.visibleToClients || row.archivedAt) && (
+      {(row.hasDraft || !row.visibleToClients || row.archivedAt) && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {row.hasDraft && <Tag tone="warn">draft</Tag>}
           {!row.visibleToClients && <Tag tone="outline">internal</Tag>}
           {row.archivedAt && <Tag tone="default">archived</Tag>}
         </div>
@@ -987,16 +1001,4 @@ function NewFolderInline({
       </Btn>
     </div>
   );
-}
-
-/**
- * Read the RFC 7807 `error` discriminator from whatever `apiFetch` handed
- * us back in the `problem` slot. We deliberately keep this defensive —
- * `problem` is typed as `unknown` because the server shape isn't
- * guaranteed on every status code.
- */
-function isSlugTaken(problem: unknown): boolean {
-  if (!problem || typeof problem !== 'object') return false;
-  const error = (problem as { error?: unknown }).error;
-  return error === 'SlugTaken';
 }

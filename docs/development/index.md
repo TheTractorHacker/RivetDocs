@@ -13,7 +13,7 @@ End users deploying published images should use the [Quickstart](/getting-starte
 
 ## Prerequisites
 
-- **Node.js 24+** managed with nvm, fnm, Volta, or a similar version manager.
+- **Node.js 24.22.1+** (or 26.12.1+) managed with nvm, fnm, Volta, or a similar version manager. Older patch releases miss the October 2026 security fixes.
 - **pnpm 11.x** via Corepack. Run `corepack enable` once; later `pnpm` commands use the exact 11.x version declared in `package.json`. Keep that pin current with the latest pnpm 11 release rather than using a floating range.
 - **Docker Engine 24+** with Docker Compose v2.
 - **openssl** on macOS, Linux, or WSL; Windows users can use the PowerShell keygen script.
@@ -128,7 +128,15 @@ This exercises the same Dockerfiles used by release builds. Tag collisions with 
 1. Branch off `main`.
 2. Make your changes. Add tests when behaviour has a clear contract.
 3. Run `pnpm lint && pnpm typecheck && pnpm test`.
-4. Add an entry to the `## Unreleased` section of [CHANGELOG.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/CHANGELOG.md).
+4. Add an entry to the `## [Unreleased]` section of [docs/overview/changelog.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/docs/overview/changelog.md).
 5. Open a PR. CI runs the same checks plus Docker builds for all three images.
 
 See [CONTRIBUTING.md](https://github.com/TheTractorHacker/RivetDocs/blob/main/CONTRIBUTING.md) for licensing notes and review expectations.
+
+## Shared Web Controls
+
+Radio and checkbox option cards use `RadioOption` and `CheckboxOption` from `apps/web/src/components/ui`. Their appearance is defined by the `.ws-choice` classes in `apps/web/src/app/globals.css`: selected cards have an accent border and soft accent fill, and the native indicator stays visible. Use `Checkbox` for bare inline checkboxes. Consumer classes may adjust layout, but must not override border, fill, or focus styling. See the repository's `CLAUDE.md` for the full UI rules.
+
+## Markdown Editor Dependencies
+
+CodeMirror relies on shared object identity for extensions and syntax trees. `pnpm-workspace.yaml` pins `@codemirror/state`, `@codemirror/language`, `@lezer/common`, and `@lezer/lr` to keep a single version of each. Review these pins together when updating CodeMirror; duplicate copies can break editor startup or syntax highlighting.

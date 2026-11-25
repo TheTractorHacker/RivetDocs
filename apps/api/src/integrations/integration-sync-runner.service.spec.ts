@@ -1,5 +1,10 @@
 import {
+  INCOMPLETE_TRAVERSAL_WARNING,
   IntegrationSyncRunnerService,
+  SOURCE_FIELD_KEYS_CAP,
+  collectSourceFieldKeys,
+  redactionWarningMessage,
+  storedSourceFields,
   validateDriverFetchPage,
 } from './integration-sync-runner.service.js';
 import type {
@@ -10,9 +15,15 @@ import type {
 import { AssetTargetWriter } from './reconstruction/asset-target.writer.js';
 import { hasEligibleNativeBinding } from './reconstruction/native-binding-ownership.js';
 import { BreezeDriver } from './drivers/breeze/breeze.driver.js';
+import {
+  DriverAuthError,
+  DriverResourceUnavailableError,
+  DriverSourceVersionHoldError,
+} from './drivers/integration-driver.js';
 import { buildResourceExecutionStages } from './integration-sync.service.js';
 import type { AssetReconstructionInput } from './reconstruction/reconstruction-target.js';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { integrationReconstructionGapInputSchema } from '@rivetdocs/shared';
 import { integrationAssetExternalSource } from './integration-asset-source.js';
 import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
@@ -53,6 +64,59 @@ describe('validateDriverFetchPage', () => {
     })).toThrow(message);
   });
 
+  it('replaces a malformed or unsanitized gap notice with a generic gap instead of failing the page', () => {
+    const page = validateDriverFetchPage({
+      records: [], hasMore: false, cursor: null, terminal: true,
+      schemaVersion: '1', snapshotAt: '2026-07-14T10:00:00.000Z',
+      blockedInputs: [
+        { kind: 'not-a-kind', externalId: 'x', message: 'bad' },
+        'not an object',
+        { kind: 'validation', externalId: 'org-1:subnets:ok', message: 'Readable gap.', details: { reasonCode: 'conflicting_subnet_facts' } },
+      ],
+    } as never, {
+      traversalStartedAt: '2026-07-14T10:00:00.000Z', previousCursor: null,
+      expectedSchemaVersion: null, expectedSnapshotAt: null,
+    });
+    expect(page.blockedInputs).toHaveLength(3);
+    expect(page.blockedInputs[0]).toMatchObject({ kind: 'validation', externalId: null, details: { reasonCode: 'invalid_blocked_input' } });
+    expect(page.blockedInputs[1]).toMatchObject({ details: { reasonCode: 'invalid_blocked_input' } });
+    expect(page.blockedInputs[2]).toMatchObject({ externalId: 'org-1:subnets:ok' });
+    expect(JSON.stringify(page.blockedInputs)).not.toContain('not-a-kind');
+  });
+
+  it('still fails a page whose gap list is not a list', () => {
+    expect(() => validateDriverFetchPage({
+      records: [], hasMore: false, cursor: null, terminal: true, blockedInputs: 'nope',
+    } as never, {
+      traversalStartedAt: '2026-07-14T10:00:00.000Z', previousCursor: null,
+      expectedSchemaVersion: null, expectedSnapshotAt: null,
+    })).toThrow(/blockedInputs must be a list/);
+  });
+
+  it('keeps well-formed redaction reports and drops ones with unsafe ids or paths', () => {
+    const page = validateDriverFetchPage({
+      records: [], hasMore: false, cursor: null, terminal: true,
+      redactions: [
+        { externalId: 'org-1:scripts:s1', count: 2, fieldPaths: ['content', 'parameters.apiToken'] },
+        { externalId: 'org-1:scripts:s2', count: 1, fieldPaths: ['bad path with spaces'] },
+      ],
+    }, {
+      traversalStartedAt: '2026-07-14T10:00:00.000Z', previousCursor: null,
+      expectedSchemaVersion: null, expectedSnapshotAt: null,
+    });
+    expect(page.redactions).toContainEqual({ externalId: 'org-1:scripts:s1', count: 2, fieldPaths: ['content', 'parameters.apiToken'] });
+    expect(JSON.stringify(page.redactions)).not.toContain('bad path with spaces');
+  });
+
+  it('words a redaction warning with the count and paths only, bounded to 500 characters', () => {
+    const message = redactionWarningMessage({
+      externalId: 'org-1:scripts:s1', count: 3,
+      fieldPaths: Array.from({ length: 20 }, (_, index) => `parameters.field${index}.${'x'.repeat(30)}`),
+    });
+    expect(message).toMatch(/^RivetDocs withheld 3 values that looked like credentials/);
+    expect(message.length).toBeLessThanOrEqual(500);
+  });
+
   it('requires schema and snapshot stability across pages', () => {
     expect(() => validateDriverFetchPage({
       records: [], hasMore: false, cursor: null, terminal: true,
@@ -61,6 +125,26 @@ describe('validateDriverFetchPage', () => {
       traversalStartedAt: '2026-07-14T10:00:00.000Z', previousCursor: 'page-1',
       expectedSchemaVersion: 'v1', expectedSnapshotAt: '2026-07-14T10:00:00.000Z',
     })).toThrow(/stable/i);
+  });
+
+  it('passes a well-formed field-presence report and drops a malformed one', () => {
+    const state = {
+      traversalStartedAt: '2026-07-14T10:00:00.000Z', previousCursor: null,
+      expectedSchemaVersion: null, expectedSnapshotAt: null,
+    };
+    const base = { records: [], hasMore: false, cursor: null };
+    const good = [{ path: 'addresses[].assignment', variant: 'device', present: 2, objects: 3 }];
+    expect(validateDriverFetchPage({ ...base, observedFields: good }, state).observedFields).toEqual(good);
+    expect(validateDriverFetchPage(base, state).observedFields).toBeNull();
+    for (const bad of [
+      [{ path: 'a', present: 4, objects: 3 }],
+      [{ path: 'a b', present: 1, objects: 1 }],
+      [{ path: 'a', variant: '1x', present: 1, objects: 1 }],
+      [{ path: 'a', present: 1, objects: 1 }, { path: 'a', present: 1, objects: 1 }],
+      [{ path: 'a', present: -1, objects: 1 }],
+    ]) {
+      expect(validateDriverFetchPage({ ...base, observedFields: bad as never }, state).observedFields).toBeNull();
+    }
   });
 
   it('rejects a source high-water beyond the page snapshot', () => {
@@ -124,6 +208,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
           pending.push('checkpoint');
           if (options.checkpointFails) throw new Error('checkpoint failed');
         }),
+        updateMany: jest.fn(async () => ({ count: 1 })),
       },
       integrationResource: { findUnique: jest.fn() },
     };
@@ -132,6 +217,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
         id: 'mapping', integrationId: 'integration', companyId: 'company', externalOrgId: 'org-1',
         filter: {}, integration: { id: 'integration', driver: 'typed' },
       }) },
+      systemSetting: { findUnique: jest.fn().mockResolvedValue({ integrationPriority: ['google-workspace', 'typed'] }) },
       integrationResource: { findFirst: jest.fn().mockResolvedValue({
         id: 'resource', integrationId: 'integration', resourceKey: 'subnets', enabled: true,
         targetKind: 'subnet', targetConfig: { normalization: 'cidr' }, dependsOnResourceKeys: [],
@@ -146,7 +232,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
               highWaterAt: new Date('2026-07-13T09:00:00.000Z'),
             }
           : null,
-      ) },
+      ), findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => {
         pending = [];
         try {
@@ -203,27 +289,51 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
       lockScope: jest.fn(async () => { pending.push('lock-scope'); }),
       persistGaps: jest.fn(async () => { pending.push('gaps'); }),
       resolveAbsentGaps: jest.fn(async () => { pending.push('resolve-gaps'); }),
-      staleUnseen: jest.fn(async () => { pending.push('stale-sweep'); return { stale: 2, archived: 1 }; }),
+      staleUnseen: jest.fn(async (): Promise<{
+        stale: number; archived: number; notSeen: number; held: { count: number; total: number } | null;
+      }> => { pending.push('stale-sweep'); return { stale: 2, archived: 1, notSeen: 0, held: null }; }),
       findMoveConflict: jest.fn().mockResolvedValue(null),
     };
     const completeness = {
       recalculate: jest.fn(async () => { pending.push('completeness'); }),
       clearNonParticipant: jest.fn(async () => { pending.push('completeness-clear'); }),
     };
+    const integrations = { loadDriverContext: jest.fn().mockResolvedValue({ config: {}, secret: {} }) };
     const service = new IntegrationSyncRunnerService(
       prisma as never,
       { values: { INTEGRATION_HTTP_TIMEOUT_MS: 1, INTEGRATION_HTTP_MAX_RETRIES: 0, INTEGRATION_HTTP_BACKOFF_MS: 1 } } as never,
       audit as never,
-      { loadDriverContext: jest.fn().mockResolvedValue({ config: {}, secret: {} }) } as never,
-      { get: jest.fn().mockReturnValue(driver) } as never,
+      integrations as never,
+      {
+        get: jest.fn().mockReturnValue(driver),
+        list: () => [{ key: 'typed', resources: [], ...driver.descriptor }, { key: 'legacy-rmm', resources: [{ key: 'devices' }] }],
+      } as never,
       {} as never,
       writerRegistry as never,
       provenance as never,
       completeness as never,
       new FieldTypesRegistry(),
     );
-    return { service, writer, writerRegistry, tx, order, driver, audit, prisma, provenance, completeness };
+    return { service, writer, writerRegistry, tx, order, driver, audit, prisma, provenance, completeness, integrations };
   }
+
+  it('loads only the connection of the mapping tenant and marks it on an auth failure', async () => {
+    const { service, driver, prisma, integrations } = setup();
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    (prisma as unknown as Record<string, unknown>).integrationConnection = { updateMany };
+    integrations.loadDriverContext.mockResolvedValueOnce({ config: {}, secret: {}, connectionId: 'conn-1' });
+    driver.fetchRecords.mockRejectedValueOnce(new DriverAuthError('Reconnect it.'));
+    await expect(service.runMapping({
+      syncRunId: 'auth-run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'incremental',
+    })).resolves.toMatchObject({ status: 'failed' });
+    expect(integrations.loadDriverContext).toHaveBeenCalledWith('integration', { externalOrgId: 'org-1' });
+    expect(driver.fetchRecords).toHaveBeenCalledWith(expect.objectContaining({ connectionId: 'conn-1', externalOrgId: 'org-1' }), null);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'conn-1' },
+      data: { status: 'needs_reconnect', lastErrorAt: expect.any(Date) },
+    });
+  });
 
   it('maps one scalar definition to only its configured target field and skips unmapped rows', () => {
     const { service } = setup();
@@ -549,6 +659,328 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
     }));
   });
 
+  it('explains a native validation block from the mappings and source keys, never from values', async () => {
+    const { service, driver, prisma, provenance, writer } = setup();
+    const field = (id: string, slug: string, fieldType: string) => ({
+      id: `00000000-0000-4000-8000-00000000060${id}`, slug, fieldType, options: {}, archivedAt: null,
+    });
+    prisma.integrationResource.findFirst.mockResolvedValueOnce({
+      id: 'resource', integrationId: 'integration', resourceKey: 'records', enabled: true,
+      targetKind: 'asset', targetConfig: {}, dependsOnResourceKeys: [],
+      assetLayoutId: '00000000-0000-4000-8000-000000000007',
+      assetLayout: { fields: [] }, matchKeyFieldIds: [],
+      fieldMappings: [
+        { sourceField: 'displayName', targetField: field('1', 'hostname', 'TEXT'), transform: null, syncDirection: 'source_wins' },
+        { sourceField: 'systemSerialNumber', targetField: field('2', 'serial_tag', 'TEXT'), transform: null, syncDirection: 'source_wins' },
+        { sourceField: 'cpuCores', targetField: field('3', 'cores', 'NUMBER'), transform: null, syncDirection: 'source_wins' },
+      ],
+    });
+    driver.fetchRecords.mockResolvedValueOnce({
+      records: [{
+        externalId: 'device-1', displayName: 'PRFM-HQ-01',
+        fields: { systemName: 'PRFM-HQ-01', systemSerialNumber: '', cpuCores: 'SECRET-NOT-A-NUMBER' },
+        updatedAt: null,
+      }],
+      hasMore: false, cursor: null, terminal: true,
+      snapshotAt: '2026-07-14T10:00:00.000Z',
+    });
+    writer.write.mockImplementation(async (_ctx, record) => ({
+      targetKind: 'asset', targetId: '', checksum: 'c'.repeat(64), change: 'blocked',
+      provenance: {
+        integrationId: 'integration', externalOrgId: 'org-1', resourceKey: 'records',
+        externalId: record.externalId, sourceRevision: null, sourceFingerprint: null,
+        firstSeenAt: '2026-07-14T10:00:00.000Z', lastSeenAt: '2026-07-14T10:00:00.000Z',
+        lastSyncedAt: null, ownership: 'breeze', state: 'blocked',
+      },
+      gaps: [{
+        kind: 'validation',
+        message: 'Native target validation blocked the write (fields: hostname, serial_tag, cores, owner).',
+        details: { reasonCode: 'native_validation', fieldPaths: ['hostname', 'serial_tag', 'cores', 'owner'] },
+      }],
+    }));
+
+    const result = await service.runMapping({
+      syncRunId: 'explain-run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'incremental',
+    });
+
+    const expected = [
+      'Required asset field "hostname" has no value: source field "displayName" is not present on this record.',
+      'Required asset field "serial_tag" has no value: source field "systemSerialNumber" is empty on this record.',
+      'Required asset field "cores" has no value: the value of source field "cpuCores" could not be converted to this field type.',
+      'Required asset field "owner" has no value because no source field is mapped to it.',
+    ].join(' ');
+    expect(result.conflicts).toContainEqual(expect.objectContaining({ message: expected }));
+    expect(provenance.persistGaps).toHaveBeenCalledWith(expect.anything(), expect.anything(), [
+      expect.objectContaining({
+        kind: 'validation',
+        message: expected,
+        details: { reasonCode: 'native_validation', fieldPaths: ['hostname', 'serial_tag', 'cores', 'owner'] },
+      }),
+    ]);
+    expect(JSON.stringify(result.conflicts)).not.toContain('SECRET-NOT-A-NUMBER');
+  });
+
+  it('skips a resource the driver no longer declares with a run warning, without fetching', async () => {
+    const { service, driver } = setup();
+    // The setup resource is `subnets`; the driver now declares only `devices`.
+    (driver.descriptor as Record<string, unknown>).resources = [{ key: 'devices' }];
+    const outcome = await service.runMapping({
+      syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'incremental',
+    });
+    expect(outcome).toMatchObject({ status: 'succeeded', error: null, resourceKey: 'subnets' });
+    expect(outcome.conflicts).toEqual([
+      expect.objectContaining({ kind: 'validation_error', message: expect.stringContaining('no longer provides it') }),
+    ]);
+    expect(driver.fetchRecords).not.toHaveBeenCalled();
+  });
+
+  describe('integration sections on legacy records', () => {
+    const fieldId = '00000000-0000-4000-8000-000000000601';
+    const validSection = {
+      title: 'Workspace',
+      groups: [{
+        key: 'account', title: 'Account', icon: 'gmail',
+        rows: [
+          { label: 'Status', kind: 'badge', value: 'Active', tone: 'success' },
+          { label: 'Mailbox', kind: 'meter', used: 12, total: 30, unit: 'mb' },
+        ],
+      }],
+    };
+
+    function arrange(section: unknown, matchSuggestions = false, standardFields = false, extra: Record<string, unknown> = {}) {
+      const ctx = setup();
+      ctx.prisma.integrationResource.findFirst.mockResolvedValueOnce({
+        id: 'resource', integrationId: 'integration', resourceKey: 'users', enabled: true,
+        targetKind: 'asset', targetConfig: {}, dependsOnResourceKeys: [],
+        assetLayoutId: '00000000-0000-4000-8000-000000000007',
+        assetLayout: { fields: [] }, matchKeyFieldIds: [fieldId],
+        fieldMappings: [{
+          sourceField: 'email',
+          targetField: { id: fieldId, slug: 'email', fieldType: 'EMAIL', options: {}, archivedAt: null },
+          transform: null, syncDirection: 'source_wins',
+        }],
+      });
+      (ctx.driver.descriptor as Record<string, unknown>).resources = [
+        {
+          key: 'users',
+          ...(matchSuggestions ? { matchSuggestions: { sourceField: 'email', layoutHints: ['people'], fieldHints: ['email'] } } : {}),
+          ...(standardFields ? { standardFields: [{ sourceField: 'title', label: 'Title', fieldType: 'TEXT', fieldHints: ['title'] }] } : {}),
+        },
+      ];
+      ctx.driver.fetchRecords.mockResolvedValueOnce({
+        records: [{
+          externalId: 'user-1', displayName: 'User One', fields: { email: 'user1@example.com' },
+          updatedAt: null, ...(section === undefined ? {} : { section }), ...extra,
+        }],
+        hasMore: false, cursor: null, terminal: true, snapshotAt: '2026-07-14T10:00:00.000Z',
+      });
+      ctx.writer.write.mockImplementation(async (_ctx, record) => ({
+        targetKind: 'asset', targetId: 'asset-id', checksum: 'c'.repeat(64), change: 'created',
+        provenance: {
+          integrationId: 'integration', externalOrgId: 'org-1', resourceKey: 'users',
+          externalId: record.externalId, sourceRevision: null, sourceFingerprint: null,
+          firstSeenAt: '2026-07-14T10:00:00.000Z', lastSeenAt: '2026-07-14T10:00:00.000Z',
+          lastSyncedAt: '2026-07-14T10:00:00.000Z', ownership: 'breeze', state: 'active',
+        },
+        gaps: [],
+      }));
+      return ctx;
+    }
+
+    const run = (service: IntegrationSyncRunnerService) => service.runMapping({
+      syncRunId: 'section-run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'incremental',
+    });
+
+    function upsertData(tx: ReturnType<typeof setup>['tx']) {
+      const call = (tx.integrationSyncRecord.upsert.mock.calls as unknown as Array<[{ create: Record<string, unknown>; update: Record<string, unknown> }]>)[0]![0];
+      return call;
+    }
+
+    function checkpointData(tx: ReturnType<typeof setup>['tx']) {
+      return (tx.integrationSyncCheckpoint.upsert.mock.calls as unknown as Array<[{ create: Record<string, unknown>; update: Record<string, unknown> }]>)[0]![0];
+    }
+
+    it('records the source field keys of a complete traversal on the checkpoint', async () => {
+      const { service, tx } = arrange(undefined);
+      await expect(run(service)).resolves.toMatchObject({ status: 'succeeded' });
+      expect(checkpointData(tx).create.sourceFields).toEqual(['email']);
+      expect(checkpointData(tx).update.sourceFields).toEqual(['email']);
+    });
+
+    it('keeps the stored keys when the traversal resumed mid-way (it saw only the tail)', async () => {
+      const ctx = arrange(undefined);
+      ctx.prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: 'page-2', schemaVersion: null, snapshotAt: new Date('2026-07-14T10:00:00.000Z'),
+        highWaterAt: null, authoritative: true,
+      });
+      await expect(run(ctx.service)).resolves.toMatchObject({ status: 'succeeded' });
+      expect(checkpointData(ctx.tx).update).not.toHaveProperty('sourceFields');
+      expect(checkpointData(ctx.tx).create).not.toHaveProperty('sourceFields');
+    });
+
+    it('stores a valid section on the binding (create and replace on update)', async () => {
+      const { service, tx } = arrange(validSection);
+      await expect(run(service)).resolves.toMatchObject({ status: 'succeeded', conflicts: [] });
+      const call = upsertData(tx);
+      expect(call.create.sectionData).toEqual(validSection);
+      expect(call.update.sectionData).toEqual(validSection);
+    });
+
+    it('clears the stored section when the record no longer carries one', async () => {
+      const { service, tx } = arrange(undefined);
+      await run(service);
+      expect(upsertData(tx).update.sectionData).toBe(Prisma.DbNull);
+    });
+
+    it.each([
+      ['markup', { ...validSection, title: '<img src=x onerror=alert(1)>' }],
+      ['unknown kind', { ...validSection, groups: [{ key: 'a', title: 'A', rows: [{ label: 'x', kind: 'html', value: 'y' }] }] }],
+      ['credential-shaped value', { ...validSection, groups: [{ key: 'a', title: 'A', rows: [{ label: 'x', kind: 'text', value: 'Bearer abcdefghijklmnop' }] }] }],
+    ])('drops an invalid section (%s) with a warning and still writes the record', async (_label, section) => {
+      const { service, tx, writer } = arrange(section);
+      const outcome = await run(service);
+      expect(outcome.status).toBe('succeeded');
+      expect(outcome.totals).toMatchObject({ created: 1, errors: 0 });
+      expect(outcome.conflicts).toEqual([expect.objectContaining({
+        kind: 'validation_error', message: 'Integration section failed validation and was dropped.',
+      })]);
+      expect(writer.write).toHaveBeenCalledTimes(1);
+      expect(upsertData(tx).update.sectionData).toBe(Prisma.DbNull);
+    });
+
+    it('stores a short source kind on the binding (create and replace on update)', async () => {
+      const { service, tx } = arrange(validSection, false, false, { sourceKind: 'HYPERV_VMM_GUEST' });
+      await run(service);
+      expect(upsertData(tx).create.sourceKind).toBe('HYPERV_VMM_GUEST');
+      expect(upsertData(tx).update.sourceKind).toBe('HYPERV_VMM_GUEST');
+    });
+
+    it.each([
+      ['absent', {}],
+      ['not a string', { sourceKind: 42 }],
+      ['empty', { sourceKind: '' }],
+      ['not a short token', { sourceKind: 'NMS SWITCH/../x' }],
+      ['too long', { sourceKind: 'A'.repeat(65) }],
+    ])('clears the source kind when it is %s, and still writes the record', async (_label, extra) => {
+      const { service, tx } = arrange(validSection, false, false, extra);
+      await expect(run(service)).resolves.toMatchObject({ status: 'succeeded', conflicts: [] });
+      expect(upsertData(tx).create.sourceKind).toBeNull();
+      expect(upsertData(tx).update.sourceKind).toBeNull();
+    });
+
+    it('opts resources declaring matchSuggestions into match-first, and only those', async () => {
+      const withHints = arrange(validSection, true);
+      await run(withHints.service);
+      expect(withHints.writer.write.mock.calls[0]![0].claimUnboundMatches).toBe(true);
+      const without = arrange(validSection, false);
+      await run(without.service);
+      expect(without.writer.write.mock.calls[0]![0].claimUnboundMatches).toBe(false);
+    });
+
+    it('opts a resource declaring matchFirst into match-first without guided matching (Custom API Items)', async () => {
+      const ctx = arrange(validSection, false);
+      (ctx.driver.descriptor as Record<string, unknown>).resources = [{ key: 'users', matchFirst: true }];
+      await run(ctx.service);
+      const writeCtx = ctx.writer.write.mock.calls[0]![0];
+      expect(writeCtx.claimUnboundMatches).toBe(true);
+      expect(writeCtx.coBindSources ?? []).toEqual([]);
+    });
+
+    it('marks the binding adopted when the writer adopted an operator asset', async () => {
+      const { service, tx, writer } = arrange(validSection, true);
+      const base = writer.write.getMockImplementation()!;
+      writer.write.mockImplementation(async (c, r) => ({ ...(await base(c, r)), change: 'updated', adopted: true }));
+      await run(service);
+      expect(upsertData(tx).create.adopted).toBe(true);
+      expect(upsertData(tx).update.adopted).toBe(true);
+      expect(writer.write.mock.calls[0]![0].matchFirstIndexes).toBeInstanceOf(Map);
+    });
+
+    it('tracks differences only for resources declaring standardFields, honouring Keep ours', async () => {
+      const plain = arrange(validSection, true);
+      await run(plain.service);
+      expect(plain.writer.write.mock.calls[0]![0].recordFieldDiffs).toBeUndefined();
+      expect(upsertData(plain.tx).update).not.toHaveProperty('fieldDiffs');
+
+      const { service, tx, writer } = arrange(validSection, true, true);
+      tx.integrationSyncRecord.findUnique.mockResolvedValue({
+        id: 'binding', state: 'active', assetId: 'asset-id', targetKind: 'asset', lastSyncedFieldChecksums: {},
+        fieldDiffs: {},
+        fieldResolutions: { kept: { choice: 'local', sourceFingerprint: 'src-k' } },
+      });
+      const base = writer.write.getMockImplementation()!;
+      writer.write.mockImplementation(async (c, r) => ({
+        ...(await base(c, r)),
+        change: 'unchanged',
+        fieldDiffs: {
+          open: { sourceValue: 'Engineer', sourceFingerprint: 'src-o', localFingerprint: 'loc-o' },
+          kept: { sourceValue: 'Lead', sourceFingerprint: 'src-k', localFingerprint: 'loc-k' },
+        },
+      }));
+      await run(service);
+      expect(writer.write.mock.calls[0]![0].recordFieldDiffs).toBe(true);
+      const data = upsertData(tx).update;
+      expect(Object.keys(data.fieldDiffs as object)).toEqual(['open']);
+      expect(data.fieldDiffs).toMatchObject({ open: { sourceValue: 'Engineer', detectedAt: expect.any(String) } });
+      expect(data.fieldResolutions).toEqual({ kept: { choice: 'local', sourceFingerprint: 'src-k' } });
+    });
+
+    it('passes co-bind sources and the priority order only to standard-field match-first resources', async () => {
+      const plain = arrange(validSection, true);
+      await run(plain.service);
+      expect(plain.writer.write.mock.calls[0]![0].coBindSources).toBeUndefined();
+      expect(plain.writer.write.mock.calls[0]![0].integrationPriority).toBeUndefined();
+
+      const { service, writer } = arrange(validSection, true, true);
+      await run(service);
+      const ctx = writer.write.mock.calls[0]![0];
+      // Drivers without standardFields (legacy) are never co-bound.
+      expect(ctx.coBindSources).toEqual(['typed']);
+      expect(ctx.integrationPriority).toEqual({ driver: 'typed', order: ['typed', 'legacy-rmm'] });
+    });
+
+    it('never clears adopted and passes it back to the writer on later syncs', async () => {
+      const { service, tx, writer } = arrange(validSection, true);
+      tx.integrationSyncRecord.findUnique.mockResolvedValue({ id: 'binding', adopted: true, state: 'active', assetId: 'asset-id', targetKind: 'asset', lastSyncedFieldChecksums: {} });
+      await run(service);
+      expect(writer.write.mock.calls[0]![0].previousAdopted).toBe(true);
+      expect(upsertData(tx).update).not.toHaveProperty('adopted');
+    });
+  });
+
+  it('skips a resource the source cannot provide with a warning and leaves its bindings alone', async () => {
+    const { service, writer, driver, provenance, tx, prisma } = setup();
+    driver.fetchRecords.mockRejectedValueOnce(
+      new DriverResourceUnavailableError('Intune is not licensed in this tenant, so computers and mobile devices are skipped.'),
+    );
+    await expect(service.runMapping({
+      syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'full',
+    })).resolves.toMatchObject({
+      status: 'succeeded',
+      error: null,
+      conflicts: [{ kind: 'validation_error', message: 'Skipped resource "subnets": Intune is not licensed in this tenant, so computers and mobile devices are skipped.' }],
+    });
+    expect(writer.write).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(provenance.staleUnseen).not.toHaveBeenCalled();
+    expect(tx.integrationSyncCheckpoint.upsert).not.toHaveBeenCalled();
+  });
+
+  it('still fails when a resource becomes unavailable after its first page', async () => {
+    const { service, driver } = setup();
+    driver.fetchRecords
+      .mockResolvedValueOnce({ records: [], hasMore: true, cursor: 'c2', terminal: false, snapshotAt: '2026-07-14T10:00:00.000Z' })
+      .mockRejectedValueOnce(new DriverResourceUnavailableError('gone'));
+    await expect(service.runMapping({
+      syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'full',
+    })).resolves.toMatchObject({ status: 'failed' });
+  });
+
   it('dispatches typed input and commits its binding before the page checkpoint', async () => {
     const { service, writer, tx, order, audit } = setup();
     await expect(service.runMapping({
@@ -728,6 +1160,361 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
     ]);
   });
 
+  describe('source version hold', () => {
+    const versionMessage = 'Breeze reported partner API schema version 2, which RivetDocs does not know yet. Sync is paused and existing data is kept.';
+    const run = (service: IntegrationSyncRunnerService, extra: Record<string, unknown> = {}) => service.runMapping({
+      syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'full', ...extra,
+    } as never);
+
+    it('pauses on an unknown source version: writes nothing, archives nothing, and records a version hold', async () => {
+      const { service, driver, writer, tx, prisma, provenance } = setup();
+      const upsert = jest.fn().mockResolvedValue({});
+      Object.assign(prisma.integrationSyncCheckpoint, { upsert });
+      driver.fetchRecords.mockRejectedValueOnce(new DriverSourceVersionHoldError('2', versionMessage));
+
+      const outcome = await run(service);
+
+      expect(outcome).toMatchObject({ status: 'succeeded', totals: { paused: 1, created: 0, archived: 0, stale: 0 } });
+      expect(outcome.conflicts).toContainEqual(expect.objectContaining({ kind: 'validation_error', message: versionMessage }));
+      expect(writer.write).not.toHaveBeenCalled();
+      expect(tx.integrationSyncRecord.upsert).not.toHaveBeenCalled();
+      expect(provenance.staleUnseen).not.toHaveBeenCalled();
+      expect(provenance.persistGaps).not.toHaveBeenCalled();
+      expect(upsert).toHaveBeenCalledTimes(1);
+      const call = upsert.mock.calls[0]![0] as { create: Record<string, unknown>; update: Record<string, unknown> };
+      expect(call.update).toEqual({
+        cursor: null, schemaVersion: null,
+        versionHold: { since: expect.any(String), version: '2' },
+      });
+      expect(call.create).toMatchObject({ cursor: null, versionHold: { version: '2' } });
+      expect(call.update).not.toHaveProperty('highWaterAt');
+      expect(call.update).not.toHaveProperty('lastCompletedAt');
+    });
+
+    it('keeps the first hold time when the hold repeats', async () => {
+      const { service, driver, prisma } = setup();
+      const upsert = jest.fn().mockResolvedValue({});
+      Object.assign(prisma.integrationSyncCheckpoint, { upsert });
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null,
+        versionHold: { since: '2026-07-01T00:00:00.000Z', version: '2' },
+      } as never);
+      driver.fetchRecords.mockRejectedValueOnce(new DriverSourceVersionHoldError('3', versionMessage));
+
+      await run(service);
+
+      expect((upsert.mock.calls[0]![0] as { update: { versionHold: unknown } }).update.versionHold)
+        .toEqual({ since: '2026-07-01T00:00:00.000Z', version: '3' });
+    });
+
+    it('writes no hold on a dry run', async () => {
+      const { service, driver, prisma } = setup();
+      const upsert = jest.fn().mockResolvedValue({});
+      Object.assign(prisma.integrationSyncCheckpoint, { upsert });
+      driver.fetchRecords.mockRejectedValueOnce(new DriverSourceVersionHoldError('2', versionMessage));
+
+      await expect(run(service, { dryRun: true })).resolves.toMatchObject({ status: 'succeeded', totals: { paused: 1 } });
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it('passes the accepted version to the driver, and lets an accepting run read any version', async () => {
+      const { service, driver, prisma } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null, acceptedSourceVersion: '2',
+      } as never);
+
+      await run(service);
+
+      expect(driver.fetchRecords).toHaveBeenCalledWith(expect.objectContaining({
+        acceptedSourceVersion: '2', acceptAnySourceVersion: false,
+      }), null);
+    });
+
+    it('reads the accepted version from another mode when this mode has no checkpoint yet', async () => {
+      const { service, driver, prisma } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue(null as never);
+      prisma.integrationSyncCheckpoint.findFirst.mockResolvedValue({ acceptedSourceVersion: '2' } as never);
+
+      await run(service);
+
+      expect(prisma.integrationSyncCheckpoint.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: {
+          companyId: 'company',
+          integrationCompanyMappingId: 'mapping',
+          resourceId: 'resource',
+          acceptedSourceVersion: { not: null },
+        },
+      }));
+      expect(driver.fetchRecords).toHaveBeenCalledWith(expect.objectContaining({
+        acceptedSourceVersion: '2', acceptAnySourceVersion: false,
+      }), null);
+    });
+
+    it('stores the accepted version on every mode and clears the hold on an accepting run', async () => {
+      const { service, driver, tx, prisma } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null,
+        versionHold: { since: '2026-07-01T00:00:00.000Z', version: '2' },
+      } as never);
+      driver.fetchRecords.mockResolvedValueOnce({
+        records: [{ reconstructionInput: input }], hasMore: false, cursor: null, terminal: true,
+        schemaVersion: '2', snapshotAt: '2026-07-14T10:00:00.000Z',
+      } as never);
+
+      await run(service, { acceptSourceChanges: true });
+
+      expect(driver.fetchRecords).toHaveBeenCalledWith(
+        expect.objectContaining({ acceptAnySourceVersion: true }), null,
+      );
+      const checkpoint = (tx.integrationSyncCheckpoint.upsert.mock.calls.at(-1) as unknown as [{ update: Record<string, unknown> }])[0];
+      expect(checkpoint.update).toMatchObject({ acceptedSourceVersion: '2', versionHold: Prisma.DbNull });
+      expect(tx.integrationSyncCheckpoint.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ mode: { not: 'full' } }),
+        data: { acceptedSourceVersion: '2', versionHold: Prisma.DbNull },
+      }));
+    });
+  });
+
+  it('writes a record with withheld values and reports each redaction as a run warning, never the value', async () => {
+    const { service, driver, writer, tx } = setup();
+    driver.fetchRecords.mockResolvedValueOnce({
+      records: [{ reconstructionInput: input }], hasMore: false, cursor: null, terminal: true,
+      snapshotAt: '2026-07-14T10:00:00.000Z',
+      redactions: [{ externalId: input.externalId, count: 2, fieldPaths: ['description', 'notes'] }],
+    } as never);
+
+    const outcome = await service.runMapping({
+      syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+      dryRun: false, actorId: 'actor', mode: 'full',
+    });
+
+    expect(outcome).toMatchObject({ status: 'succeeded', totals: { created: 1, redacted: 1, secretBlocked: 0, blocked: 0 } });
+    expect(writer.write).toHaveBeenCalledTimes(1);
+    expect(tx.integrationSyncRecord.upsert).toHaveBeenCalledTimes(1);
+    expect(outcome.conflicts).toContainEqual({
+      kind: 'secret_redacted', externalId: input.externalId,
+      message: expect.stringMatching(/withheld 2 values .*\(description, notes\)/),
+    });
+  });
+
+  describe('sync holds', () => {
+    const snapshot = '2026-07-14T10:00:00.000Z';
+    const watchedBaseline = {
+      v: 1, updatedAt: '2026-07-13T10:00:00.000Z', records: 10,
+      paths: {
+        'device:addresses[].assignment': { path: 'addresses[].assignment', variant: 'device', present: 10, objects: 10 },
+        hostname: { path: 'hostname', present: 10, objects: 10 },
+        // Sometimes absent in the baseline: never watched.
+        displayName: { path: 'displayName', present: 7, objects: 10 },
+      },
+    };
+    const driftedFields = [
+      { path: 'addresses[].assignment', variant: 'device', present: 0, objects: 3 },
+      { path: 'hostname', present: 1, objects: 1 },
+      { path: 'displayName', present: 0, objects: 1 },
+    ];
+    const cleanFields = (objects: number) => [
+      { path: 'addresses[].assignment', variant: 'device', present: objects, objects },
+      { path: 'hostname', present: objects, objects },
+    ];
+    const page = (records: number, observedFields: unknown) => ({
+      records: Array.from({ length: records }, () => ({ reconstructionInput: input })),
+      hasMore: false, cursor: null, terminal: true, snapshotAt: snapshot, observedFields,
+    });
+    const checkpointUpdate = (tx: { integrationSyncCheckpoint: { upsert: jest.Mock } }) =>
+      (tx.integrationSyncCheckpoint.upsert.mock.calls.at(-1) as unknown as [{
+        create: Record<string, unknown>; update: Record<string, unknown>;
+      }])[0];
+
+    it('holds a page whose records all lack a watched field: writes nothing, sets a field hold, and skips the sweep', async () => {
+      const { service, tx, writer, driver, prisma, provenance } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null, fieldPresence: watchedBaseline,
+      } as never);
+      driver.fetchRecords.mockResolvedValue(page(1, driftedFields) as never);
+
+      const outcome = await service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'full',
+      });
+
+      expect(outcome).toMatchObject({
+        status: 'succeeded', totals: { fetched: 1, blocked: 1, created: 0, incomplete: 1 },
+      });
+      expect(writer.write).not.toHaveBeenCalled();
+      expect(tx.integrationSyncRecord.upsert).not.toHaveBeenCalled();
+      expect(tx.integrationSyncRecord.update).not.toHaveBeenCalled();
+      expect(provenance.staleUnseen).not.toHaveBeenCalled();
+      expect(provenance.resolveAbsentGaps).not.toHaveBeenCalled();
+      const messages = outcome.conflicts.map((conflict) => conflict.message);
+      expect(messages).toContainEqual(expect.stringMatching(
+        /typed stopped sending `addresses\[\]\.assignment` \(device records\) for subnets\. Nothing was changed\./,
+      ));
+      // Only the always-present path drifted; the sometimes-absent one is not watched.
+      expect(messages.join(' ')).not.toContain('displayName');
+      expect(messages).toContain(INCOMPLETE_TRAVERSAL_WARNING);
+      const { update } = checkpointUpdate(tx);
+      expect(update).toMatchObject({
+        authoritative: false,
+        fieldHold: { since: snapshot, paths: ['device:addresses[].assignment'] },
+      });
+      expect(update).not.toHaveProperty('fieldPresence');
+    });
+
+    it('keeps the first since of an existing field hold and warns once per traversal', async () => {
+      const { service, tx, driver, prisma } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null, fieldPresence: watchedBaseline,
+        fieldHold: { since: '2026-07-01T00:00:00.000Z', paths: ['hostname'] },
+      } as never);
+      driver.fetchRecords
+        .mockResolvedValueOnce({ ...page(1, driftedFields), hasMore: true, cursor: 'p2', terminal: false } as never)
+        .mockResolvedValueOnce(page(1, driftedFields) as never);
+
+      const outcome = await service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'full',
+      });
+      expect(outcome.conflicts.filter((c) => c.message.includes('stopped sending'))).toHaveLength(1);
+      expect(checkpointUpdate(tx).update).toMatchObject({
+        fieldHold: { since: '2026-07-01T00:00:00.000Z', paths: ['device:addresses[].assignment', 'hostname'] },
+      });
+    });
+
+    it('builds the presence baseline from a clean, fresh traversal of at least 5 records and clears an old field hold', async () => {
+      const { service, tx, driver, prisma } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null,
+        fieldHold: { since: '2026-07-01T00:00:00.000Z', paths: ['hostname'] },
+      } as never);
+      driver.fetchRecords.mockResolvedValue(page(5, cleanFields(5)) as never);
+
+      await service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'incremental',
+      });
+      const { update, create } = checkpointUpdate(tx);
+      const baseline = {
+        v: 1, updatedAt: snapshot, records: 5,
+        paths: {
+          'device:addresses[].assignment': { path: 'addresses[].assignment', variant: 'device', present: 5, objects: 5 },
+          hostname: { path: 'hostname', present: 5, objects: 5 },
+        },
+      };
+      expect(update).toMatchObject({ fieldPresence: baseline, fieldHold: Prisma.DbNull });
+      expect(create).toMatchObject({ fieldPresence: baseline });
+      expect(JSON.stringify(update.fieldPresence)).not.toMatch(/10\.0\.0\.0|LAN/);
+    });
+
+    it.each([
+      ['fewer than 5 records', { records: 4, fields: cleanFields(4), resume: undefined }],
+      ['a resumed traversal', { records: 5, fields: cleanFields(5), resume: 'cursor-1' }],
+      ['a page without a presence report', { records: 5, fields: undefined, resume: undefined }],
+      ['a malformed presence report', { records: 5, fields: [{ path: 'bad path!', present: 1, objects: 1 }], resume: undefined }],
+    ])('does not touch the baseline after %s', async (_label, scenario) => {
+      const { service, tx, driver, prisma } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: scenario.resume ?? null, snapshotAt: new Date(snapshot), highWaterAt: null,
+        fieldPresence: watchedBaseline,
+      } as never);
+      driver.fetchRecords.mockResolvedValue(page(scenario.records, scenario.fields) as never);
+
+      await service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'incremental',
+      });
+      expect(checkpointUpdate(tx).update).not.toHaveProperty('fieldPresence');
+      expect(checkpointUpdate(tx).update).not.toHaveProperty('fieldHold');
+    });
+
+    it('accepting run writes a drifted page, rebuilds the baseline on every mode, and clears both holds', async () => {
+      const { service, tx, writer, driver, prisma, provenance } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null, fieldPresence: watchedBaseline,
+        fieldHold: { since: '2026-07-01T00:00:00.000Z', paths: ['device:addresses[].assignment'] },
+        removalHold: { since: '2026-07-02T00:00:00.000Z', count: 4, total: 10 },
+      } as never);
+      driver.fetchRecords.mockResolvedValue(page(1, driftedFields) as never);
+
+      const outcome = await service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'full', acceptSourceChanges: true,
+      });
+
+      expect(outcome).toMatchObject({ status: 'succeeded', totals: { created: 1, blocked: 0, incomplete: 0 } });
+      expect(writer.write).toHaveBeenCalledTimes(1);
+      expect(provenance.staleUnseen).toHaveBeenCalledWith(tx, expect.objectContaining({ acceptSourceChanges: true }));
+      const baseline = expect.objectContaining({ v: 1, records: 1 });
+      expect(tx.integrationSyncCheckpoint.updateMany).toHaveBeenCalledWith({
+        where: {
+          companyId: 'company', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+          mode: { not: 'full' },
+        },
+        data: { fieldPresence: baseline, fieldHold: Prisma.DbNull },
+      });
+      expect(checkpointUpdate(tx).update).toMatchObject({
+        fieldPresence: baseline, fieldHold: Prisma.DbNull, removalHold: Prisma.DbNull,
+      });
+    });
+
+    it('ignores the accept flag on a dry run', async () => {
+      const { service, writer, driver, prisma } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null, fieldPresence: watchedBaseline,
+      } as never);
+      driver.fetchRecords.mockResolvedValue(page(1, driftedFields) as never);
+      await expect(service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: true, actorId: 'actor', mode: 'full', acceptSourceChanges: true,
+      })).resolves.toMatchObject({ totals: { blocked: 1 } });
+      expect(writer.write).not.toHaveBeenCalled();
+    });
+
+    it('records a removal hold, keeps its first since, and reports not-seen records', async () => {
+      const { service, tx, prisma, provenance } = setup();
+      prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null,
+        removalHold: { since: '2026-07-02T00:00:00.000Z', count: 3, total: 10 },
+      } as never);
+      provenance.staleUnseen.mockResolvedValueOnce({
+        stale: 0, archived: 0, notSeen: 4, held: { count: 4, total: 10 },
+      });
+
+      const outcome = await service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'full',
+      });
+      expect(outcome).toMatchObject({ status: 'succeeded', totals: { notSeen: 4, archived: 0, held: 4 } });
+      expect(outcome.conflicts.map((c) => c.message)).toContainEqual(expect.stringMatching(
+        /typed returned far fewer subnets records than before \(4 of 10 missing from two full syncs\)\. Nothing was archived\./,
+      ));
+      expect(checkpointUpdate(tx).update).toMatchObject({
+        removalHold: { since: '2026-07-02T00:00:00.000Z', count: 4, total: 10 },
+      });
+    });
+
+    it('clears an old removal hold when the sweep holds nothing, and leaves the column alone otherwise', async () => {
+      const held = setup();
+      held.prisma.integrationSyncCheckpoint.findUnique.mockResolvedValue({
+        cursor: null, snapshotAt: null, highWaterAt: null,
+        removalHold: { since: '2026-07-02T00:00:00.000Z', count: 3, total: 10 },
+      } as never);
+      await held.service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'full',
+      });
+      expect(checkpointUpdate(held.tx).update).toMatchObject({ removalHold: Prisma.DbNull });
+
+      const clean = setup();
+      await clean.service.runMapping({
+        syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
+        dryRun: false, actorId: 'actor', mode: 'full',
+      });
+      expect(checkpointUpdate(clean.tx).update).not.toHaveProperty('removalHold');
+    });
+  });
+
   it('restores a stale binding in place, clears staleSince, and carries native/manual preservation state', async () => {
     const { service, writer, tx } = setup({ staleBinding: true });
     writer.write.mockResolvedValueOnce({
@@ -823,7 +1610,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
     await expect(service.runMapping({
       syncRunId: 'run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
       dryRun: false, actorId: 'actor', mode: 'incremental',
-    })).resolves.toMatchObject({ status: 'failed' });
+    })).resolves.toMatchObject({ status: 'succeeded', conflicts: expect.arrayContaining([expect.objectContaining({ message: INCOMPLETE_TRAVERSAL_WARNING })]) });
     const gapCalls = provenance.persistGaps.mock.calls as unknown as Array<[
       unknown, { observedAt: Date }, unknown[],
     ]>;
@@ -887,7 +1674,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
     await expect(service.runMapping({
       syncRunId: 'validation-run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
       dryRun: false, actorId: 'actor', mode: 'full',
-    })).resolves.toMatchObject({ status: 'failed', totals: { created: 1, errors: 1 } });
+    })).resolves.toMatchObject({ status: 'succeeded', totals: { created: 1, errors: 1 }, conflicts: expect.arrayContaining([expect.objectContaining({ message: INCOMPLETE_TRAVERSAL_WARNING })]) });
     expect(writer.write).toHaveBeenCalledTimes(1);
     expect(tx.integrationSyncRecord.upsert).toHaveBeenCalledTimes(1);
     expect(provenance.persistGaps).toHaveBeenCalledWith(expect.anything(), expect.anything(), [
@@ -923,7 +1710,7 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
     await expect(service.runMapping({
       syncRunId: 'dependency-run', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
       dryRun: false, actorId: 'actor', mode: 'incremental',
-    })).resolves.toMatchObject({ status: 'failed', totals: { missingDependency: 1 } });
+    })).resolves.toMatchObject({ status: 'succeeded', totals: { missingDependency: 1 }, conflicts: expect.arrayContaining([expect.objectContaining({ message: INCOMPLETE_TRAVERSAL_WARNING })]) });
     expect(provenance.persistGaps).toHaveBeenCalledWith(expect.anything(), expect.anything(), [
       expect.objectContaining({ kind: 'missing_dependency' }),
     ]);
@@ -980,7 +1767,13 @@ describe('IntegrationSyncRunnerService writer dispatch', () => {
     await expect(service.runMapping({
       syncRunId: 'resume-run-2', integrationCompanyMappingId: 'mapping', resourceId: 'resource',
       dryRun: false, actorId: 'actor', mode: 'full',
-    })).resolves.toMatchObject({ status: 'failed', error: expect.stringContaining('incomplete') });
+    })).resolves.toMatchObject({
+      status: 'succeeded', error: null,
+      // The resumed walk saw no gap of its own, so only this marker carries
+      // the warning to the Runs tab.
+      totals: { blocked: 0, errors: 0, missingDependency: 0, incomplete: 1 },
+      conflicts: expect.arrayContaining([expect.objectContaining({ message: INCOMPLETE_TRAVERSAL_WARNING })]),
+    });
     expect(prisma.integrationSyncCheckpoint.findUnique).toHaveBeenCalledTimes(2);
     expect(provenance.resolveAbsentGaps).not.toHaveBeenCalled();
     expect(provenance.staleUnseen).not.toHaveBeenCalled();
@@ -1537,9 +2330,14 @@ describe('Breeze foundational asset composition', () => {
   const manualField = '00000000-0000-4000-8000-000000000108';
   const manualOnlyField = '00000000-0000-4000-8000-000000000109';
 
-  it('namespaces Breeze identities without changing established driver sources', () => {
+  it('namespaces Breeze and Custom API identities without changing established driver sources', () => {
     expect(integrationAssetExternalSource('breeze', integrationA)).toBe(
       `breeze:${integrationA}`,
+    );
+    // 2 Custom API integrations can both send record id 1.
+    expect(integrationAssetExternalSource('custom-api', integrationA)).toBe(`custom-api:${integrationA}`);
+    expect(integrationAssetExternalSource('custom-api', integrationB)).not.toBe(
+      integrationAssetExternalSource('custom-api', integrationA),
     );
     for (const driver of ['action1', 'ninjaone', 'unifi']) {
       expect(integrationAssetExternalSource(driver, integrationA)).toBe(driver);
@@ -1630,7 +2428,7 @@ describe('Breeze foundational asset composition', () => {
         filter: {}, integration: { id: integrationA, driver: 'breeze' },
       }) },
       integrationResource: { findFirst: jest.fn(async ({ where }: { where: { id: string } }) => resources.get(where.id)) },
-      integrationSyncCheckpoint: { findUnique: jest.fn().mockResolvedValue(null) },
+      integrationSyncCheckpoint: { findUnique: jest.fn().mockResolvedValue(null), findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
     };
     const writeFromIntegration = jest.fn(async (input: { resourceId: string }) => ({
@@ -1873,5 +2671,26 @@ describe('Breeze foundational asset composition', () => {
     });
     expect(assets.size).toBe(countBeforeMigration);
     expect(siteA).toMatchObject({ externalId: `${org}:sites:site-uuid`, externalSource: `breeze:${integrationA}`, name: 'HQ renamed' });
+  });
+});
+
+describe('source field keys', () => {
+  const legacy = (fields: Record<string, unknown>) => ({ externalId: 'x', displayName: null, fields, updatedAt: null });
+
+  it('collects the keys of legacy records only, skipping keys no mapping could name', () => {
+    const keys = new Set<string>();
+    collectSourceFieldKeys(keys, [
+      legacy({ systemName: 'a', osName: null }),
+      legacy({ systemName: 'b', ['bad\u0000key']: 1, ['x'.repeat(257)]: 1 }),
+      { reconstructionInput: { externalId: 'typed' } } as never,
+    ]);
+    expect(storedSourceFields(keys)).toEqual(['osName', 'systemName']);
+  });
+
+  it('stores nothing (unknown) rather than a cut list when there are too many keys', () => {
+    const keys = new Set<string>();
+    const wide = Object.fromEntries(Array.from({ length: SOURCE_FIELD_KEYS_CAP + 1 }, (_, i) => [`k${i}`, i]));
+    collectSourceFieldKeys(keys, [legacy(wide)]);
+    expect(storedSourceFields(keys)).toEqual([]);
   });
 });

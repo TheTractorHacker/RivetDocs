@@ -13,12 +13,12 @@ Every mutation in RivetDocs writes an immutable record to the audit log. The log
 
 Every create, update, delete, archive, restore, and sensitive access operation writes an audit entry. This includes:
 
-- **Asset** create, update, archive, restore
+- **Asset** create, update, archive, restore, CSV export (`asset.export`, including layout, column mode, field slugs, row count, truncation, and filter metadata)
 - **Password** create, update, archive, restore, **reveal** (each decryption), version restore
 - **Article** create, update, move, archive, restore
 - **Company** create, update, archive, restore
 - **User** create, update, deactivate, role change, password change, MFA reset, invite created/accepted
-- **Membership** create, update, revoke
+- **Membership** create, update, revoke, including the company password-access override in the change history
 - **Domain** create, update, archive, restore, check result
 - **Layout** create, update, rename, archive
 - **Settings** update, email update/test
@@ -28,7 +28,9 @@ Every create, update, delete, archive, restore, and sensitive access operation w
 - **Export** PDF vault export triggered, completed, failed
 - **Security** session revocation, IP rule CRUD, egress blocks
 - **Login** events (success, failure, MFA success/failure, logout, refresh)
-- **Auth** MFA enroll/complete, sessions revoke others
+- **Auth** MFA enroll/complete, sessions revoke others, remote AI connection approved (`auth.mcp_connection.create`) and revoked (`auth.mcp_connection.revoke`)
+- **Settings** the API key and remote AI connection switches (`settings.api_keys.toggle`, `settings.mcp_remote.toggle`), and which AI apps can connect (`settings.mcp_client_policy.change`)
+- **Settings** global password access policy changes (`settings.password_access_policy.change`), including before/after modes and selected user IDs, plus the acting session row ID
 
 ## Audit Entry Fields
 
@@ -46,6 +48,8 @@ Every create, update, delete, archive, restore, and sensitive access operation w
 | `userAgent` | Browser or client user-agent |
 | `before` | JSON snapshot of the record before the change |
 | `after` | JSON snapshot of the record after the change |
+| `apiKeyId` | The [API key](/security/api-keys/) that performed the action, when it was not an interactive session |
+| `mcpConnectionId` | The remote AI connection (an AI app such as Claude or ChatGPT) that performed the action, when it came through [`/mcp`](/integrations/mcp/) |
 
 For password operations, the `before`/`after` blobs contain metadata only (name, username, URL, tag). Ciphertext is never written to the audit log. Reveal entries log the password ID and actor only — the plaintext is never recorded.
 
@@ -55,6 +59,7 @@ For security actions:
 - **Session revocation** — `entityId` carries the targeted session; `after.targetUserId` identifies the affected user
 - **Egress blocks** — `after` carries `{ url, hostname, resolvedIps, reason, matchedCidr }` for each blocked outbound request
 - **IP rules** — changes to global IP allow/deny rules are fully audited with the rule configuration
+- **Remote AI connections** — on approval, `after` carries the app's client id and host, the return host, whether changes were allowed, and the approving `sessionId`. On revocation, `after.targetUserId` is the owner and `after.reason` is `user`, `admin`, `token_reuse` (a code or refresh token was replayed) or `client_revoked` (the app revoked its token). Tokens and codes are never logged. Changes made through a connection carry the user as the actor and the connection in `mcpConnectionId`, with the client IP and user agent of the AI app's request
 
 ## Tamper Protection
 

@@ -35,20 +35,20 @@
   }
 }
 
-/* Theme-aware wordmark logo. Both variants are rendered by `AppLogo`
- * so SSR can pick the correct one purely via CSS — no hydration flash.
- * `<html data-theme>` is always set to 'light' or 'dark' by the root
- * layout, with 'dark' as the default. */
-.app-logo-wordmark--light {
+/* Theme-aware logo (wordmark and mark). Both variants are rendered by
+ * `AppLogo` so SSR can pick the correct one purely via CSS — no
+ * hydration flash. `<html data-theme>` is always set to 'light' or
+ * 'dark' by the root layout, with 'dark' as the default. */
+.app-logo--light {
   display: none;
 }
-.app-logo-wordmark--dark {
+.app-logo--dark {
   display: inline-block;
 }
-[data-theme='light'] .app-logo-wordmark--light {
+[data-theme='light'] .app-logo--light {
   display: inline-block;
 }
-[data-theme='light'] .app-logo-wordmark--dark {
+[data-theme='light'] .app-logo--dark {
   display: none;
 }
 
@@ -206,12 +206,14 @@
    * the same stack: its 120px label column left too little room for
    * the reveal row and the strength meter. */
   .asset-field-grid,
-  .password-field-grid {
+  .password-field-grid,
+  .security-field-grid {
     grid-template-columns: minmax(0, 1fr) !important;
     row-gap: 4px !important;
   }
   .asset-field-grid > .asset-field-label:not(:first-child),
-  .password-field-grid > .password-field-label:not(:first-child) {
+  .password-field-grid > .password-field-label:not(:first-child),
+  .security-field-grid > .security-field-label:not(:first-child) {
     padding-top: 12px !important;
   }
   .article-read-grid .article-read-body {
@@ -450,6 +452,86 @@ button.sidebar-switcher-entry {
 .ws-card-clickable:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Selectable option cards: `RadioOption` and `CheckboxOption` in
+ * components/ui/choice-option.tsx. This is the ONE look for every radio
+ * or checkbox drawn as a card. Do not restyle the selected state per
+ * page; a `className` on either component is for layout only.
+ * Selected  = accent border + accent-soft fill.
+ * Otherwise = line-2 border + no fill.
+ * The native radio/checkbox indicator is always visible. */
+
+.ws-choice {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.ws-choice:hover {
+  border-color: var(--line-3);
+}
+
+.ws-choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ws-choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ws-choice:has(input:disabled) {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.ws-choice--dense {
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.ws-choice-input {
+  flex-shrink: 0;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.ws-choice-input:focus-visible {
+  outline: none;
+}
+
+.ws-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ws-choice-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.ws-choice-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
 }
 
 /* Phase 6 command palette. `cmdk` tags the currently-highlighted
@@ -721,4 +803,16 @@ tr:hover .row-actions,
 .article-property-switch:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Integration section panels (asset page): a native <details> with its own
+ * chevron, since the flex summary drops the default disclosure marker. */
+.integration-section > summary::-webkit-details-marker {
+  display: none;
+}
+.integration-section > summary .integration-section-chevron {
+  transition: transform 120ms ease;
+}
+.integration-section[open] > summary .integration-section-chevron {
+  transform: rotate(90deg);
 }

@@ -1,3 +1,5 @@
+import { HttpToolApi } from '@rivetdocs/shared/mcp-tools';
+
 /**
  * Minimal RivetDocs REST client. Every request carries the user's API key,
  * so the server applies exactly the permissions, tenant scope, rate limits and
@@ -13,18 +15,7 @@ export interface ClientConfig {
   fetchImpl?: typeof fetch;
 }
 
-export class RivetDocsApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'RivetDocsApiError';
-  }
-}
-
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-const REQUEST_TIMEOUT_MS = 30_000;
 
 /**
  * Validate configuration up front. The key is a long-lived bearer credential,
@@ -50,88 +41,13 @@ export function parseConfig(env: Record<string, string | undefined>): ClientConf
   return { baseUrl: url.origin, apiKey };
 }
 
-export class RivetDocsClient {
-  private readonly fetchImpl: typeof fetch;
-
-  constructor(private readonly config: ClientConfig) {
-    this.fetchImpl = config.fetchImpl ?? fetch;
+export class RivetDocsClient extends HttpToolApi {
+  constructor(config: ClientConfig) {
+    super({
+      baseUrl: config.baseUrl,
+      credential: 'api-key',
+      fetchImpl: config.fetchImpl,
+      authorize: () => ({ headers: { authorization: `Bearer ${config.apiKey}` } }),
+    });
   }
-
-  async request<T = unknown>(
-    method: 'GET' | 'POST' | 'PATCH',
-    path: string,
-    opts: { query?: Record<string, string | number | boolean | undefined>; body?: unknown } = {},
-  ): Promise<T> {
-    const url = new URL(`/api/v1${path}`, this.config.baseUrl);
-    for (const [k, v] of Object.entries(opts.query ?? {})) {
-      if (v !== undefined) url.searchParams.set(k, String(v));
-    }
-    let res: Response;
-    let text: string;
-    try {
-      res = await this.fetchImpl(url, {
-        method,
-        redirect: 'error', // never replay the bearer token to another origin
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        headers: {
-          authorization: `Bearer ${this.config.apiKey}`,
-          accept: 'application/json',
-          ...(opts.body !== undefined ? { 'content-type': 'application/json' } : {}),
-        },
-        body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-      });
-      // Read the body inside the try: the timeout signal also covers it.
-      text = await res.text();
-    } catch (err) {
-      // Timeouts and network failures become tool errors the model can read.
-      const reason =
-        err instanceof DOMException && err.name === 'TimeoutError'
-          ? `timed out after ${REQUEST_TIMEOUT_MS / 1000}s`
-          : 'could not be reached';
-      throw new RivetDocsApiError(0, `RivetDocs ${reason}.`);
-    }
-    let json: unknown = undefined;
-    if (text) {
-      try {
-        json = JSON.parse(text);
-      } catch {
-        json = undefined;
-      }
-    }
-    if (!res.ok) {
-      throw new RivetDocsApiError(res.status, describeProblem(res.status, json));
-    }
-    return json as T;
-  }
-}
-
-/**
- * Server problem details are safe to surface; never echo request headers.
- * Validation `issues` ({ path, message }) are passed through so the model
- * can correct its arguments instead of retrying blind.
- */
-function describeProblem(status: number, json: unknown): string {
-  const p = (json ?? {}) as {
-    detail?: unknown;
-    title?: unknown;
-    message?: unknown;
-    issues?: unknown;
-  };
-  const detail = [p.detail, p.message, p.title].find((v) => typeof v === 'string' && v.length > 0);
-  const issues = Array.isArray(p.issues)
-    ? p.issues
-        .slice(0, 20)
-        .map(
-          (i: { path?: unknown; message?: unknown }) =>
-            `${typeof i?.path === 'string' && i.path ? i.path : '(body)'}: ${String(i?.message ?? 'invalid')}`,
-        )
-        .join('; ')
-    : '';
-  const hint =
-    status === 401
-      ? ' The API key is invalid, expired or revoked.'
-      : status === 403
-        ? ' The key is read-only, its owner lacks permission, or this action needs an interactive session.'
-        : '';
-  return `RivetDocs returned ${status}${detail ? `: ${String(detail)}` : '.'}${issues ? ` Issues: ${issues}.` : ''}${hint}`;
 }

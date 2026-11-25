@@ -1,17 +1,36 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type {
   AssetSummary,
   LayoutFieldSummary,
   LayoutSummary,
 } from '@rivetdocs/shared';
 import { LayoutAssetsTable } from './layout-assets-table';
+import { TimezoneProvider } from '../../lib/timezone-context';
+import { ToastProvider } from '../ui';
+import { downloadApiFile } from '../../lib/api';
+
+jest.mock('../../lib/api', () => ({
+  downloadApiFile: jest.fn(async () => ({ ok: true, truncated: false })),
+}));
 
 const push = jest.fn();
+const replace = jest.fn();
+
+/**
+ * `useTransition` runs the callback at once and reports `navigating` as
+ * its pending flag. With the flag true, the table sees a navigation
+ * still in flight, as Next reports until a pushed URL lands.
+ */
+const mockTransition = { navigating: false };
+jest.mock('react', () => ({
+  ...jest.requireActual<typeof import('react')>('react'),
+  useTransition: () => [mockTransition.navigating, (fn: () => void) => fn()],
+}));
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push, refresh: jest.fn(), replace: jest.fn() }),
+  useRouter: () => ({ push, refresh: jest.fn(), replace }),
 }));
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -30,7 +49,13 @@ jest.mock('next/link', () => ({
 }));
 jest.mock('../../lib/timezone-context', () => {
   const Stamp = ({ value }: { value: unknown }) => <span>{String(value)}</span>;
-  return { FormattedCalendarDate: Stamp, FormattedDateTime: Stamp };
+  // Keep the real provider, `useTimezone` and `FormattedFieldDateTime`: the
+  // DATETIME sort test depends on the viewer's zone.
+  return {
+    ...jest.requireActual('../../lib/timezone-context'),
+    FormattedCalendarDate: Stamp,
+    FormattedDateTime: Stamp,
+  };
 });
 
 const urlField: LayoutFieldSummary = {
@@ -99,19 +124,22 @@ function renderTable(
   overrides: Partial<
     Pick<
       React.ComponentProps<typeof LayoutAssetsTable>,
-      'q' | 'includeArchived' | 'canManage'
+      'searchTerms' | 'includeArchived' | 'canManage' | 'exportCompanyId'
     >
   > = {},
 ) {
   return render(
-    <LayoutAssetsTable
-      basePath="/admin/companies/co-1"
-      layout={layout}
-      rows={rows}
-      q={overrides.q ?? ''}
-      includeArchived={overrides.includeArchived ?? false}
-      canManage={overrides.canManage ?? false}
-    />,
+    <ToastProvider>
+      <LayoutAssetsTable
+        basePath="/admin/companies/co-1"
+        layout={layout}
+        rows={rows}
+        searchTerms={overrides.searchTerms ?? []}
+        includeArchived={overrides.includeArchived ?? false}
+        canManage={overrides.canManage ?? false}
+        exportCompanyId={overrides.exportCompanyId}
+      />
+    </ToastProvider>,
   );
 }
 
@@ -144,42 +172,153 @@ describe('LayoutAssetsTable URL cell', () => {
 describe('LayoutAssetsTable filters', () => {
   beforeEach(() => {
     push.mockClear();
+    replace.mockClear();
   });
 
   it('keeps filter controls available when a server-side filter has no matches', () => {
-    renderTable([], { q: 'missing', includeArchived: true });
+    renderTable([], { searchTerms: ['missing'], includeArchived: true });
 
-    expect(screen.getByPlaceholderText('Search Devices…')).toHaveValue('missing');
+    expect(screen.getByPlaceholderText('Add a search term…')).toHaveValue('');
+    expect(screen.getByText('search: missing')).toBeInTheDocument();
+    expect(screen.getByText('incl. archived')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hide archived' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'clear all' })).toBeInTheDocument();
     expect(screen.getByText('No Devices match the current filters.')).toBeInTheDocument();
   });
 
   it('clears all URL-backed filters without reloading', () => {
-    renderTable([], { q: 'missing', includeArchived: true });
+    renderTable([], { searchTerms: ['missing'], includeArchived: true });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    fireEvent.click(screen.getByRole('button', { name: 'clear all' }));
 
     expect(push).toHaveBeenCalledWith('/admin/companies/co-1/layouts/devices');
   });
 
-  it('synchronizes the search input when URL state changes', () => {
-    const { rerender } = renderTable([makeRow('a-4', 'Delta', 'example.com')], {
-      q: 'before',
+  it('stacks a new search term as a pill and clears the box (#99)', () => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')], { searchTerms: ['dell'] });
+    const box = screen.getByPlaceholderText('Add a search term…');
+
+    fireEvent.change(box, { target: { value: ' 10.2.4 ' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+
+    // An added term edits the active search: it replaces the history
+    // entry, so Back removes the whole search.
+    expect(replace).toHaveBeenCalledWith('/admin/companies/co-1/layouts/devices?q=dell&q=10.2.4');
+    expect(push).not.toHaveBeenCalled();
+    expect(box).toHaveValue('');
+  });
+
+  it('ignores a blank or repeated term and never commits on blur', () => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')], { searchTerms: ['dell'] });
+    const box = screen.getByPlaceholderText('Add a search term…');
+
+    fireEvent.change(box, { target: { value: 'DELL' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    fireEvent.change(box, { target: { value: '   ' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    fireEvent.change(box, { target: { value: 'typed only' } });
+    fireEvent.blur(box);
+
+    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('removes one search pill and keeps the others', () => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')], {
+      searchTerms: ['dell', 'lab', 'rack 4'],
+      includeArchived: true,
     });
 
-    rerender(
-      <LayoutAssetsTable
-        basePath="/admin/companies/co-1"
-        layout={layout}
-        rows={[makeRow('a-4', 'Delta', 'example.com')]}
-        q="after"
-        includeArchived={false}
-        canManage={false}
-      />,
-    );
+    const pill = screen.getByText('search: lab').closest('span')!;
+    fireEvent.click(within(pill).getByRole('button', { name: 'Remove filter' }));
 
-    expect(screen.getByPlaceholderText('Search Devices…')).toHaveValue('after');
+    expect(replace).toHaveBeenCalledWith(
+      '/admin/companies/co-1/layouts/devices?q=dell&q=rack+4&archived=1',
+    );
+  });
+
+  it('keeps a term entered while the previous search is still navigating', () => {
+    // Next keeps the push transition pending until the new URL lands, so
+    // the URL (the `searchTerms` prop) still has no terms here.
+    mockTransition.navigating = true;
+    try {
+      renderTable([makeRow('a-1', 'Alpha', 'example.com')]);
+      const box = screen.getByPlaceholderText('Search Devices…');
+
+      fireEvent.change(box, { target: { value: 'dell' } });
+      fireEvent.keyDown(box, { key: 'Enter' });
+      fireEvent.change(box, { target: { value: 'lab' } });
+      fireEvent.keyDown(box, { key: 'Enter' });
+
+      // The 1st term starts the search (a new history entry); the 2nd
+      // edits it (replaces that entry).
+      expect(push).toHaveBeenCalledTimes(1);
+      expect(push).toHaveBeenCalledWith('/admin/companies/co-1/layouts/devices?q=dell');
+      expect(replace).toHaveBeenLastCalledWith('/admin/companies/co-1/layouts/devices?q=dell&q=lab');
+      expect(screen.getByText('search: dell')).toBeInTheDocument();
+      expect(screen.getByText('search: lab')).toBeInTheDocument();
+    } finally {
+      mockTransition.navigating = false;
+    }
+  });
+
+  it('forgets pushed terms once navigation settles, so a later navigation cannot bring them back', () => {
+    const rows = [makeRow('a-1', 'Alpha', 'example.com')];
+    const table = (navigating: boolean) => {
+      mockTransition.navigating = navigating;
+      return (
+        <LayoutAssetsTable
+          basePath="/admin/companies/co-1"
+          layout={layout}
+          rows={rows}
+          searchTerms={[]}
+          includeArchived={false}
+          canManage={false}
+        />
+      );
+    };
+    try {
+      // Search for `dell` while a navigation is in flight.
+      const { rerender } = render(table(true));
+      const box = screen.getByPlaceholderText('Search Devices…');
+      fireEvent.change(box, { target: { value: 'dell' } });
+      fireEvent.keyDown(box, { key: 'Enter' });
+      expect(screen.getByText('search: dell')).toBeInTheDocument();
+
+      // Navigation settles; then Back leaves a URL with no terms.
+      rerender(table(false));
+      // A later navigation (for example removing another pill) starts.
+      rerender(table(true));
+
+      expect(screen.queryByText('search: dell')).not.toBeInTheDocument();
+      fireEvent.change(box, { target: { value: 'lab' } });
+      fireEvent.keyDown(box, { key: 'Enter' });
+      expect(push).toHaveBeenLastCalledWith('/admin/companies/co-1/layouts/devices?q=lab');
+    } finally {
+      mockTransition.navigating = false;
+    }
+  });
+
+  it('follows the URL again once navigation settles', () => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')]);
+    const box = screen.getByPlaceholderText('Search Devices…');
+
+    // The mocked push never changes the URL and the transition is not
+    // pending, so the URL's empty term list is what the next push uses.
+    fireEvent.change(box, { target: { value: 'dell' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    fireEvent.change(box, { target: { value: 'lab' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+
+    expect(push).toHaveBeenLastCalledWith('/admin/companies/co-1/layouts/devices?q=lab');
+  });
+
+  it('removes the last search pill on Backspace in an empty box', () => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')], { searchTerms: ['dell', 'lab'] });
+
+    fireEvent.keyDown(screen.getByPlaceholderText('Add a search term…'), { key: 'Backspace' });
+
+    expect(replace).toHaveBeenCalledWith('/admin/companies/co-1/layouts/devices?q=dell');
   });
 
   it('retains the dedicated creation state for an unfiltered empty layout', () => {
@@ -188,5 +327,152 @@ describe('LayoutAssetsTable filters', () => {
     expect(screen.getByText('No Devices yet for this company.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'New Devices' })).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Search Devices…')).not.toBeInTheDocument();
+  });
+});
+
+describe('LayoutAssetsTable DATETIME sorting', () => {
+  // Issue #98 review: a zone-less value is wall-clock time and an instant
+  // shows in the viewer's zone, so the sort must follow the displayed time.
+  // For a Los Angeles viewer `20:00Z` shows as 01:00 PM and must sort before
+  // the zone-less `15:00` (03:00 PM), although it is the later instant.
+  const whenField: LayoutFieldSummary = {
+    ...urlField,
+    id: 'f-when',
+    name: 'Installed',
+    slug: 'installed',
+    fieldType: 'DATETIME',
+    position: 2,
+  };
+  const whenLayout: LayoutSummary = { ...layout, fields: [urlField, whenField] };
+
+  function whenRow(id: string, name: string, installed: string): AssetSummary {
+    const row = makeRow(id, name, 'example.com');
+    return { ...row, fieldValues: { ...row.fieldValues, installed } };
+  }
+
+  function displayedTimes(): string[] {
+    return screen
+      .getAllByText(/^Jul 1, 2026, /)
+      .map((el) => el.textContent ?? '');
+  }
+
+  it('sorts mixed zone-less and zoned values in displayed order', () => {
+    render(
+      <TimezoneProvider timezone="America/Los_Angeles">
+        <LayoutAssetsTable
+          basePath="/admin/companies/co-1"
+          layout={whenLayout}
+          rows={[
+            whenRow('a-1', 'Wall clock', '2026-07-01T15:00'),
+            whenRow('a-2', 'Instant', '2026-07-01T20:00:00Z'),
+            whenRow('a-3', 'Earlier wall clock', '2026-07-01T14:59'),
+          ]}
+          searchTerms={[]}
+          includeArchived={false}
+          canManage={false}
+        />
+      </TimezoneProvider>,
+    );
+
+    const header = screen.getByRole('columnheader', { name: /Installed/ });
+    fireEvent.click(within(header).getByRole('button'));
+    expect(header).toHaveAttribute('aria-sort', 'ascending');
+    expect(displayedTimes()).toEqual([
+      'Jul 1, 2026, 01:00 PM',
+      'Jul 1, 2026, 02:59 PM',
+      'Jul 1, 2026, 03:00 PM',
+    ]);
+
+    fireEvent.click(within(header).getByRole('button'));
+    expect(header).toHaveAttribute('aria-sort', 'descending');
+    expect(displayedTimes()).toEqual([
+      'Jul 1, 2026, 03:00 PM',
+      'Jul 1, 2026, 02:59 PM',
+      'Jul 1, 2026, 01:00 PM',
+    ]);
+  });
+});
+
+describe('LayoutAssetsTable CSV export', () => {
+  const download = downloadApiFile as jest.MockedFunction<typeof downloadApiFile>;
+  beforeEach(() => download.mockClear());
+
+  it('shows no Export control without exportCompanyId (the portal)', () => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')]);
+    expect(screen.queryByRole('button', { name: 'Export' })).toBeNull();
+  });
+
+  it('puts Export right after Show archived', () => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')], { exportCompanyId: 'co-1' });
+    const archived = screen.getByRole('button', { name: 'Show archived' });
+    const exportBtn = screen.getByRole('button', { name: 'Export' });
+    expect(archived.nextElementSibling).toBe(exportBtn);
+  });
+
+  it.each([
+    ['Visible columns (CSV)', 'table'],
+    ['All fields (CSV)', 'all'],
+  ])('%s requests the export with the active filters', async (label, mode) => {
+    renderTable([makeRow('a-1', 'Alpha', 'example.com')], {
+      exportCompanyId: 'co-1',
+      searchTerms: ['dell', '10.2'],
+      includeArchived: true,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: label }));
+    });
+
+    expect(download).toHaveBeenCalledTimes(1);
+    const [path, filename] = download.mock.calls[0]!;
+    const url = new URL(path, 'http://x');
+    expect(url.pathname).toBe('/companies/co-1/assets/export');
+    expect(url.searchParams.get('layout')).toBe('l-1');
+    expect(url.searchParams.get('columns')).toBe(mode);
+    expect(url.searchParams.getAll('q')).toEqual(['dell', '10.2']);
+    expect(url.searchParams.get('includeArchived')).toBe('true');
+    expect(url.searchParams.has('tag')).toBe(false);
+    expect(filename).toMatch(/^devices-\d{4}-\d{2}-\d{2}\.csv$/);
+  });
+
+  it('passes the active tag filter', async () => {
+    const tagField: LayoutFieldSummary = {
+      ...urlField,
+      id: 'f-tags',
+      name: 'Tags',
+      slug: 'tags',
+      fieldType: 'TAGS',
+      position: 2,
+      showInTable: false,
+    };
+    const row = makeRow('a-1', 'Alpha', 'example.com');
+    row.fieldValues = { ...row.fieldValues, tags: [{ id: 't-1', name: 'Prod' }] };
+    render(
+      <ToastProvider>
+        <LayoutAssetsTable
+          basePath="/admin/companies/co-1"
+          layout={{ ...layout, fields: [urlField, tagField] }}
+          rows={[row]}
+          searchTerms={[]}
+          includeArchived={false}
+          canManage={false}
+          exportCompanyId="co-1"
+        />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Filter by tag/ }));
+    fireEvent.click(screen.getByRole('option', { name: 'Prod' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Visible columns (CSV)' }));
+    });
+    const url = new URL(download.mock.calls[0]![0], 'http://x');
+    expect(url.searchParams.get('tag')).toBe('t-1');
+  });
+
+  it('disables the export rows when no rows show', () => {
+    renderTable([], { exportCompanyId: 'co-1', searchTerms: ['missing'] });
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    expect(screen.getByRole('menuitem', { name: 'Visible columns (CSV)' })).toBeDisabled();
   });
 });

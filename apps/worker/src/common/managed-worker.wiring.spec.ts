@@ -92,14 +92,14 @@ const CASES: readonly Case[] = [
     name: 'IntegrationSyncOrchestratorWorker',
     queue: QueueNames.integrationSyncOrchestrator,
     concurrency: 7,
-    make: () => new IntegrationSyncOrchestratorWorker(env, redis, stub, stub),
+    make: () => new IntegrationSyncOrchestratorWorker(env, redis, stub, stub, stub),
   },
   {
     name: 'IntegrationSyncMappingWorker',
     queue: QueueNames.integrationSyncMapping,
     concurrency: 6,
     make: () =>
-      new IntegrationSyncMappingWorker(env, redis, stub, stub, stub, stub, stub),
+      new IntegrationSyncMappingWorker(env, redis, stub, stub, stub, stub, stub, stub),
   },
   {
     name: 'CloudflareDriftSweepWorker',

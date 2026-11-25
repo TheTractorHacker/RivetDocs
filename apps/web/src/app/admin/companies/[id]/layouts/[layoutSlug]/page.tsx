@@ -4,7 +4,8 @@ import { requireMe } from '../../../../../../lib/server-api/auth';
 import { getSettings } from '../../../../../../lib/server-api/settings';
 import { getCompanyDetail } from '../../../../../../lib/server-api/companies';
 import { getActiveLayouts } from '../../../../../../lib/server-api/layouts';
-import { listAssets } from '../../../../../../lib/server-api/assets';
+import { listAllAssetsForPage } from '../../../../../../lib/server-api/assets';
+import { parseSearchTerms } from '../../../../../../lib/search-terms';
 import {
   forMetadata,
   throwUnlessFound,
@@ -14,7 +15,7 @@ import {
   PageBody,
   PageHeader,
 } from '../../../../../../components/shell/page-header';
-import { Icon, LayoutSwatch, LinkBtn, Panel, Tag } from '../../../../../../components/ui';
+import { ErrorBanner, Icon, LayoutSwatch, LinkBtn, Panel, Tag } from '../../../../../../components/ui';
 import { buildTerm } from '../../../../../../lib/term';
 import { companyCrumbs } from '../../../../../../lib/company-crumbs';
 import { LayoutAssetsTable } from '../../../../../../components/layouts/layout-assets-table';
@@ -80,16 +81,15 @@ export default async function LayoutAssetsPage({
   if (!layout) notFound();
   const manage = canWriteCompany(me, company.id);
 
-  const q = typeof sp.q === 'string' ? sp.q : undefined;
+  const searchTerms = parseSearchTerms(sp.q);
   const includeArchived = sp.archived === '1';
 
   // Filter server-side by layoutId so counts + row data stay
   // consistent with the sidebar.
-  const assets = await listAssets(companyId, {
+  const { assets, filterError } = await listAllAssetsForPage(companyId, {
     layoutId: layout.id,
-    q,
+    q: searchTerms,
     includeArchived,
-    limit: 200,
   });
 
   return (
@@ -115,13 +115,25 @@ export default async function LayoutAssetsPage({
         }
       />
       <PageBody>
+        {filterError && (
+          <div style={{ marginBottom: 12 }}>
+            <ErrorBanner title="Filter not applied" detail={filterError} tone="warn" />
+          </div>
+        )}
         <Panel
           title={
             <span>
-              {assets.items.length} record{assets.items.length === 1 ? '' : 's'}
+              {assets.items.length}
+              {assets.truncated ? '+' : ''} record
+              {assets.items.length === 1 ? '' : 's'}
               {includeArchived && (
                 <Tag tone="outline" style={{ marginLeft: 10 }}>
                   incl. archived
+                </Tag>
+              )}
+              {assets.truncated && (
+                <Tag tone="warn" style={{ marginLeft: 10 }}>
+                  showing the first {assets.items.length}
                 </Tag>
               )}
             </span>
@@ -133,9 +145,10 @@ export default async function LayoutAssetsPage({
             basePath={`/admin/companies/${companyId}`}
             layout={layout}
             rows={assets.items}
-            q={q ?? ''}
+            searchTerms={searchTerms}
             includeArchived={includeArchived}
             canManage={manage}
+            exportCompanyId={companyId}
           />
         </Panel>
       </PageBody>

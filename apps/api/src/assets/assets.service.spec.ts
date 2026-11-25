@@ -1,5 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { AssetsService, classifyIntegrationAssetChange } from './assets.service.js';
+import {
+  AssetsService,
+  classifyIntegrationAssetChange,
+  exportCellText,
+  rowHasTag,
+} from './assets.service.js';
+import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
 
 /**
  * Focused unit test for the FILE-field upload backfill that runs
@@ -548,5 +554,174 @@ describe('AssetsService purge (archive-first, WS-015)', () => {
       expect(result).toEqual({ ok: ['a-1'], failed: [] });
       expect(deleteMany).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('AssetsService.get integration sections', () => {
+  const companyId = '00000000-0000-4000-8000-0000000000c1';
+  const assetId = '00000000-0000-4000-8000-0000000000a1';
+  const integrationId = '00000000-0000-4000-8000-0000000000b1';
+  const section = {
+    title: 'Workspace',
+    groups: [{ key: 'account', title: 'Account', rows: [{ label: 'Admin', kind: 'boolean', value: true }] }],
+  };
+
+  function makeService() {
+    const sectionRows = [
+      {
+        id: 'rec-1',
+        lastSyncedAt: new Date('2026-10-01T00:00:00.000Z'),
+        sectionData: section,
+        fieldDiffs: {
+          'f-title': { sourceValue: 'Engineer', sourceFingerprint: 's', localFingerprint: 'l', detectedAt: '2026-10-01T00:00:00.000Z' },
+          'f-gone': { sourceValue: 'x', sourceFingerprint: 's', localFingerprint: 'l', detectedAt: '2026-10-01T00:00:00.000Z' },
+        },
+        state: 'active',
+        resource: { resourceKey: 'users' },
+        companyMapping: { externalOrgId: 'org1', integration: { id: integrationId, driver: 'google-workspace', name: 'Acme Workspace' } },
+      },
+      {
+        // The record left the source: kept as history, flagged inactive.
+        id: 'rec-2',
+        lastSyncedAt: new Date('2026-09-15T00:00:00.000Z'),
+        sectionData: section,
+        state: 'stale',
+        resource: { resourceKey: 'users' },
+        companyMapping: { externalOrgId: 'org1', integration: { id: integrationId, driver: 'google-workspace', name: 'Acme Workspace' } },
+      },
+      {
+        // A driver with a source page: the link is built from the source id on read.
+        id: 'rec-3',
+        externalId: 'grp1:devices:dev-9',
+        lastSyncedAt: new Date('2026-09-10T00:00:00.000Z'),
+        sectionData: section,
+        state: 'active',
+        resource: { resourceKey: 'devices' },
+        companyMapping: { externalOrgId: 'grp1', integration: { id: integrationId, driver: 'level', name: 'Level' } },
+      },
+      {
+        // Never rendered: fails the schema on read.
+        lastSyncedAt: new Date('2026-09-01T00:00:00.000Z'),
+        sectionData: { title: '<b>x</b>', groups: [] },
+        resource: { resourceKey: 'users' },
+        companyMapping: { externalOrgId: 'org1', integration: { id: integrationId, driver: 'google-workspace', name: 'Acme Workspace' } },
+      },
+    ];
+    const findMany = jest.fn(({ where }: { where: Record<string, unknown> }) =>
+      Promise.resolve('sectionData' in where ? sectionRows : []),
+    );
+    const prisma = {
+      asset: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: assetId, companyId, assetLayoutId: 'layout-1', name: 'User One',
+          externalId: null, externalSource: null, archivedAt: null,
+          createdBy: null, updatedBy: null, createdAt: new Date(), updatedAt: new Date(),
+          assetLayout: { id: 'layout-1', name: 'People', slug: 'people', icon: 'user', color: '#000', fields: [] },
+          fieldValues: [],
+        }),
+      },
+      integrationSyncRecord: { findMany },
+      // f-gone was archived: its difference is not shown.
+      assetField: { findMany: jest.fn().mockResolvedValue([{ id: 'f-title', name: 'Job title' }]) },
+      assetFieldValue: { findMany: jest.fn().mockResolvedValue([{ assetFieldId: 'f-title', value: 'Senior engineer' }]) },
+    };
+    const stars = { isStarred: jest.fn().mockResolvedValue(false) };
+    const service = new AssetsService(
+      prisma as never, {} as never, {} as never, {} as never, {} as never,
+      {} as never, {} as never, stars as never, {} as never,
+    );
+    for (const name of ['hydrateFileFields', 'hydrateAssetReferences', 'hydrateTagFields', 'hydrateActors']) {
+      jest.spyOn(service as never, name as never).mockResolvedValue(undefined as never);
+    }
+    return { service, findMany };
+  }
+
+  it('returns validated sections per sync source to staff', async () => {
+    const { service, findMany } = makeService();
+    const asset = await service.get({ id: 'u1', role: 'SUPER_ADMIN' } as never, companyId, assetId);
+    expect(asset.integrationSections).toEqual([{
+      integrationId, driver: 'google-workspace', integrationName: 'Acme Workspace',
+      lastSyncedAt: new Date('2026-10-01T00:00:00.000Z'), active: true, section,
+      syncRecordId: 'rec-1',
+      differences: [{
+        syncRecordId: 'rec-1', assetFieldId: 'f-title', fieldLabel: 'Job title',
+        localValue: 'Senior engineer', sourceValue: 'Engineer', detectedAt: '2026-10-01T00:00:00.000Z',
+      }],
+    }, {
+      integrationId, driver: 'google-workspace', integrationName: 'Acme Workspace',
+      lastSyncedAt: new Date('2026-09-15T00:00:00.000Z'), active: false, section,
+      syncRecordId: 'rec-2', differences: [],
+    }, {
+      integrationId, driver: 'level', integrationName: 'Level',
+      lastSyncedAt: new Date('2026-09-10T00:00:00.000Z'), active: true, section,
+      sourceUrl: 'https://app.level.io/device/dev-9/overview',
+      syncRecordId: 'rec-3', differences: [],
+    }]);
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ companyId, assetId }),
+    }));
+  });
+
+  it('never returns sections to a client user, even on a readable asset', async () => {
+    const { service, findMany } = makeService();
+    const asset = await service.get({ id: 'u2', role: 'CLIENT_USER' } as never, companyId, assetId);
+    expect(asset.integrationSections).toEqual([]);
+    expect(findMany).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ sectionData: expect.anything() }),
+    }));
+  });
+});
+
+describe('rowHasTag', () => {
+  const TAG = 'tag-1';
+
+  it('matches a hydrated chip in any TAGS field', () => {
+    expect(rowHasTag({ a: [], b: [{ id: TAG, name: 'Prod' }] }, ['a', 'b'], TAG)).toBe(true);
+  });
+
+  it('ignores other tags, non-TAGS slugs, and legacy string values', () => {
+    expect(rowHasTag({ a: [{ id: 'tag-2', name: 'Dev' }] }, ['a'], TAG)).toBe(false);
+    expect(rowHasTag({ other: [{ id: TAG }] }, ['a'], TAG)).toBe(false);
+    expect(rowHasTag({ a: [TAG] }, ['a'], TAG)).toBe(false);
+    expect(rowHasTag({ a: null }, ['a'], TAG)).toBe(false);
+  });
+});
+
+describe('exportCellText', () => {
+  const registry = new FieldTypesRegistry();
+  const refs = { r1: { id: 'r1', name: 'Core switch', archivedAt: null } };
+  const cell = (type: Parameters<typeof exportCellText>[0], value: unknown, options = {}) =>
+    exportCellText(type, value, options, refs, registry);
+
+  it('returns an empty cell for absent and null values', () => {
+    expect(cell('TEXT', undefined)).toBe('');
+    expect(cell('TEXT', null)).toBe('');
+    expect(cell('ASSET_REFERENCE', null)).toBe('');
+  });
+
+  it('keeps 0 and false', () => {
+    expect(cell('NUMBER', 0)).toBe('0');
+    expect(cell('BOOLEAN', false)).toBe('no');
+    expect(cell('BOOLEAN', true)).toBe('yes');
+  });
+
+  it('resolves references as an array, keeping unresolved ids', () => {
+    expect(cell('ASSET_REFERENCE', ['r1'])).toBe('Core switch');
+    expect(cell('ASSET_REFERENCE', ['r1', 'gone'])).toBe('Core switch, gone');
+    expect(cell('ASSET_REFERENCE', [])).toBe('');
+    expect(cell('ASSET_REFERENCE', 'r1')).toBe('Core switch');
+  });
+
+  it('exports tag names and file names only', () => {
+    expect(cell('TAGS', [{ id: 't', name: 'Prod' }, { id: 'u', name: 'Edge' }])).toBe('Prod, Edge');
+    expect(
+      cell('FILE', [{ uploadId: 'x', filename: 'a.pdf', downloadUrl: '/api/v1/uploads/x/download' }]),
+    ).toBe('a.pdf');
+  });
+
+  it('uses choice labels and flat rich text', () => {
+    const options = { choices: [{ slug: 'dell', label: 'Dell Technologies' }] };
+    expect(cell('DROPDOWN', 'dell', options)).toBe('Dell Technologies');
+    expect(cell('RICH_TEXT', { v: null, plain: 'Rack four' })).toBe('Rack four');
   });
 });

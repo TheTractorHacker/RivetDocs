@@ -1,9 +1,11 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   ForbiddenException,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -12,9 +14,15 @@ import {
   Post,
   Query,
   Req,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
+import { z } from 'zod';
+import { contentDispositionFor } from '../common/content-disposition.js';
 import {
+  assetExportColumnsSchema,
   bulkAssetIdsSchema,
   bulkCloneAssetsSchema,
   cloneAssetSchema,
@@ -43,10 +51,16 @@ import { PermissionService } from '../rbac/permission.service.js';
  *
  * `GET /companies/:companyId/assets` accepts:
  *   - `layout=<uuid>` — restrict to a single layout.
- *   - `q=<text>` — case-insensitive substring match on `Asset.name`
- *     (Phase 6 expands this to field values via tsvector).
+ *   - `q=<text>` (repeatable, at most 10) — each term must match; in a
+ *     term, every word is a case-insensitive substring of the
+ *     name or of any indexed field value (see
+ *     `SearchIndexService.matchAssetIds`). Client users match only
+ *     fields visible to clients.
  *   - `includeArchived=true` — includes soft-deleted assets.
- *   - `field.<slug>=<value>` — value-equality filter against that field.
+ *   - `field.<slug>=<value>` — value-equality filter against that field
+ *     (text types trimmed and case-insensitive; a DROPDOWN accepts the
+ *     choice label or slug). Without `layout`, every layout's field with
+ *     that slug counts.
  *   - `limit=<int>`, `cursor=<uuid>` — keyset pagination (bounded 1..200).
  */
 @Controller({ path: 'companies/:companyId/assets', version: '1' })
@@ -88,7 +102,7 @@ export class AssetsController {
   async list(
     @CurrentUser() actor: AuthedUser,
     @Param('companyId', new ParseUUIDPipe()) companyId: string,
-    @Query() query: Record<string, string | undefined>,
+    @Query() query: Record<string, string | string[] | undefined>,
   ) {
     // Build the filter map from a validated entry list rather than
     // dynamic bracket-writes. `fieldSlugSchema` enforces the canonical
@@ -104,13 +118,21 @@ export class AssetsController {
           : [];
       }),
     );
+    // Only `q` may repeat (stacked search terms). Any other key that
+    // arrives repeated (an array) is ignored.
+    const single = (key: string): string | undefined => {
+      const value = query[key];
+      return typeof value === 'string' ? value : undefined;
+    };
+    const q = query['q'];
+    const limit = single('limit');
     return this.assets.list(actor, companyId, {
-      layoutId: query['layout'],
-      q: query['q'],
-      includeArchived: query['includeArchived'] === 'true',
+      layoutId: single('layout'),
+      q: Array.isArray(q) ? q.filter((t): t is string => typeof t === 'string') : q,
+      includeArchived: single('includeArchived') === 'true',
       fieldFilters,
-      limit: query['limit'] ? parseInt(query['limit'], 10) : undefined,
-      cursor: query['cursor'],
+      limit: limit ? parseInt(limit, 10) : undefined,
+      cursor: single('cursor'),
     });
   }
 
@@ -200,6 +222,62 @@ export class AssetsController {
     @Req() req: Request,
   ) {
     return this.assets.purgeMany(actor, companyId, dto.ids, meta(req));
+  }
+
+  /**
+   * CSV export of one layout's list. Same filters as `GET /` (`layout`
+   * required, stacked `q`, `includeArchived=true`) plus `tag=<uuid>` —
+   * the per-layout table's client-side tag filter — and
+   * `columns=table|all`. See `AssetsService.exportCsv` for the row and
+   * column rules. No `.csv` in the path: the edge blocks file-extension
+   * probes. Routed before `:id` so `export` is not read as an id.
+   */
+  @Get('export')
+  @RequirePermission('asset.read', { companyIdFrom: 'params.companyId' })
+  @Throttle({ global: { limit: 10, ttl: 60_000 } })
+  @Header('Cache-Control', 'private, no-store')
+  async exportCsv(
+    @CurrentUser() actor: AuthedUser,
+    @Param('companyId', new ParseUUIDPipe()) companyId: string,
+    @Query() query: Record<string, string | string[] | undefined>,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const single = (key: string): string | undefined => {
+      const value = query[key];
+      return typeof value === 'string' ? value : undefined;
+    };
+    const layoutId = z.guid().safeParse(single('layout'));
+    if (!layoutId.success) {
+      throw new BadRequestException({ error: 'InvalidLayout', message: 'Pick a layout to export.' });
+    }
+    const rawTag = single('tag');
+    const tagId = rawTag === undefined ? undefined : z.guid().safeParse(rawTag);
+    if (tagId && !tagId.success) {
+      throw new BadRequestException({ error: 'InvalidTag', message: 'The tag filter is not valid.' });
+    }
+    const columns = assetExportColumnsSchema.safeParse(single('columns') ?? 'table');
+    if (!columns.success) {
+      throw new BadRequestException({ error: 'InvalidColumns', message: 'Use columns=table or columns=all.' });
+    }
+    const q = query['q'];
+    const result = await this.assets.exportCsv(
+      actor,
+      companyId,
+      {
+        layoutId: layoutId.data,
+        q: Array.isArray(q) ? q.filter((t): t is string => typeof t === 'string') : q,
+        includeArchived: single('includeArchived') === 'true',
+        tagId: tagId?.data,
+        columns: columns.data,
+      },
+      meta(req),
+    );
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', contentDispositionFor(result.filename, 'attachment'));
+    if (result.truncated) res.setHeader('X-Export-Truncated', 'true');
+    return new StreamableFile(Buffer.from(result.csv, 'utf8'));
   }
 
   @Get(':id')

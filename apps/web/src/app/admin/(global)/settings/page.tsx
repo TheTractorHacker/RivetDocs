@@ -3,12 +3,15 @@ import { requireMe } from '../../../../lib/server-api/auth';
 import {
   getAiSettings,
   getEmailSettings,
+  getIntegrationPriority,
+  getPasswordAccessPolicy,
   getSettings,
 } from '../../../../lib/server-api/settings';
 import { hasCapability } from '../../../../lib/roles';
 import { PageBody, PageHeader } from '../../../../components/shell/page-header';
 import { Panel } from '../../../../components/ui';
 import { SettingsTabs } from './settings-tabs';
+import { resolveSettingsTab } from './tab-ids';
 
 /**
  * Workspace + tenant-term configuration. The fields here are cosmetic —
@@ -25,11 +28,14 @@ export default async function SettingsPage({
   const me = await requireMe();
   if (!hasCapability(me, 'SETTINGS_MANAGE')) redirect('/admin');
 
-  const [settings, emailSettings, aiSettings] = await Promise.all([
-    getSettings(),
-    getEmailSettings(),
-    getAiSettings(),
-  ]);
+  const [settings, emailSettings, aiSettings, integrationPriority, passwordAccessPolicy] =
+    await Promise.all([
+      getSettings(),
+      getEmailSettings(),
+      getAiSettings(),
+      getIntegrationPriority(),
+      getPasswordAccessPolicy(),
+    ]);
 
   return (
     <>
@@ -39,22 +45,17 @@ export default async function SettingsPage({
           { label: 'Settings' },
         ]}
         title="Workspace settings"
-        description="Manage workspace defaults, security options, and SMTP email delivery."
+        description="Manage workspace defaults, password access and generator defaults, SMTP email delivery, integration priority, and API access."
       />
       <PageBody>
-        <Panel noPad>
+        <Panel noPad fillHeight>
           <SettingsTabs
-            initialTab={
-              (sp.tab as
-                | 'general'
-                | 'security'
-                | 'articles'
-                | 'email'
-                | 'ai') ?? 'general'
-            }
+            initialTab={resolveSettingsTab(sp.tab)}
             settings={settings}
             emailSettings={emailSettings}
             aiSettings={aiSettings}
+            integrationPriority={integrationPriority}
+            passwordAccessPolicy={passwordAccessPolicy}
             currentUserEmail={me.email}
           />
         </Panel>

@@ -20,6 +20,8 @@ const ids = {
   otherResource: '00000000-0000-4000-8000-000000000016',
 };
 
+const REQUESTER = '00000000-0000-4000-8000-000000000050';
+
 const BLOCKED_SECRET = 'ghp_distinctiveBlockedSecretValue1234567890';
 const NOW = new Date('2026-07-14T12:00:00.000Z');
 
@@ -113,7 +115,7 @@ describe('CompanyExportDataService reconstruction export', () => {
       }),
     ]);
 
-    const result = await service.gather(ids.company, { includePasswords: false });
+    const result = await service.gather(ids.company, { includePasswords: false, requestedBy: REQUESTER });
     const serialized = JSON.stringify(result);
 
     expect(result.includePasswords).toBe(false);
@@ -219,11 +221,169 @@ describe('CompanyExportDataService reconstruction export', () => {
     }]);
     crypto.decrypt.mockReturnValueOnce('manually-managed-password');
 
-    const result = await service.gather(ids.company, { includePasswords: true });
+    const result = await service.gather(ids.company, { includePasswords: true, requestedBy: REQUESTER });
 
     expect(result.includePasswords).toBe(true);
     expect(result.passwords[0]?.password).toBe('manually-managed-password');
     expect(crypto.decrypt).toHaveBeenCalledTimes(1);
+  });
+
+  describe('password access of the requester (issue #110)', () => {
+    /** The global policy: `selected_users` with nobody listed. */
+    function outsiderSetup() {
+      const ctx = setup();
+      ctx.prisma.systemSetting.findUnique.mockImplementation(async (args: { select?: object }) =>
+        args?.select && 'passwordAccessMode' in args.select
+          ? { passwordAccessMode: 'selected_users', passwordAccessUserIds: [] }
+          : { workspaceName: 'MSP Workspace' },
+      );
+      return ctx;
+    }
+
+    it.each([false, true])(
+      'exports only own-list entries and their files for an outsider (includePasswords=%s)',
+      async (includePasswords) => {
+        const { prisma, service } = outsiderSetup();
+        prisma.password.findMany.mockImplementation(async (args: { select?: { id?: boolean; name?: boolean } }) =>
+          args.select?.name ? [] : [{ id: 'pw-granted' }],
+        );
+        await service.gather(ids.company, { includePasswords, requestedBy: REQUESTER });
+
+        const scope = { restrictedToUserIds: { has: REQUESTER } };
+        // Every password query carries the requester's scope.
+        for (const [args] of prisma.password.findMany.mock.calls as Array<[{ where: { AND?: unknown[] } }]>) {
+          expect(args.where.AND).toEqual([scope]);
+        }
+        expect(prisma.password.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { companyId: ids.company, archivedAt: null, AND: [scope] } }),
+        );
+        // Uploads on hidden entries are filtered in the query.
+        expect(prisma.upload.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              companyId: ids.company,
+              deletedAt: null,
+              OR: [
+                { attachedToType: null },
+                { attachedToType: { not: 'password' } },
+                { attachedToId: { in: ['pw-granted'] } },
+              ],
+            },
+          }),
+        );
+      },
+    );
+
+    it('keeps the full scope for a user in the global list', async () => {
+      const { prisma, service } = setup();
+      prisma.systemSetting.findUnique.mockImplementation(async (args: { select?: object }) =>
+        args?.select && 'passwordAccessMode' in args.select
+          ? { passwordAccessMode: 'selected_users', passwordAccessUserIds: [REQUESTER] }
+          : { workspaceName: 'MSP Workspace' },
+      );
+      await service.gather(ids.company, { includePasswords: false, requestedBy: REQUESTER });
+      expect(prisma.password.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            companyId: ids.company,
+            archivedAt: null,
+            AND: [{
+              OR: [
+                { restrictedToUserIds: { isEmpty: true } },
+                { restrictedToUserIds: { has: REQUESTER } },
+              ],
+            }],
+          },
+        }),
+      );
+    });
+
+    const allUsersPolicy = async (args: { select?: object }) =>
+      args?.select && 'passwordAccessMode' in args.select
+        ? { passwordAccessMode: 'all_users', passwordAccessUserIds: [] }
+        : { workspaceName: 'MSP Workspace' };
+    /** Membership rows for the password-scope read only (not the member roster). */
+    const scopeMemberships = (prisma: ReturnType<typeof setup>['prisma'], rows: unknown[]) =>
+      prisma.membership.findMany.mockImplementation((async (args: { select?: object }) =>
+        args?.select && 'passwordAccess' in args.select ? rows : []) as never);
+    const passwordWhere = (prisma: ReturnType<typeof setup>['prisma']) =>
+      (prisma.password.findMany.mock.calls[0] as unknown as [{ where: { AND: unknown[] } }])[0].where.AND;
+
+    it('drops global-policy entries for a requester with a deny membership in this company', async () => {
+      const { prisma, service } = setup();
+      prisma.systemSetting.findUnique.mockImplementation(allUsersPolicy);
+      scopeMemberships(prisma, [
+        { companyId: ids.company, revokedAt: null, expiresAt: null, passwordAccess: 'deny' },
+      ]);
+      await service.gather(ids.company, { includePasswords: false, requestedBy: REQUESTER });
+      expect(prisma.membership.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: REQUESTER, companyId: ids.company } }),
+      );
+      expect(passwordWhere(prisma)).toEqual([
+        {
+          OR: [
+            { restrictedToUserIds: { isEmpty: true }, companyId: { notIn: [ids.company] } },
+            { restrictedToUserIds: { has: REQUESTER } },
+          ],
+        },
+      ]);
+    });
+
+    it('includes global-policy entries for an outsider with an allow membership in this company', async () => {
+      const { prisma, service } = outsiderSetup();
+      scopeMemberships(prisma, [
+        { companyId: ids.company, revokedAt: null, expiresAt: null, passwordAccess: 'allow' },
+      ]);
+      await service.gather(ids.company, { includePasswords: false, requestedBy: REQUESTER });
+      expect(passwordWhere(prisma)).toEqual([
+        {
+          OR: [
+            { restrictedToUserIds: { isEmpty: true }, companyId: { in: [ids.company] } },
+            { restrictedToUserIds: { has: REQUESTER } },
+          ],
+        },
+      ]);
+    });
+
+    it('ignores an expired allow membership', async () => {
+      const { prisma, service } = outsiderSetup();
+      scopeMemberships(prisma, [
+        {
+          companyId: ids.company,
+          revokedAt: null,
+          expiresAt: new Date('2000-01-01'),
+          passwordAccess: 'allow',
+        },
+      ]);
+      await service.gather(ids.company, { includePasswords: false, requestedBy: REQUESTER });
+      expect(passwordWhere(prisma)).toEqual([{ restrictedToUserIds: { has: REQUESTER } }]);
+    });
+
+    it.each([
+      ['no requester (job queued before the field existed)', undefined, { id: REQUESTER, role: 'OPERATOR', isActive: true }],
+      ['an inactive requester', REQUESTER, { id: REQUESTER, role: 'OPERATOR', isActive: false }],
+      ['a deleted requester', REQUESTER, null],
+    ])('fails closed for %s', async (_label, requestedBy, user) => {
+      const { prisma, service, crypto } = setup();
+      prisma.user.findUnique.mockResolvedValue(user);
+      const warn = jest
+        .spyOn((service as unknown as { logger: { warn: () => void } }).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      const result = await service.gather(ids.company, { includePasswords: true, requestedBy });
+
+      expect(result.passwords).toEqual([]);
+      expect(prisma.password.findMany).not.toHaveBeenCalled();
+      expect(crypto.decrypt).not.toHaveBeenCalled();
+      expect(prisma.upload.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([{ attachedToId: { in: [] } }]),
+          }),
+        }),
+      );
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
   });
 
   it.each([
@@ -745,6 +905,9 @@ describe('CompanyExportDataService reconstruction export', () => {
 function setup() {
   const prisma = {
     systemSetting: { findUnique: jest.fn().mockResolvedValue({ workspaceName: 'MSP Workspace' }) },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ id: REQUESTER, role: 'OPERATOR', isActive: true }),
+    },
     company: { findUnique: jest.fn().mockResolvedValue(company()) },
     membership: { findMany: jest.fn().mockResolvedValue([]) },
     asset: { findMany: jest.fn().mockResolvedValue([]) },

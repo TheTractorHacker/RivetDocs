@@ -12,6 +12,7 @@ import { problemMessage } from '@rivetdocs/shared';
 import { apiFetch } from '../../../../../lib/api';
 import {
   Btn,
+  Checkbox,
   Field,
   Icon,
   Input,
@@ -25,6 +26,16 @@ import {
 } from '../../../../../components/integrations/sync-schedule';
 import { DriverFieldsEditor } from '../driver-fields-editor';
 import { safeIntegrationProblemMessage } from '../integration-feedback';
+import { credentialsReady } from '../integration-credentials';
+import { ApiKeySetupGuide } from './api-key-setup-guide';
+import { CustomApiConfig } from '../custom-api/custom-api-config';
+import {
+  cleanDefinition,
+  customApiSavePlan,
+  draftFromConfig,
+  planHasChanges,
+  type CustomApiDraft,
+} from '../custom-api/definition-draft';
 
 const STATUSES: Array<{ value: IntegrationStatusValue; label: string }> = [
   { value: 'ACTIVE', label: 'Active — scheduled syncs run, manual sync allowed' },
@@ -45,10 +56,13 @@ export function CredentialsTab({
   integration,
   mappings,
   driver,
+  syncHoldCount = 0,
 }: {
   integration: IntegrationDto;
   mappings: IntegrationCompanyMappingDto[];
   driver: DriverDescriptor | null;
+  /** Open sync holds; when there are any, the run control offers to accept them. */
+  syncHoldCount?: number;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -66,6 +80,7 @@ export function CredentialsTab({
   const [testing, setTesting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [acceptChanges, setAcceptChanges] = useState(false);
 
   const enabledMappingCount = useMemo(
     () => mappings.filter((m) => m.enabled).length,
@@ -86,13 +101,16 @@ export function CredentialsTab({
       integration.resources.reduce((sum, r) => sum + r.fieldMappingCount, 0),
     [integration.resources],
   );
+  const ready = credentialsReady(integration);
   const cannotSync =
     integration.status === 'DISABLED' ||
-    !integration.hasSecret ||
+    !ready ||
     !hasSyncableResource ||
     enabledMappingCount === 0;
-  const syncBlockedReason: string | null = !integration.hasSecret
-    ? 'Add credentials below before running a sync.'
+  const syncBlockedReason: string | null = !ready
+    ? driver?.oauth
+      ? 'Connect a client tenant on the Connections tab before running a sync.'
+      : 'Add credentials below before running a sync.'
     : !hasSyncableResource
       ? 'No resource is fully configured — open a resource tab to pick a layout and field mappings.'
       : enabledMappingCount === 0
@@ -101,14 +119,32 @@ export function CredentialsTab({
           ? 'Integration is disabled. Set status to Active or Paused to enable manual runs.'
           : null;
 
+  // Custom API: the config is an API definition; its save rules (which
+  // secret keys, when to clear the secret) come from the definition.
+  const apiDefinition = driver?.capabilities.apiDefinition === true;
+  const plan = useMemo(
+    () =>
+      apiDefinition
+        ? customApiSavePlan({
+            saved: integration.config,
+            hasSecret: integration.hasSecret,
+            draft: draftFromConfig(config),
+            values: secret,
+            rotate: rotateSecret,
+          })
+        : null,
+    [apiDefinition, integration.config, integration.hasSecret, config, secret, rotateSecret],
+  );
+
   const dirty = useMemo(() => {
     if (name.trim() !== integration.name) return true;
     if (status !== integration.status) return true;
     if ((syncCron.trim() || null) !== integration.syncCron) return true;
+    if (plan) return planHasChanges(plan);
     if (JSON.stringify(config) !== JSON.stringify(integration.config)) return true;
     if (rotateSecret && Object.keys(secret).length > 0) return true;
     return false;
-  }, [name, status, syncCron, config, secret, rotateSecret, integration]);
+  }, [name, status, syncCron, config, secret, rotateSecret, integration, plan]);
 
   async function save() {
     setError(null);
@@ -119,11 +155,16 @@ export function CredentialsTab({
     if ((syncCron.trim() || null) !== integration.syncCron) {
       body.syncCron = syncCron.trim() === '' ? null : syncCron.trim();
     }
-    if (JSON.stringify(config) !== JSON.stringify(integration.config)) {
-      body.config = config;
-    }
-    if (rotateSecret && Object.keys(secret).length > 0) {
-      body.secret = secret;
+    if (plan) {
+      if (plan.configChanged) body.config = cleanDefinition(draftFromConfig(config));
+      Object.assign(body, plan.secretPatch);
+    } else {
+      if (JSON.stringify(config) !== JSON.stringify(integration.config)) {
+        body.config = config;
+      }
+      if (rotateSecret && Object.keys(secret).length > 0) {
+        body.secret = secret;
+      }
     }
     const res = await apiFetch<IntegrationDto>(
       `/admin/integrations/${integration.id}`,
@@ -134,7 +175,7 @@ export function CredentialsTab({
       const message = safeIntegrationProblemMessage(
         res.problem,
         'Could not save changes.',
-        rotateSecret ? secret : {},
+        rotateSecret || plan?.entering ? secret : {},
       );
       setError(message);
       toast.push(message, 'danger');
@@ -165,9 +206,14 @@ export function CredentialsTab({
 
   async function triggerSync(dryRun: boolean) {
     setSyncing(true);
+    // Accepting applies to a real run only; the API makes it a full sync.
+    const accept = !dryRun && acceptChanges && syncHoldCount > 0;
     const res = await apiFetch<{ id: string }>(
       `/admin/integrations/${integration.id}/sync`,
-      { method: 'POST', body: JSON.stringify({ dryRun }) },
+      {
+        method: 'POST',
+        body: JSON.stringify(accept ? { dryRun, acceptSourceChanges: true } : { dryRun }),
+      },
     );
     setSyncing(false);
     if (!res.ok || !res.data) {
@@ -177,7 +223,15 @@ export function CredentialsTab({
       );
       return;
     }
-    toast.push(dryRun ? 'Dry run enqueued.' : 'Sync run enqueued.', 'ok');
+    toast.push(
+      dryRun
+        ? 'Dry run enqueued.'
+        : accept
+          ? 'Full sync enqueued. It accepts the held changes.'
+          : 'Sync run enqueued.',
+      'ok',
+    );
+    if (accept) setAcceptChanges(false);
     router.refresh();
   }
 
@@ -205,6 +259,22 @@ export function CredentialsTab({
     toast.push('Integration deleted, assets released.', 'ok');
     router.push('/admin/integrations');
   }
+
+  // Test connection checks the saved integration. With unsaved definition
+  // changes its result would describe the old definition, so it waits for
+  // Save (the definition editor's own Test buttons use the form).
+  const testConnectionButton = (
+    <Btn
+      kind="ghost"
+      size="sm"
+      icon={Icon.zap}
+      onClick={testConnection}
+      loading={testing}
+      disabled={!ready || (plan !== null && planHasChanges(plan))}
+    >
+      Test connection
+    </Btn>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -259,7 +329,23 @@ export function CredentialsTab({
         </Field>
       </section>
 
-      {driver && driver.configFields.length > 0 && (
+      {driver && plan && (
+        <CustomApiConfig
+          integration={integration}
+          mappings={mappings}
+          draft={draftFromConfig(config)}
+          onDraftChange={(next: CustomApiDraft) => setConfig(next as unknown as Record<string, unknown>)}
+          secret={secret}
+          onSecretChange={setSecret}
+          rotate={rotateSecret}
+          onRotateChange={setRotateSecret}
+          plan={plan}
+          secretMask={<SecretMask mask={integration.secretMask} />}
+          testConnection={testConnectionButton}
+        />
+      )}
+
+      {driver && !plan && driver.configFields.length > 0 && (
         <DriverFieldsEditor
           title="Configuration"
           fields={driver.configFields}
@@ -268,7 +354,11 @@ export function CredentialsTab({
         />
       )}
 
-      {driver && driver.secretFields.length > 0 && (
+      {driver && !driver.oauth && driver.setupGuide && driver.setupGuide.length > 0 && (
+        <ApiKeySetupGuide integrationId={integration.id} steps={driver.setupGuide} hasSecret={ready} />
+      )}
+
+      {driver && !plan && driver.secretFields.length > 0 && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div
             style={{
@@ -295,16 +385,7 @@ export function CredentialsTab({
               >
                 Rotate credentials
               </Btn>
-              <Btn
-                kind="ghost"
-                size="sm"
-                icon={Icon.zap}
-                onClick={testConnection}
-                loading={testing}
-                disabled={!integration.hasSecret}
-              >
-                Test connection
-              </Btn>
+              {testConnectionButton}
             </div>
           ) : (
             <>
@@ -361,6 +442,15 @@ export function CredentialsTab({
             persists results.
           </p>
           {syncBlockedReason && <Tag tone="warn">{syncBlockedReason}</Tag>}
+          {syncHoldCount > 0 && (
+            <Checkbox
+              label={`Accept changes from ${driver?.label ?? integration.driver}`}
+              hint="Applies to Run sync now, which then runs a full sync. Records missing from two full syncs are archived, pages held for a field the source stopped sending are written, and the field check starts again from this sync."
+              checked={acceptChanges}
+              onChange={setAcceptChanges}
+              disabled={cannotSync || syncing}
+            />
+          )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Btn
               kind="outline"
@@ -387,6 +477,7 @@ export function CredentialsTab({
       )}
 
       {error && <Tag tone="danger">{error}</Tag>}
+      {dirty && plan?.blocked && <Tag tone="warn">{plan.blocked}</Tag>}
 
       <div
         style={{
@@ -411,7 +502,7 @@ export function CredentialsTab({
           kind="primary"
           onClick={save}
           loading={pending}
-          disabled={!dirty}
+          disabled={!dirty || Boolean(plan?.blocked)}
         >
           Save changes
         </Btn>

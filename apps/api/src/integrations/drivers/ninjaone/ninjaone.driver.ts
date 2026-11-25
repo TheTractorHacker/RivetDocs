@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { z } from 'zod';
 import type {
   DriverDescriptor,
+  IntegrationSetupCheck,
   SourceFieldDto,
   SourceOrgDto,
   TicketActivityDto,
@@ -15,6 +16,7 @@ import type {
 } from '@rivetdocs/shared';
 import {
   DriverAuthError,
+  type DriverDiagnoseInput,
   type LegacyDriverFetchPage,
   type LegacyDriverRecord,
   type FetchRecordsContext,
@@ -24,10 +26,26 @@ import {
 } from '../integration-driver.js';
 import {
   fetchWithRetry,
+  httpsBaseUrlSchema,
   humanizeKey,
+  type RequestPace,
   inferHintType,
   sortByLabel,
 } from '../driver-utils.js';
+import {
+  NinjaOneAuthError,
+  NinjaOneRequestError,
+  diagnoseNinjaOne,
+} from './ninjaone.diagnose.js';
+import { NINJAONE_DEFAULT_BASE_URL, NINJAONE_SETUP_GUIDE } from './ninjaone.setup-guide.js';
+import { evictRun, optional, runCached } from '../run-cache.js';
+import { arr, obj, str, type Lookup } from '../section-rows.js';
+import {
+  buildDeviceSection,
+  byDeviceId,
+  type ByDevice,
+  type DeviceLookups,
+} from './ninjaone.sections.js';
 
 /**
  * Phase 11 — NinjaOne RMM driver.
@@ -69,7 +87,6 @@ import {
  *                       filter. Applied post-fetch against
  *                       `device.locationId`.
  */
-const NINJAONE_DEFAULT_BASE_URL = 'https://app.ninjarmm.com';
 const NINJAONE_OAUTH_PATH = '/ws/oauth/token';
 // NinjaOne OAuth2 client_credentials scopes. We always try the full
 // set first (monitoring + ticketing). If the API client wasn't granted
@@ -103,11 +120,59 @@ const NINJAONE_RESOURCE_KEYS = new Set<string>([
   NINJAONE_NMS_RESOURCE_KEY,
 ]);
 
+/** Largest page asked of a `/v2/queries/*` report. */
+const QUERY_PAGE_SIZE = 1_000;
+const QUERY_MAX_PAGES = 200;
+/** Most report rows held per lookup and organisation in one run. */
+export const NINJAONE_LOOKUP_ITEM_CAP = 50_000;
+
+type LookupKey = keyof DeviceLookups;
+
+/**
+ * Reports behind the asset-page section, per resource. Patch, antivirus,
+ * interface and disk reports come from the agent, so non-agent devices
+ * load only health and alerts.
+ */
+const RESOURCE_LOOKUPS: Readonly<Record<string, readonly LookupKey[]>> = {
+  records: ['health', 'alerts', 'osPatches', 'softwarePatches', 'antivirus', 'networkInterfaces', 'disks'],
+  nms: ['health', 'alerts'],
+};
+
+const QUERY_PATHS: Readonly<Record<Exclude<LookupKey, 'alerts'>, string>> = {
+  health: '/v2/queries/device-health',
+  osPatches: '/v2/queries/os-patches',
+  softwarePatches: '/v2/queries/software-patches',
+  antivirus: '/v2/queries/antivirus-status',
+  networkInterfaces: '/v2/queries/network-interfaces',
+  disks: '/v2/queries/disks',
+};
+
+/** A lookup failure whose message is ours and safe to show in the section. */
+class LookupNote extends Error {}
+
+/** Optional report data: any failure becomes a note; only a rate limit propagates. */
+function sectionLookup(load: () => Promise<ByDevice>): Promise<Lookup<ByDevice>> {
+  return optional(
+    async () => {
+      try {
+        return await load();
+      } catch (e) {
+        if (e instanceof NinjaOneAuthError || (e instanceof NinjaOneRequestError && e.status === 404)) {
+          throw new LookupNote('your NinjaOne API client or plan does not include this data.');
+        }
+        throw e;
+      }
+    },
+    'NinjaOne did not return this data. It is retried on the next sync.',
+    (e) => e instanceof LookupNote,
+  );
+}
+
 /** NinjaOne's `deviceType` value for agented devices. */
 const NINJAONE_AGENT_DEVICE_TYPE = 'AgentDevice';
 
 const ninjaoneConfigSchema = z.object({
-  baseUrl: z.string().url().default(NINJAONE_DEFAULT_BASE_URL),
+  baseUrl: httpsBaseUrlSchema.default(NINJAONE_DEFAULT_BASE_URL),
 });
 
 const ninjaoneSecretSchema = z.object({
@@ -255,6 +320,27 @@ function ninjaoneTokenCacheKey(
   return `fp:${baseUrl}::${apiKey}`;
 }
 
+/**
+ * Minimum spacing between NinjaOne requests per API client. NinjaOne does
+ * not publish its limits, so this stays cautious (5 per second); a 429
+ * still backs off on its Retry-After.
+ */
+export const NINJAONE_MIN_REQUEST_INTERVAL_MS = 200;
+let requestIntervalMs = NINJAONE_MIN_REQUEST_INTERVAL_MS;
+
+/** @internal only `*.spec.ts` should call this (0 = no spacing). */
+export function __setNinjaOneRequestIntervalForTests(ms: number = NINJAONE_MIN_REQUEST_INTERVAL_MS): void {
+  requestIntervalMs = ms;
+}
+
+/** Requests of one API client (instance + Client ID) share one pace, whichever integration sends them. */
+function ninjaonePace(ctx: IntegrationContext): RequestPace {
+  const { baseUrl } = parseConfig(ctx.config);
+  const parsed = ninjaoneSecretSchema.safeParse(ctx.secret ?? {});
+  const client = parsed.success ? parsed.data.apiKey : (ctx.integrationId ?? '');
+  return { key: `ninjaone:${baseUrl}::${client}`, minIntervalMs: requestIntervalMs };
+}
+
 function ninjaoneTokenFingerprint(
   baseUrl: string,
   apiKey: string,
@@ -305,6 +391,9 @@ export class NinjaOneDriver implements IntegrationDriver {
           'NinjaOne OAuth2 Client Secret. Stored AES-256-GCM encrypted; never returned to the UI.',
       },
     ],
+    setupGuide: NINJAONE_SETUP_GUIDE,
+    // The key goes to baseUrl: moving it to a new host needs the key again.
+    secretBoundConfigKeys: ['baseUrl'],
     resources: [
       // Primary resource — agented endpoints (workstations / servers
       // running the NinjaOne agent). Default match key suggestion is
@@ -350,6 +439,26 @@ export class NinjaOneDriver implements IntegrationDriver {
       reconstructionCompleteness: false,
     },
   };
+
+  diagnose(input: DriverDiagnoseInput): Promise<IntegrationSetupCheck> {
+    if (input.mode !== 'connection') {
+      return Promise.resolve({
+        ok: false,
+        passedStepIds: [],
+        failures: [{ stepId: null, message: 'NinjaOne has no OAuth app to check.' }],
+      });
+    }
+    const { ctx } = input;
+    return diagnoseNinjaOne({
+      secretSaved: ninjaoneSecretSchema.safeParse(ctx.secret ?? {}).success,
+      baseUrlValid: ninjaoneConfigSchema.safeParse(ctx.config ?? {}).success,
+      probe: async () => {
+        // Exchange afresh so a cached token cannot hide a revoked client app or a removed scope.
+        this.invalidateToken(ctx);
+        return (await this.fetchAllOrgs(ctx)).length;
+      },
+    });
+  }
 
   async testConnection(
     ctx: IntegrationContext,
@@ -548,6 +657,8 @@ export class NinjaOneDriver implements IntegrationDriver {
     const { baseUrl } = parseConfig(ctx.config);
     const token = await this.getAccessToken(ctx);
     const filter = ninjaoneFilterSchema.parse(ctx.filter ?? {});
+    // Stable across the pages of one traversal, so its lookups load once.
+    const snapshotAt = ctx.snapshotAt ?? new Date().toISOString();
 
     const pageSize = 200;
     let after = 0;
@@ -608,6 +719,8 @@ export class NinjaOneDriver implements IntegrationDriver {
         )
       : resourceScoped;
 
+    const lookups = filtered.length > 0 ? await this.loadSectionLookups(ctx, snapshotAt) : {};
+    const nowMs = Date.now();
     const records: LegacyDriverRecord[] = filtered.map((d) => {
       const fields = normalizeNinjaOneRecordFields(d);
       return {
@@ -622,6 +735,9 @@ export class NinjaOneDriver implements IntegrationDriver {
           (d.displayName && String(d.displayName)) ||
           null,
         fields,
+        section: buildDeviceSection({ device: d, lookups, nowMs }),
+        // Picks the device's dashboard page for "Open in NinjaOne".
+        sourceKind: typeof d.nodeClass === 'string' ? d.nodeClass : null,
         updatedAt:
           typeof fields.lastContact === 'string' ? fields.lastContact : null,
       };
@@ -637,11 +753,67 @@ export class NinjaOneDriver implements IntegrationDriver {
         ? String(lastRaw.id)
         : null;
 
+    if (nextCursor === null) evictRun(ctx, snapshotAt);
     return {
       records,
       hasMore: nextCursor !== null,
       cursor: nextCursor,
+      snapshotAt,
     };
+  }
+
+  /**
+   * The reports behind the section, loaded once per organisation and run,
+   * one after the other (the request pace would queue parallel calls
+   * anyway). Each is scoped with `df=org=<id>`, and rows are only ever
+   * read back by the id of a device on this organisation's page, so a
+   * report that ignored the filter still cannot show another tenant's data.
+   */
+  private async loadSectionLookups(ctx: FetchRecordsContext, snapshotAt: string): Promise<DeviceLookups> {
+    const out: DeviceLookups = {};
+    for (const key of RESOURCE_LOOKUPS[ctx.resourceKey] ?? []) {
+      out[key] = await runCached(ctx, snapshotAt, `${key}:${ctx.externalOrgId}`, () =>
+        sectionLookup(async () =>
+          byDeviceId(key === 'alerts' ? await this.listAlerts(ctx) : await this.listQuery(ctx, QUERY_PATHS[key])),
+        ),
+      );
+    }
+    return out;
+  }
+
+  /** Every page of one `/v2/queries/*` report for the mapped organisation. */
+  private async listQuery(ctx: FetchRecordsContext, path: string): Promise<Record<string, unknown>[]> {
+    const { baseUrl } = parseConfig(ctx.config);
+    const token = await this.getAccessToken(ctx);
+    const out: Record<string, unknown>[] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < QUERY_MAX_PAGES; page += 1) {
+      const url = new URL(`${baseUrl.replace(/\/$/, '')}${path}`);
+      url.searchParams.set('df', `org=${ctx.externalOrgId}`);
+      url.searchParams.set('pageSize', String(QUERY_PAGE_SIZE));
+      if (cursor) url.searchParams.set('cursor', cursor);
+      const body = await this.callJson<unknown>(url.toString(), { token, ctx });
+      const results = arr(obj(body)?.results);
+      out.push(...results);
+      assertLookupSize(out.length);
+      const next = str(obj(obj(body)?.cursor)?.name);
+      // NinjaOne does not document its largest page size, so a short page
+      // does not prove the end: only an empty page or no cursor does.
+      if (results.length === 0 || !next) break;
+      cursor = next;
+    }
+    return out;
+  }
+
+  /** Active alerts of the mapped organisation (one unpaged list). */
+  private async listAlerts(ctx: FetchRecordsContext): Promise<Record<string, unknown>[]> {
+    const { baseUrl } = parseConfig(ctx.config);
+    const token = await this.getAccessToken(ctx);
+    const url = new URL(`${baseUrl.replace(/\/$/, '')}/v2/alerts`);
+    url.searchParams.set('df', `org=${ctx.externalOrgId}`);
+    const alerts = arr(await this.callJson<unknown>(url.toString(), { token, ctx }));
+    assertLookupSize(alerts.length);
+    return alerts;
   }
 
   // -------------------------------------------------------------------
@@ -680,7 +852,7 @@ export class NinjaOneDriver implements IntegrationDriver {
 
     // Try the full scope set first; on `invalid_scope` fall back to
     // monitoring-only. Two attempts max — if both fail we surface a
-    // single DriverAuthError with the upstream body.
+    // single DriverAuthError with the HTTP status (never the body).
     let token = await this.exchangeForToken(
       tokenUrl,
       apiKey,
@@ -750,46 +922,50 @@ export class NinjaOneDriver implements IntegrationDriver {
       backoffMs: ctx.http.backoffMs,
       correlationId: ctx.correlationId,
       serviceName: 'NinjaOne',
+      pace: ninjaonePace(ctx),
     });
 
     if (res.status === 401 || res.status === 403) {
       ninjaoneTokenCache.delete(cacheKey);
-      throw new DriverAuthError(
+      throw new NinjaOneAuthError(
         `NinjaOne token exchange failed (${res.status}). Check the Client ID, Client Secret, and that the API client has the "monitoring" scope.`,
+        'token',
+        res.status,
       );
     }
+    // The body is inspected only to detect `invalid_scope`; it is never
+    // put into an error or a log line (provider text is not ours to echo).
     if (res.status === 400 && opts.failOnInvalidScope) {
-      // Body is JSON: { "error": "invalid_scope", "error_description": "..." }
-      const bodyText = await res
-        .text()
-        .catch(() => '')
-        .then((t) => t.slice(0, 500));
-      if (/invalid_scope/i.test(bodyText)) {
+      if (await isInvalidScopeResponse(res)) {
         return null;
       }
       ninjaoneTokenCache.delete(cacheKey);
-      throw new DriverAuthError(
-        `NinjaOne token exchange returned HTTP 400${
-          bodyText ? `: ${bodyText.slice(0, 200)}` : ''
-        }`,
+      throw new NinjaOneAuthError(
+        'NinjaOne token exchange returned HTTP 400. Check the Client ID and Client Secret, and that the API client allows the Client Credentials grant.',
+        'token',
+        400,
       );
     }
     if (!res.ok) {
-      const bodyText = await res
-        .text()
-        .catch(() => '')
-        .then((t) => t.slice(0, 500));
-      throw new Error(
-        `NinjaOne token exchange returned HTTP ${res.status}${
-          bodyText ? `: ${bodyText.slice(0, 200)}` : ''
-        }`,
+      // Monitoring-only fallback refused: the client app lacks the scope.
+      const invalidScope =
+        res.status === 400 && (await isInvalidScopeResponse(res));
+      throw new NinjaOneRequestError(
+        invalidScope
+          ? 'NinjaOne token exchange returned HTTP 400 (invalid_scope). Enable the "monitoring" scope on the NinjaOne API client.'
+          : `NinjaOne token exchange returned HTTP ${res.status}. Check the instance URL, or try again later if NinjaOne is unavailable.`,
+        'token',
+        res.status,
+        invalidScope,
       );
     }
 
     const json = (await res.json()) as { access_token?: string };
     if (!json.access_token) {
-      throw new DriverAuthError(
+      throw new NinjaOneAuthError(
         'NinjaOne token exchange did not return access_token.',
+        'token',
+        res.status,
       );
     }
     return json.access_token;
@@ -816,18 +992,25 @@ export class NinjaOneDriver implements IntegrationDriver {
       backoffMs: opts.ctx.http.backoffMs,
       correlationId: opts.ctx.correlationId,
       serviceName: 'NinjaOne',
+      pace: ninjaonePace(opts.ctx),
     });
 
     if (res.status === 401 || res.status === 403) {
       // Token may have been revoked or expired sooner than our TTL.
       // Drop the cached entry so the next call mints fresh credentials.
       this.invalidateToken(opts.ctx);
-      throw new DriverAuthError(
+      throw new NinjaOneAuthError(
         `NinjaOne GET ${url} returned ${res.status}. Token rejected.`,
+        'api',
+        res.status,
       );
     }
     if (!res.ok) {
-      throw new Error(`NinjaOne GET ${url} returned HTTP ${res.status}`);
+      throw new NinjaOneRequestError(
+        `NinjaOne GET ${url} returned HTTP ${res.status}`,
+        'api',
+        res.status,
+      );
     }
     return (await res.json()) as T;
   }
@@ -1009,6 +1192,7 @@ export class NinjaOneDriver implements IntegrationDriver {
       backoffMs: ctx.http.backoffMs,
       correlationId: ctx.correlationId,
       serviceName: 'NinjaOne',
+      pace: ninjaonePace(ctx),
     });
 
     if (res.status === 401 || res.status === 403) {
@@ -1021,18 +1205,10 @@ export class NinjaOneDriver implements IntegrationDriver {
       return { records: [], lastCursorId: null, exhausted: true };
     }
     if (!res.ok) {
-      const bodyText = await res
-        .text()
-        .catch(() => '')
-        .then((t) => t.slice(0, 500));
       this.logger.warn(
-        `NinjaOne ticketing list returned HTTP ${res.status} for board ${board.id} (corr=${ctx.correlationId}): ${bodyText}`,
+        `NinjaOne ticketing list returned HTTP ${res.status} for board ${board.id} (corr=${ctx.correlationId}).`,
       );
-      throw new Error(
-        `NinjaOne ticketing list returned HTTP ${res.status}${
-          bodyText ? `: ${bodyText.slice(0, 200)}` : ''
-        }`,
-      );
+      throw new Error(`NinjaOne ticketing list returned HTTP ${res.status}.`);
     }
 
     const payload = (await res.json()) as {
@@ -1181,6 +1357,7 @@ export class NinjaOneDriver implements IntegrationDriver {
         backoffMs: ctx.http.backoffMs,
         correlationId: ctx.correlationId,
         serviceName: 'NinjaOne',
+        pace: ninjaonePace(ctx),
       });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
@@ -1197,7 +1374,12 @@ export class NinjaOneDriver implements IntegrationDriver {
           undefined,
       };
     } catch (e) {
-      return { failure: e instanceof Error ? e.message.slice(0, 80) : 'unknown' };
+      // The error class name, never `e.message`: a JSON SyntaxError quotes
+      // the start of the response body. Matched by name, not instanceof,
+      // because the parse error can come from another realm.
+      const name = (e as { name?: unknown } | null)?.name;
+      if (name === 'SyntaxError') return { failure: 'invalid_json' };
+      return { failure: typeof name === 'string' ? name.slice(0, 40) : 'unknown' };
     }
   }
 
@@ -1302,6 +1484,7 @@ export class NinjaOneDriver implements IntegrationDriver {
       backoffMs: ctx.http.backoffMs,
       correlationId: ctx.correlationId,
       serviceName: 'NinjaOne',
+      pace: ninjaonePace(ctx),
     });
     if (res.status === 401 || res.status === 403) {
       this.invalidateToken(ctx);
@@ -1333,6 +1516,19 @@ export class NinjaOneDriver implements IntegrationDriver {
 
 function parseConfig(raw: Record<string, unknown>): { baseUrl: string } {
   return ninjaoneConfigSchema.parse(raw ?? {});
+}
+
+/**
+ * True when a token-endpoint 400 names `invalid_scope`. Reads the body
+ * for that one test only; the text never leaves this function.
+ */
+async function isInvalidScopeResponse(res: Response): Promise<boolean> {
+  // Body is JSON: { "error": "invalid_scope", "error_description": "..." }
+  const bodyText = await res
+    .text()
+    .catch(() => '')
+    .then((t) => t.slice(0, 500));
+  return /invalid_scope/i.test(bodyText);
 }
 
 function assertExpectedResourceKey(resourceKey: string): void {
@@ -1371,6 +1567,14 @@ function filterByResource<T extends NinjaOneDevice>(
     return devices.filter((d) => d.deviceType !== NINJAONE_AGENT_DEVICE_TYPE);
   }
   return devices;
+}
+
+function assertLookupSize(count: number): void {
+  if (count > NINJAONE_LOOKUP_ITEM_CAP) {
+    throw new LookupNote(
+      `the organisation has more than ${NINJAONE_LOOKUP_ITEM_CAP.toLocaleString('en-US')} entries, above what one sync holds.`,
+    );
+  }
 }
 
 function isStringArray(v: unknown): v is string[] {

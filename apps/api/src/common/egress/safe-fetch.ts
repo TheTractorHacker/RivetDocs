@@ -21,7 +21,15 @@
  *   4. Follows 3xx redirects in-process (up to 5 hops) and re-runs the
  *      resolve-and-validate path on every hop, so a public host can't
  *      redirect to a private one. Callers that need raw hop visibility
- *      can opt into `redirect: 'manual'`.
+ *      can opt into `redirect: 'manual'`. Each hop also applies the
+ *      Fetch-standard redirect rules plus two stricter ones (see
+ *      `buildRedirectOptions`): 303 (and 301/302 for POST) rewrite to a
+ *      bodyless GET; an https → http downgrade is refused; a
+ *      cross-origin hop drops `Authorization` / `Proxy-Authorization` /
+ *      `Cookie`, and is refused outright when it would still carry a
+ *      request body or any header outside `CROSS_ORIGIN_SAFE_HEADERS`
+ *      (custom API-key headers like `X-API-Key` can't be recognised by
+ *      name, so anything unknown is treated as a credential).
  *   5. Wraps the response stream so we can refuse to keep reading once
  *      `maxResponseBytes` is exceeded — protects worker memory from a
  *      hostile origin streaming a multi-GB payload.
@@ -33,6 +41,7 @@
  */
 
 import { lookup as dnsLookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import { Agent, fetch as undiciFetch } from 'undici';
 import {
   defaultBlockedCidrs,
@@ -81,8 +90,19 @@ export type EgressBlockedInfo = {
 export type EgressBlockedCallback = (info: EgressBlockedInfo) => void;
 
 export interface SafeFetchOptions extends Omit<RequestInit, 'signal'> {
-  /** Hard upper bound on the request duration (start-to-headers + body). */
+  /**
+   * Upper bound on the time to response headers. With
+   * `timeoutCoversBody`, the same deadline also covers reading the body.
+   */
   timeoutMs: number;
+  /**
+   * Keep the `timeoutMs` deadline (and the caller's `signal`) running until
+   * the body is fully read, not only until the headers arrive. Use it for
+   * fetches to hosts an untrusted party chooses, so a server that sends
+   * headers at once and then stalls or trickles the body cannot hold the
+   * connection open. Off by default.
+   */
+  timeoutCoversBody?: boolean;
   /** Refuse to read more than this many bytes from the response body. */
   maxResponseBytes?: number;
   /**
@@ -214,6 +234,118 @@ export async function safeFetch(
   return safeFetchInternal(url, options, {});
 }
 
+/**
+ * Egress guard for raw `net`/`tls` sockets, which cannot go through
+ * {@link safeFetch}. Resolves `hostname`, applies the same private-range
+ * policy (operator `EGRESS_*` settings included), and returns ONE validated
+ * address. The caller must connect to that address, not to the hostname —
+ * a second lookup at connect time could return a different, unvalidated
+ * answer (DNS rebinding). For TLS, keep the hostname as `servername` so SNI
+ * and certificate identity checks are unchanged.
+ *
+ * `target` is a label for the block telemetry, e.g. `tls://host:443`.
+ */
+export async function resolveEgressAddress(
+  hostname: string,
+  target: string,
+  options: { resolve?: ResolveFn } = {},
+): Promise<string> {
+  const bare = hostname.replace(/^\[/, '').replace(/\]$/, '');
+  if (!bare) {
+    throw block(target, bare, [], 'invalid_hostname', 'empty hostname', null);
+  }
+  const resolvedIps = await resolveAndCheck(target, bare, {
+    resolve: options.resolve ?? defaultResolveImpl,
+    allowPrivate: config.allowAllPrivate,
+    extraAllowed: [],
+  });
+  const address = pickPinnableIp(resolvedIps);
+  if (!address) {
+    throw block(target, bare, resolvedIps, 'dns_resolution_failed', 'no usable address', null);
+  }
+  return address;
+}
+
+/**
+ * Resolve `hostname` (IP literals skip DNS) and refuse the whole answer if
+ * ANY address is in a blocked range — a mixed public/private answer must not
+ * let the connect land on the private one.
+ */
+async function resolveAndCheck(
+  url: string,
+  hostname: string,
+  opts: { resolve: ResolveFn; allowPrivate: boolean; extraAllowed: readonly Cidr[] },
+): Promise<string[]> {
+  // Skip DNS when the operator already supplied a literal IP — both
+  // `new URL('http://10.0.0.1')` and `http://[::1]` parse the address
+  // straight onto `hostname`.
+  let resolvedIps: string[];
+  if (isIpLiteral(hostname)) {
+    resolvedIps = [hostname];
+  } else {
+    try {
+      const out = await opts.resolve(hostname);
+      resolvedIps = [...out];
+    } catch (err) {
+      throw block(
+        url,
+        hostname,
+        [],
+        'dns_resolution_failed',
+        err instanceof Error ? err.message : String(err),
+        null,
+      );
+    }
+    if (resolvedIps.length === 0) {
+      throw block(
+        url,
+        hostname,
+        [],
+        'dns_resolution_failed',
+        'no addresses returned',
+        null,
+      );
+    }
+  }
+
+  // Fail closed on anything that is not a canonical address: the range
+  // check below cannot classify it, and a caller that connects to it would
+  // hand it to the system resolver unchecked.
+  const nonCanonical = resolvedIps.find((ip) => isIP(ip) === 0);
+  if (nonCanonical !== undefined) {
+    throw block(
+      url,
+      hostname,
+      resolvedIps,
+      'dns_resolution_failed',
+      `${nonCanonical} is not a canonical IP address`,
+      null,
+    );
+  }
+
+  if (!opts.allowPrivate) {
+    const blockList = defaultBlockedCidrs();
+    for (const ip of resolvedIps) {
+      const matched = ipMatchesAny(ip, blockList);
+      if (
+        matched &&
+        !ipMatchesAny(ip, config.allowedPrivateCidrs) &&
+        !ipMatchesAny(ip, opts.extraAllowed)
+      ) {
+        throw block(
+          url,
+          hostname,
+          resolvedIps,
+          'private_ip_blocked',
+          `${ip} is in blocked range ${matched.raw}`,
+          matched.raw,
+        );
+      }
+    }
+  }
+  return resolvedIps;
+}
+
 async function safeFetchInternal(
   url: string,
   options: SafeFetchOptions,
@@ -251,60 +383,12 @@ async function safeFetchInternal(
     throw block(url, hostname, [], 'invalid_hostname', 'empty hostname', null);
   }
 
-  // Skip DNS when the operator already supplied a literal IP — both
-  // `new URL('http://10.0.0.1')` and `http://[::1]` parse the address
-  // straight onto `hostname`.
-  let resolvedIps: string[];
-  if (isIpLiteral(hostname)) {
-    resolvedIps = [hostname];
-  } else {
-    try {
-      const out = await resolveImpl(hostname);
-      resolvedIps = [...out];
-    } catch (err) {
-      throw block(
-        url,
-        hostname,
-        [],
-        'dns_resolution_failed',
-        err instanceof Error ? err.message : String(err),
-        null,
-      );
-    }
-    if (resolvedIps.length === 0) {
-      throw block(
-        url,
-        hostname,
-        [],
-        'dns_resolution_failed',
-        'no addresses returned',
-        null,
-      );
-    }
-  }
-
   const allowPrivate = options.allowPrivateNetworks || config.allowAllPrivate;
-  if (!allowPrivate) {
-    const blockList = defaultBlockedCidrs();
-    const extraAllowed = options.extraAllowedPrivateCidrs ?? [];
-    for (const ip of resolvedIps) {
-      const matched = ipMatchesAny(ip, blockList);
-      if (
-        matched &&
-        !ipMatchesAny(ip, config.allowedPrivateCidrs) &&
-        !ipMatchesAny(ip, extraAllowed)
-      ) {
-        throw block(
-          url,
-          hostname,
-          resolvedIps,
-          'private_ip_blocked',
-          `${ip} is in blocked range ${matched.raw}`,
-          matched.raw,
-        );
-      }
-    }
-  }
+  const resolvedIps = await resolveAndCheck(url, hostname, {
+    resolve: resolveImpl,
+    allowPrivate,
+    extraAllowed: options.extraAllowedPrivateCidrs ?? [],
+  });
 
   // Caller asked us to follow redirects (or didn't say — that's the
   // fetch default). We force the underlying fetch into 'manual' so we
@@ -375,6 +459,7 @@ async function safeFetchInternal(
     delete (init as { extraAllowedPrivateCidrs?: unknown }).extraAllowedPrivateCidrs;
     delete (init as { maxResponseBytes?: unknown }).maxResponseBytes;
     delete (init as { timeoutMs?: unknown }).timeoutMs;
+    delete (init as { timeoutCoversBody?: unknown }).timeoutCoversBody;
     // The `dispatcher` knob comes from the bundled undici inside Node's
     // global `fetch`. Node's RequestInit type uses `undici-types` for
     // the slot, but the actual implementation accepts any
@@ -399,11 +484,11 @@ async function safeFetchInternal(
         await ownedAgent?.close().catch(() => {});
         const visited = internal.visitedUrls ?? [url];
         if (visited.includes(nextUrl)) {
-          throw new Error(`safeFetch redirect loop detected at ${nextUrl}`);
+          throw new Error(`safeFetch redirect loop detected at ${redactUrl(nextUrl)}`);
         }
         return safeFetchInternal(
           nextUrl,
-          { ...options, redirect: 'follow' },
+          buildRedirectOptions(url, nextUrl, res.status, options),
           {
             redirectHopsRemaining: hopsRemaining - 1,
             visitedUrls: [...visited, nextUrl],
@@ -417,6 +502,7 @@ async function safeFetchInternal(
       options.maxResponseBytes ?? config.defaultMaxResponseBytes,
       timer,
       ownedAgent,
+      options.timeoutCoversBody ? controller.signal : null,
     );
   } catch (err) {
     clearTimeout(timer);
@@ -427,6 +513,101 @@ async function safeFetchInternal(
 
 function isRedirectStatus(status: number): boolean {
   return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+// Stripped on every cross-origin hop, as the Fetch standard does for
+// `Authorization` (and browsers do for cookies).
+const CREDENTIAL_HEADERS = ['authorization', 'proxy-authorization', 'cookie'];
+
+// Dropped together with the body when a redirect rewrites to GET.
+const REQUEST_BODY_HEADERS = [
+  'content-type',
+  'content-length',
+  'content-encoding',
+  'content-language',
+  'content-location',
+];
+
+// The only headers allowed to follow a cross-origin redirect: the
+// CORS-safelisted request headers plus a few transport headers. None can
+// carry a credential. Anything else (e.g. `X-API-Key`, `Add-Padding`)
+// makes the hop refuse, because a custom API-key header can't be told
+// apart from a harmless custom header by name.
+const CROSS_ORIGIN_SAFE_HEADERS = new Set([
+  'accept',
+  'accept-encoding',
+  'accept-language',
+  'cache-control',
+  'content-language',
+  'content-type',
+  'pragma',
+  'user-agent',
+]);
+
+/**
+ * Options for the next hop of a followed redirect. Throws when the hop
+ * must not be followed: an https → http downgrade, or a cross-origin hop
+ * that would still forward a request body or a non-allowlisted header.
+ * Same-origin hops keep every header (Fetch-standard behaviour).
+ */
+function buildRedirectOptions(
+  fromUrl: string,
+  toUrl: string,
+  status: number,
+  options: SafeFetchOptions,
+): SafeFetchOptions {
+  const from = new URL(fromUrl);
+  let to: URL;
+  try {
+    to = new URL(toUrl);
+  } catch {
+    // Unparseable Location: the next hop rejects it as `invalid_url`
+    // before any request is made, so nothing is forwarded.
+    return { ...options, redirect: 'follow' };
+  }
+  if (from.protocol === 'https:' && to.protocol !== 'https:') {
+    throw new Error(
+      `safeFetch refused an https → http redirect downgrade to ${redactUrl(toUrl)}`,
+    );
+  }
+
+  const headers: Record<string, string> = {};
+  new Headers(options.headers).forEach((value, name) => {
+    headers[name] = value;
+  });
+  let method = options.method;
+  let body = options.body;
+
+  const upper = (method ?? 'GET').toUpperCase();
+  const rewriteToGet =
+    (status === 303 && upper !== 'GET' && upper !== 'HEAD') ||
+    ((status === 301 || status === 302) && upper === 'POST');
+  if (rewriteToGet) {
+    method = 'GET';
+    body = undefined;
+    for (const name of REQUEST_BODY_HEADERS) delete headers[name];
+  }
+
+  if (from.origin !== to.origin) {
+    for (const name of CREDENTIAL_HEADERS) delete headers[name];
+    if (body != null) {
+      throw new Error(
+        `safeFetch refused to forward a request body across origins to ${redactUrl(toUrl)}`,
+      );
+    }
+    const unsafe = Object.keys(headers).filter(
+      (name) => !CROSS_ORIGIN_SAFE_HEADERS.has(name),
+    );
+    if (unsafe.length > 0) {
+      // Header names only — never values.
+      throw new Error(
+        `safeFetch refused a cross-origin redirect to ${redactUrl(toUrl)} ` +
+          `carrying non-allowlisted headers: ${unsafe.join(', ')}`,
+      );
+    }
+  }
+
+  return { ...options, method, body, headers, redirect: 'follow' };
 }
 
 function resolveLocation(base: string, location: string): string {
@@ -444,22 +625,36 @@ function pickPinnableIp(ips: readonly string[]): string | null {
   return v4 ?? ips[0] ?? null;
 }
 
+/**
+ * `bodyDeadline`: when set (`timeoutCoversBody`), the request's abort signal
+ * keeps running through the body read, and its abort fails the body. When
+ * null, the timeout ends once headers are in and the caller is responsible
+ * for reading promptly.
+ */
 function wrapResponse(
   res: Response,
   maxBytes: number,
   timer: NodeJS.Timeout,
   ownedAgent: Agent | null,
+  bodyDeadline: AbortSignal | null,
 ): Response {
-  // Clear the timeout once headers are in — body reads handle their own
-  // limit. The caller is still responsible for reading promptly.
-  clearTimeout(timer);
+  // Without a body deadline, clear the timeout once headers are in — body
+  // reads handle their own size limit.
+  if (!bodyDeadline) clearTimeout(timer);
 
-  const closeAgent = async (): Promise<void> => {
+  let finished = false;
+  let onDeadline: (() => void) | null = null;
+  const finish = async (): Promise<void> => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    // A late abort after the body is done must do nothing.
+    if (onDeadline) bodyDeadline?.removeEventListener('abort', onDeadline);
     if (ownedAgent) await ownedAgent.close().catch(() => {});
   };
 
   if (!res.body) {
-    void closeAgent();
+    void finish();
     return res;
   }
 
@@ -467,12 +662,30 @@ function wrapResponse(
   let received = 0;
 
   const limited = new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (!bodyDeadline) return;
+      // Fail the body at the deadline even if the source never answers the
+      // abort (a pending `read()` on a stalled stream would wait forever).
+      const deadline = bodyDeadline;
+      const fire = () => {
+        if (finished) return;
+        controller.error(deadline.reason ?? new Error('safeFetch body deadline exceeded'));
+        reader.cancel(deadline.reason).catch(() => {
+          // The body is already failed; a cancel error adds nothing.
+        });
+        void finish();
+      };
+      onDeadline = fire;
+      if (deadline.aborted) fire();
+      else deadline.addEventListener('abort', fire, { once: true });
+    },
     async pull(controller) {
       try {
         const { value, done } = await reader.read();
+        if (finished) return;
         if (done) {
           controller.close();
-          await closeAgent();
+          await finish();
           return;
         }
         received += value?.byteLength ?? 0;
@@ -483,18 +696,19 @@ function wrapResponse(
             ),
           );
           await reader.cancel();
-          await closeAgent();
+          await finish();
           return;
         }
         controller.enqueue(value);
       } catch (err) {
+        if (finished) return;
         controller.error(err);
-        await closeAgent();
+        await finish();
       }
     },
     async cancel(reason) {
       await reader.cancel(reason);
-      await closeAgent();
+      await finish();
     },
   });
 
@@ -533,8 +747,15 @@ function block(
   });
 }
 
+/**
+ * Canonical IP literals only. A digits-and-dots test also matched shorthand
+ * such as `127.1`, which the CIDR matcher cannot parse (so it was never
+ * blocked) while Node's connect resolves it to 127.0.0.1. Shorthand, hex
+ * and octal forms now go through the resolver, which returns canonical
+ * addresses for the check.
+ */
 function isIpLiteral(hostname: string): boolean {
-  return /^[\d.]+$/.test(hostname) || hostname.includes(':');
+  return isIP(hostname) !== 0;
 }
 
 async function defaultResolve(hostname: string): Promise<readonly string[]> {

@@ -14,6 +14,8 @@ import { TopBar } from '../../../../../../components/shell/top-bar';
 import { Panel, ShowMore, Tag } from '../../../../../../components/ui';
 import { buildTerm } from '../../../../../../lib/term';
 import { companyCrumbs } from '../../../../../../lib/company-crumbs';
+import { getEffectiveTimezone } from '../../../../../../lib/date-format';
+import { formatDateTime } from '@rivetdocs/shared';
 import { ArticleBody } from '../../../../../../components/editor/article-body';
 import { ArticleChatContext } from '../../../../../../components/editor/article-chat-context';
 import { ArticleSideNavColumn } from '../../../../../../components/editor/article-side-nav-column';
@@ -44,6 +46,7 @@ export default async function ArticleReadPage({
   const { id: companyId, articleId } = await params;
   const me = await requireMe();
   const term = buildTerm(await getSettings());
+  const timeZone = getEffectiveTimezone(me);
 
   const [companyRes, article, folders, articleList] = await Promise.all([
     getCompanyDetail(companyId),
@@ -118,7 +121,10 @@ export default async function ArticleReadPage({
               padding: '40px 40px 80px',
             }}
           >
-            {(!article.visibleToClients || article.archivedAt) && (
+            {(!article.isPublished ||
+              article.hasDraft ||
+              !article.visibleToClients ||
+              article.archivedAt) && (
               <div
                 style={{
                   display: 'flex',
@@ -128,6 +134,10 @@ export default async function ArticleReadPage({
                   margin: '0 0 10px',
                 }}
               >
+                {/* Only Publish publishes: say plainly when readers are
+                    looking at unpublished text. */}
+                {!article.isPublished && <Tag tone="warn">not published</Tag>}
+                {article.isPublished && article.hasDraft && <Tag tone="warn">draft</Tag>}
                 {!article.visibleToClients && <Tag tone="outline">internal</Tag>}
                 {article.archivedAt && <Tag tone="warn">archived</Tag>}
               </div>
@@ -186,13 +196,13 @@ export default async function ArticleReadPage({
           />
           <ShowMore attention={provenanceAttention(article.provenance)}>
             <Panel title="Last activity">
-              <Row label="Created" value={new Date(article.createdAt).toLocaleString()} />
+              <Row label="Created" value={formatDateTime(article.createdAt, timeZone)} />
               {article.createdByUser && (
                 <Row label="Created by" value={article.createdByUser.name} />
               )}
               <Row
                 label="Updated"
-                value={new Date(article.updatedAt).toLocaleString()}
+                value={formatDateTime(article.updatedAt, timeZone)}
                 last={!article.updatedByUser}
               />
               {article.updatedByUser && (

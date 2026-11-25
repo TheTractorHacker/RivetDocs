@@ -1,6 +1,7 @@
 import { ChatToolCallService } from './chat-tool-call.service.js';
 import type { ChatToolCallDto, ChatTurnContext } from '@rivetdocs/shared';
 import type { AuthedUser } from '../common/current-user.decorator.js';
+import { FULL_PASSWORD_ACCESS } from '../passwords/password-access-policy.js';
 
 const ACTOR: AuthedUser = {
   id: 'actor-1',
@@ -11,6 +12,7 @@ const ACTOR: AuthedUser = {
   sessionId: 's-1',
   mfaEnforcementCompletedAt: new Date(),
   mfaPending: false,
+  passwordAccess: FULL_PASSWORD_ACCESS,
 };
 /** Same identity with the role that carries a row-level read restriction. */
 const CLIENT_ACTOR: AuthedUser = { ...ACTOR, role: 'CLIENT_USER' };

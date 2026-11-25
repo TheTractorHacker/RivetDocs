@@ -46,6 +46,8 @@ API_URL=https://your-domain.com/api
 
 Browsers stream every uploaded file (thumbnails, attachments, logos, export PDFs) through the API on the same origin as the web app, so there is no second virtual host to configure.
 
+`APP_URL` is also the public identity of the [remote MCP endpoint](/integrations/mcp/): AI apps connect to `APP_URL` followed by `/mcp`, and OAuth tokens are bound to that exact address. It must be the `https://` address users type, with no path.
+
 Restart the stack after changing these: `docker compose up -d`
 
 ## Client IP Headers
@@ -188,6 +190,58 @@ your-domain.com {
 
 **`cloudflared` straight to `web`.** Point the tunnel's public hostname at `http://web:3000` when `cloudflared` joins the compose network, or at `http://localhost:3000` when it runs on the host. Keep `TRUST_PROXY_HOPS=1`. A request that reaches `web` without the tunnel can choose its own `X-Forwarded-For`, so remove the published `web` port or bind it to loopback (see the next section).
 
+## Remote MCP (AI apps)
+
+Nothing extra to route: `/mcp`, `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server` and `/api/v1/oauth/*` (including `/api/v1/oauth/reg` for apps that register themselves, when **Any MCP app** is chosen) all go through the same catch-all to `web` as the rest of the app. Check these when you put a proxy or firewall in front:
+
+- **Do not block `/.well-known/`.** A rule that blocks dot-paths must exempt `/.well-known/`, or AI apps cannot discover how to sign in. Make the exemption a *starts with* match on `/.well-known/`.
+- **Allow JSON `POST` bodies to `/mcp`.** A web application firewall that inspects bodies may flag JSON-RPC requests; exempt `/mcp` if it does.
+- **Pass `WWW-Authenticate` through.** The first request from an AI app gets a `401` whose `WWW-Authenticate` header points to the sign-in metadata. A proxy that drops or rewrites 401 responses breaks the connection.
+- **IP rules.** If you use IP allow rules, allow the AI app's address ranges (Claude: `160.79.104.0/21`; ChatGPT: `https://openai.com/chatgpt-connectors.json`).
+
+### Bot protection, challenges and WAF rules
+
+AI apps such as ChatGPT and Claude call some of these addresses from their own servers, with no browser and no person present. They cannot run a JavaScript challenge, solve a CAPTCHA or keep a challenge cookie. Any feature that answers with a challenge page instead of the real response breaks the connection, even though the same address works when you open it in your browser. Look for:
+
+- **Bot protection or bot management** (in a WAF such as SafeLine, ModSecurity-based products or a hosting provider's firewall, and in a CDN such as Cloudflare's Bot Fight Mode).
+- **JavaScript challenges, "under attack" modes, CAPTCHA and human verification**.
+- **"Block AI bots" or AI crawler controls** at a CDN. These can match the user agents ChatGPT and Claude use for connector traffic, not only crawlers.
+- **Rate limits** tuned for people. A connection makes several requests in quick succession while it signs in.
+
+Add one exception (an *allow*, *skip* or *bypass* rule, depending on the product) for the machine-called addresses only. Match the **path without the query string** and limit it to your RivetDocs host:
+
+| Path | Match | Called by |
+|---|---|---|
+| `/mcp` | exact | Every tool call |
+| `/.well-known/oauth-protected-resource` | starts with | Discovery |
+| `/.well-known/oauth-authorization-server` | exact | Discovery |
+| `/api/v1/oauth/token` | starts with (also covers `/token/revocation`) | Token exchange, refresh and revocation |
+
+As a single regular expression, if your product supports one:
+
+```
+^/(mcp|api/v1/oauth/token(/revocation)?|\.well-known/(oauth-protected-resource(/mcp)?|oauth-authorization-server))$
+```
+
+Keep the exception this narrow:
+
+- **Use an exact match for `/mcp`.** A *starts with* match on `/mcp` also matches any other path that begins with those characters.
+- **Leave the browser steps protected.** `/api/v1/oauth/auth` and `/api/v1/oauth-consent/*` open in the user's own browser, which can pass a challenge, so they need no exception.
+- **Keep detection and logging on** if your product offers it for allowed requests. The exception only has to stop blocks and challenges; RivetDocs itself authenticates every request on these paths (a bearer token on `/mcp`, PKCE and the client checks on the token endpoint).
+- **Do not allow the whole host or all of `/api/`** to make the AI apps work.
+
+A blocked request is easy to recognise: the response is an HTML page from the firewall or CDN (often with a status such as `403`, `429`, or a vendor-specific code like `468`) instead of JSON from RivetDocs. Your firewall's event log, searched by time or by the request ID shown on that page, names the rule or module that blocked it.
+
+Check from outside, without signing in:
+
+```bash
+curl -s https://your-domain.com/.well-known/oauth-authorization-server
+curl -s https://your-domain.com/.well-known/oauth-protected-resource/mcp
+curl -si -X POST https://your-domain.com/mcp -H 'content-type: application/json' -d '{}'
+```
+
+The first two return JSON with `issuer` and `resource` equal to your `APP_URL` (and `APP_URL` + `/mcp`); the last returns `401` with `WWW-Authenticate: Bearer resource_metadata="…"`. The metadata lives at the root of the host, not under `/mcp`: a test of `/mcp/.well-known/…` checks an address no AI app uses, and a dot-path rule may block it.
+
 ## Bind `web` to loopback (proxy on the same host)
 
 If your reverse proxy runs on the **same host** as the Compose stack, there's no reason to publish `web` on every interface. Bind it to loopback so the port is reachable only by the local proxy, not by anything else on the network. In `compose.yml`, change the `web` port mapping to:
@@ -271,4 +325,8 @@ For internal deployments where Let's Encrypt isn't available:
 | 502 Bad Gateway | `web` container not running or proxy pointing at wrong port |
 | Audit log shows the proxy IP for every request | `TRUST_PROXY_HOPS` is too low for your edge tier, or the proxy is not setting `X-Forwarded-For` correctly |
 | **Resolved client IP** on the Connection tab is a Docker address (for example `172.18.0.4`) | Check the **Inbound chain** row. If your public IP is in it, `TRUST_PROXY_HOPS` is too low: follow [Find the correct `TRUST_PROXY_HOPS`](#find-the-correct-trust_proxy_hops). If it is not, the client entry was lost before `web`. A proxy replaced `X-Forwarded-For` with the address of the hop in front of it (Caddy with `header_up X-Forwarded-For {remote_host}`, or Caddy behind `cloudflared` without `trusted_proxies`), or nothing set the header and `web` recorded the proxy's own address (for example with Cloudflare's **Remove visitor IP headers** Managed Transform). Fix the proxy: no `TRUST_PROXY_HOPS` value can recover a lost entry. |
+| An AI app says the server is unreachable or sign-in fails at once | Run the three checks under [Remote MCP](#remote-mcp-ai-apps). A wrong `issuer` or `resource` means `APP_URL` is not the public address; a `403`/`404` on `/.well-known/` or `/mcp` means a proxy, WAF or IP rule blocks it. |
+| One of those checks returns an HTML page (a block page, a challenge, or a status such as `429` or `468`) instead of JSON or a `401` | Bot protection, a challenge or a WAF rule answered instead of RivetDocs. Add the narrow exception in [Bot protection, challenges and WAF rules](#bot-protection-challenges-and-waf-rules). |
+| ChatGPT shows `client_id metadata document fetch not allowed` | ChatGPT sent a client identity RivetDocs does not accept. This has been seen with a connector added from the ChatGPT desktop app. Make sure the three checks above pass, delete the connector, then add it again from ChatGPT on the web. |
+| The consent page says remote AI connections are turned off | An administrator turns them on in **Admin → Settings → API & MCP**. |
 | The Connection tab shows different `TRUST_PROXY_HOPS` values for web and API | Only one container was recreated after `.env` changed. The web value is in effect. Run `docker compose up -d --force-recreate web api`. |

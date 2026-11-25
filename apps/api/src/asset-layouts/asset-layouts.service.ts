@@ -2,13 +2,17 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma, AssetLayout, AssetField } from '@prisma/client';
+import { Prisma, type AssetLayout, type AssetField } from '@prisma/client';
 import {
   type CreateAssetLayoutInput,
   type UpdateAssetLayoutInput,
   type SaveAssetFieldsInput,
+  type CreateAssetFieldInput,
+  canShowInTable,
+  createAssetFieldSchema,
   fieldOptionsSchemaFor,
   type FieldType,
 } from '@rivetdocs/shared';
@@ -18,6 +22,11 @@ import { FieldTypesRegistry } from '../field-types/field-types.registry.js';
 import { SearchIndexService } from '../search/search-index.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
 import { assertStringIdList } from '../common/safe-id-list.js';
+import { describeError } from '../common/describe-error.js';
+import { getTenantContext } from '@rivetdocs/shared/server';
+
+/** Another writer bumped the layout version between our read and write. */
+class LayoutVersionConflict extends Error {}
 
 export interface AuditMeta {
   ip: string;
@@ -66,8 +75,13 @@ export interface SerializedLayout {
   fields: SerializedLayoutField[];
 }
 
+/** Field types whose indexed text comes from the choice labels in `options`. */
+const CHOICE_FIELD_TYPES: ReadonlySet<string> = new Set(['DROPDOWN', 'MULTISELECT']);
+
 @Injectable()
 export class AssetLayoutsService {
+  private readonly logger = new Logger(AssetLayoutsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
@@ -513,6 +527,9 @@ export class AssetLayoutsService {
       from: unknown;
       to: unknown;
     }> = [];
+    // The search index holds choice *labels* (dropdown slug → label), so
+    // a changed choice list makes the indexed text of every asset stale.
+    let choiceTextChanged = false;
 
     const updatedLayout = await this.prisma.$transaction(async (tx) => {
       // Archive removed fields (soft). Destructive, but audit-friendly.
@@ -594,6 +611,9 @@ export class AssetLayoutsService {
             showInTable: f.showInTable,
             options: f.options,
           });
+          if ('options' in diff.before && CHOICE_FIELD_TYPES.has(old.fieldType)) {
+            choiceTextChanged = true;
+          }
           if (Object.keys(diff.before).length > 0) {
             updatedAudits.push({
               id: f.id,
@@ -708,21 +728,146 @@ export class AssetLayoutsService {
       });
     }
 
-    // Phase 6: whenever field visibility flips or a field is removed,
-    // every asset's denormalised `body_public` is stale. Rebuild the
-    // search_index rows for the whole layout. Layout edits are
-    // operator-only and low-frequency, so doing this synchronously in
-    // the request is acceptable (batched in 200-row chunks by
-    // `reindexLayout`). Field-value mutations have no impact on the
-    // index beyond the per-asset path in AssetsService.
+    // Phase 6: whenever field visibility flips, a field is removed, or
+    // the choices of a DROPDOWN/MULTISELECT field change, the indexed
+    // text of every asset on the layout is stale (`body_public`, or the
+    // choice labels). Rebuild the search_index rows for the whole
+    // layout. Layout edits are operator-only and low-frequency, so doing
+    // this synchronously in the request is acceptable (batched in
+    // 200-row chunks by `reindexLayout`). Field-value mutations have no
+    // impact on the index beyond the per-asset path in AssetsService.
     const visibilityChanged = updatedAudits.some((u) =>
       Object.prototype.hasOwnProperty.call(u.from as object, 'visibleToClients'),
     );
-    if (visibilityChanged || removedIds.length > 0) {
-      await this.searchIndex.reindexLayout(layoutId);
+    if (visibilityChanged || choiceTextChanged || removedIds.length > 0) {
+      try {
+        await this.searchIndex.reindexLayout(layoutId);
+      } catch (error) {
+        // The layout change has already committed. Until the index is
+        // rebuilt, `body_public` can still hold values of a field just
+        // hidden from clients, so an admin must act on this.
+        this.logger.error(
+          `Search reindex failed for layout ${layoutId} after a field change ` +
+            `(ref ${getTenantContext()?.requestId ?? 'none'}). Client search may show ` +
+            `stale field values until \`reindex-search\` runs: ${describeError(error)}`,
+        );
+        throw error;
+      }
     }
 
     return this.serialize(updatedLayout, updatedLayout.fields);
+  }
+
+  /**
+   * Add one field to a layout against its current state, never a caller's
+   * snapshot, so a field another request added meanwhile is kept. The
+   * field goes last, becomes primary only when the layout has none, and a
+   * live field with the same slug is returned untouched (`created: false`).
+   * The layout `version` guards the write; one retry on a concurrent change.
+   */
+  async addField(
+    actor: AuthedUser,
+    layoutId: string,
+    input: CreateAssetFieldInput,
+    meta: AuditMeta,
+  ): Promise<{ field: SerializedLayoutField; created: boolean }> {
+    const parsed = createAssetFieldSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new BadRequestException({ error: 'InvalidField', issues: parsed.error.issues });
+    }
+    const f = parsed.data;
+    if (f.showInTable && !canShowInTable(f.fieldType)) {
+      throw new BadRequestException('showInTable is not supported for this field type.');
+    }
+    const options = this.registry.get(f.fieldType).optionsSchema.safeParse(f.options);
+    if (!options.success) {
+      throw new BadRequestException({
+        error: 'InvalidFieldOptions',
+        slug: f.slug,
+        fieldType: f.fieldType,
+        issues: options.error.issues,
+      });
+    }
+
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.addFieldOnce(actor, layoutId, { ...f, options: options.data as Record<string, unknown> }, meta);
+      } catch (err) {
+        const raced =
+          err instanceof LayoutVersionConflict ||
+          (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002');
+        if (!raced || attempt > 0) {
+          if (raced) throw new ConflictException('The layout changed while adding the field. Try again.');
+          throw err;
+        }
+      }
+    }
+  }
+
+  private async addFieldOnce(
+    actor: AuthedUser,
+    layoutId: string,
+    f: CreateAssetFieldInput,
+    meta: AuditMeta,
+  ): Promise<{ field: SerializedLayoutField; created: boolean }> {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const layout = await tx.assetLayout.findUnique({
+        where: { id: layoutId },
+        include: { fields: { where: { archivedAt: null } } },
+      });
+      if (!layout) throw new NotFoundException();
+      if (layout.archivedAt) throw new BadRequestException('Cannot edit fields on an archived layout');
+      const existing = layout.fields.find((field) => field.slug === f.slug);
+      if (existing) return { layout, field: existing, created: false };
+      if (layout.fields.length >= 100) {
+        throw new BadRequestException('A layout can have at most 100 fields');
+      }
+      // Version-guarded bump first: it row-locks the layout, so a concurrent
+      // writer that read the same version fails here and retries on fresh state.
+      const bumped = await tx.assetLayout.updateMany({
+        where: { id: layoutId, version: layout.version },
+        data: { version: { increment: 1 } },
+      });
+      if (bumped.count !== 1) throw new LayoutVersionConflict();
+      const field = await tx.assetField.create({
+        data: {
+          assetLayoutId: layoutId,
+          name: f.name,
+          slug: f.slug,
+          fieldType: f.fieldType,
+          position: Math.max(-1, ...layout.fields.map((row) => row.position)) + 1,
+          isRequired: f.isRequired,
+          isUniquePerCompany: f.isUniquePerCompany,
+          visibleToClients: f.visibleToClients,
+          isPrimary: !layout.fields.some((row) => row.isPrimary),
+          showInTable: f.showInTable,
+          options: f.options as Prisma.InputJsonValue,
+        },
+      });
+      // Same transaction: a failed audit write rolls the field back, so a
+      // retry never finds an unaudited field and returns it as existing.
+      await this.audit.logWithClient(tx, {
+        actorId: actor.id,
+        action: 'layout.field.added',
+        entityType: 'AssetField',
+        entityId: field.id,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        before: null,
+        after: {
+          layoutId,
+          layoutName: layout.name,
+          fieldId: field.id,
+          fieldName: field.name,
+          slug: field.slug,
+          fieldType: field.fieldType,
+        },
+      });
+      return { layout, field, created: true };
+    });
+
+    const field = this.serialize(result.layout, [result.field]).fields[0]!;
+    return { field, created: result.created };
   }
 
   // --------------------------------------------------------------------

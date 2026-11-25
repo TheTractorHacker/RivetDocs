@@ -7,6 +7,10 @@ import { UniFiSiteManagerDriver } from './unifi/unifi.driver.js';
 import { CloudflareDriver } from './cloudflare/cloudflare.driver.js';
 import { CloudflareApiClient } from './cloudflare/cloudflare-api.client.js';
 import { BreezeDriver } from './breeze/breeze.driver.js';
+import { GoogleWorkspaceDriver } from './google-workspace/google-workspace.driver.js';
+import { LevelDriver } from './level/level.driver.js';
+import { Microsoft365Driver } from './microsoft-365/microsoft-365.driver.js';
+import { CustomApiDriver } from './custom-api/custom-api.driver.js';
 import { RivetEditionDriver } from './rivetedition/rivetedition.driver.js';
 
 /**
@@ -38,6 +42,10 @@ export class IntegrationDriverRegistry {
       new Action1Driver(),
       new NinjaOneDriver(),
       new UniFiSiteManagerDriver(),
+      new GoogleWorkspaceDriver(),
+      new LevelDriver(),
+      new Microsoft365Driver(),
+      new CustomApiDriver(),
       new RivetEditionDriver('rivetit'),
       new RivetEditionDriver('rivetmsp'),
     ];

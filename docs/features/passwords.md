@@ -97,11 +97,65 @@ Per-password controls:
 
 ### Internal Access
 
-By default a credential is visible to every internal user with access to the company. It can instead be restricted to a selected list of users, managed from the **Internal access** panel on the password detail page.
+On a default installation, a credential without its own access list is visible to every internal user with access to the company. The global policy and company membership overrides described below can narrow that access. You can also give a credential its own selected list, managed from the **Internal access** panel on the password detail page.
 
 The restriction governs **visibility**, not just reveal: users who are not on the list do not see the credential in lists, cannot open its detail page, and cannot reveal it. The eligible-user list is derived server-side from people who already have a path to the company — **super admins** (always included), **members** (operators and contractors with an active, unexpired membership), and **operators with global access**. Super admins always retain access regardless of the list.
 
 Managing internal access requires write access to the company plus the membership-management permission; the API rejects any attempt to add a user who is not an eligible internal user for that company.
+
+### Global Password Access Policy
+
+A workspace-wide policy (**Settings → Passwords → Password access**) decides who can open credentials that have **no** own internal-access list:
+
+| Mode | Effect on credentials without their own list |
+|---|---|
+| **All internal users** (default) | Every internal user with company access can see them (the behaviour before the policy existed) |
+| **Selected users only** | Only the selected operators and contractors, plus super admins, can see them |
+
+Rules:
+
+- A credential with its own internal-access list uses **only** that list. The global policy does not apply to it, so the list can give access to a user who is not in the global list.
+- Super admins always have access. Client users are governed only by **Visible to clients**.
+- The policy never gives company access. A selected user still needs a membership or global access for the company.
+- The server checks the policy when a credential is read. Changing it does not change any credential.
+- A user without access does not see the credential anywhere: lists, detail pages, search (including file names of its attachments), stars, related items, PDF exports, and MCP or API-key access, which act as their owner.
+- A user without effective password access in that company (after membership overrides) cannot create a credential without its own list.
+
+Changing the policy requires the settings-management permission, step-up authentication, and an interactive session. Each change is audited as `settings.password_access_policy.change`, with the before and after user IDs.
+
+Use **Manage users** to search by name or email and edit the selection, then **Apply** to return to settings. **Save password access** persists the policy; Apply alone does not. The list accepts up to 500 operators and contractors. Remove unavailable users before saving a selected-users policy. Switching to **All internal users** retains the saved eligible-user list for later. Changes take effect on the saving API replica immediately and on other replicas within the five-second settings cache lifetime.
+
+### Company Password Access Override
+
+An admin can change the global policy for 1 user in 1 company. The setting is on the user's membership, on the company **Members** page (or the **Companies** list on the user's detail page):
+
+| Value | Effect in this company, on credentials without their own list |
+|---|---|
+| **Use global policy** (default) | The global policy decides |
+| **Allow** | The user can open them, even if the global policy excludes the user |
+| **Deny** | The user cannot open them, even if the global policy includes the user |
+
+Rule order, most specific first:
+
+1. A credential with its own internal-access list uses only that list.
+2. An active membership with **Allow** or **Deny** decides for its company.
+3. Otherwise, the global policy decides.
+
+Super admins always have access. Client users cannot have an override; **Visible to clients** governs them.
+
+- To give an override to an operator with global access, add the operator as a member of the company. The membership role then also applies in that company, as for every membership.
+- An override ends when its membership expires or is revoked. The user then goes back to the global policy. A revoked membership that is added again starts from **Use global policy**.
+- Bulk adds always create **Use global policy**.
+- The override applies everywhere the global policy applies: lists, detail pages, search, stars, related items, PDF exports, MCP, and API keys.
+
+These membership changes need step-up authentication and an interactive session, because they change password access:
+
+- Add a member with **Allow** or **Deny**.
+- Change the override.
+- Change the expiry of a membership with **Allow** or **Deny**.
+- Revoke a membership with **Allow** or **Deny**.
+
+A role-only change needs no step-up. The `membership.create`, `membership.update`, and `membership.revoke` audit entries include `passwordAccess` in the before and after values.
 
 ## Reveal Audit Trail
 
@@ -135,7 +189,9 @@ Passwords can be linked to articles and assets using the same relations system u
 
 ## PDF Export
 
-Admin users can export a company's entire password vault to a **PDF document** directly from the vault workflow. The export is generated server-side and downloaded immediately. Use this for secure offline archival, handover documents, or audit evidence.
+Users with the `EXPORT_CREATE` capability (including super admins) can request a company's **vault-archive PDF**. The worker builds it in the background; download it when the job completes. Only password entries, their attachments, and their related-item links that the requester may read are included. The worker reads the current global policy and company membership overrides when gathering the data. Including plaintext passwords requires step-up authentication, as does downloading the PDF.
+
+Only the requester or a super admin can view the job status and download its file. A job queued before requester tracking was introduced omits password entries and their attachments when processed by the updated worker; only super admins can retrieve that legacy job. Request a new export if needed. Use exports for secure offline archival, handover documents, or audit evidence.
 
 ## Embedded Passwords
 

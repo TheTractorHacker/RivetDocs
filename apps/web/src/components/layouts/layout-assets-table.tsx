@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { safeExternalHref } from '@rivetdocs/shared';
+import { parseFieldDateTime, problemMessage, safeExternalHref } from '@rivetdocs/shared';
 import type {
+  AssetExportColumns,
   AssetSummary,
   FieldType,
   LayoutFieldSummary,
@@ -13,19 +14,29 @@ import type {
 import { vaultLinkLabel } from '../../lib/vault-link';
 import {
   FormattedCalendarDate,
-  FormattedDateTime,
+  FormattedFieldDateTime,
+  useTimezone,
 } from '../../lib/timezone-context';
+import { fieldDateTimeSortKey } from '../../lib/field-datetime';
 import {
   DataTable,
   type DataColumn,
+  FilterChipRow,
+  type FilterChipItem,
   Icon,
   LayoutSwatch,
   LinkBtn,
+  MenuItem,
   MobileCardRow,
+  OverflowMenu,
   Tag,
+  useToast,
 } from '../ui';
+import { downloadApiFile } from '../../lib/api';
 import { TagFilterMenu } from './tag-filter-menu';
 import { compactRelative as relative } from '../../lib/relative-time';
+import { editsActiveSearch, withSearchTerm } from '../../lib/search-terms';
+import { usePendingSearchTerms } from '../../lib/hooks/use-pending-search-terms';
 
 type ReferenceMap = AssetSummary['references'];
 
@@ -54,25 +65,33 @@ export function LayoutAssetsTable({
   basePath,
   layout,
   rows,
-  q,
+  searchTerms,
   includeArchived,
   canManage,
+  exportCompanyId,
 }: {
   /** URL prefix for every outbound link (e.g. `/admin/companies/<id>`). */
   basePath: string;
   layout: LayoutSummary;
   rows: AssetSummary[];
-  q: string;
+  /** Stacked search terms from the URL (`?q=a&q=b`); all must match. */
+  searchTerms: string[];
   includeArchived: boolean;
   canManage: boolean;
+  /**
+   * Company id for the CSV export. Only the admin page passes it, so the
+   * portal shows no Export control.
+   */
+  exportCompanyId?: string;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [draftState, setDraftState] = useState(() => ({ source: q, value: q }));
+  const timeZone = useTimezone();
+  const [navigating, startTransition] = useTransition();
+  // Terms to build on: includes terms pushed but not yet in the URL.
+  const [terms, rememberTerms] = usePendingSearchTerms(searchTerms, navigating);
+  // The box only holds the term being typed; committed terms are pills.
+  const [draft, setDraft] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
-  // Ignore a stale local draft when Next reuses this client component
-  // with a different URL query during back/forward navigation.
-  const draft = draftState.source === q ? draftState.value : q;
 
   const columns = useMemo(() => {
     const primary = layout.fields.find((f) => f.isPrimary);
@@ -153,34 +172,65 @@ export function LayoutAssetsTable({
     ? availableTags.find((t) => t.id === tagFilter) ?? null
     : null;
 
-  function pushParams(next: Record<string, string | undefined | null>) {
+  function pushParams(
+    next: Record<string, string | undefined | null>,
+    nextTerms: readonly string[] = terms,
+  ) {
+    rememberTerms(nextTerms);
     const params = new URLSearchParams();
-    if (q) params.set('q', q);
+    for (const term of nextTerms) params.append('q', term);
     if (includeArchived) params.set('archived', '1');
     for (const [k, v] of Object.entries(next)) {
       if (v == null || v === '') params.delete(k);
       else params.set(k, v);
     }
     const qs = params.toString();
+    const href = `${basePath}/layouts/${layout.slug}${qs ? `?${qs}` : ''}`;
+    const replace = editsActiveSearch(terms, nextTerms);
     startTransition(() => {
-      router.push(`${basePath}/layouts/${layout.slug}${qs ? `?${qs}` : ''}`);
+      if (replace) router.replace(href);
+      else router.push(href);
     });
   }
 
   function commitSearch() {
-    pushParams({ q: draft.trim() || null });
+    const next = withSearchTerm(terms, draft);
+    setDraft('');
+    if (next) pushParams({}, next);
+  }
+
+  function removeSearchTerm(index: number) {
+    pushParams(
+      {},
+      terms.filter((_, i) => i !== index),
+    );
   }
 
   function clearAll() {
-    setDraftState({ source: q, value: '' });
+    setDraft('');
     setTagFilter(null);
-    if (!q && !includeArchived) return;
+    rememberTerms([]);
+    if (terms.length === 0 && !includeArchived) return;
     startTransition(() => {
       router.push(`${basePath}/layouts/${layout.slug}`);
     });
   }
 
-  if (rows.length === 0 && !q && !includeArchived) {
+  const chips: FilterChipItem[] = [
+    ...terms.map((term, i) => ({
+      key: `q:${term}`,
+      label: `search: ${term}`,
+      onRemove: () => removeSearchTerm(i),
+    })),
+    ...(activeTag
+      ? [{ key: 'tag', label: `tag: ${activeTag.name}`, onRemove: () => setTagFilter(null) }]
+      : []),
+    ...(includeArchived
+      ? [{ key: 'archived', label: 'incl. archived', onRemove: () => pushParams({ archived: null }) }]
+      : []),
+  ];
+
+  if (rows.length === 0 && terms.length === 0 && !includeArchived) {
     return (
       <div
         style={{
@@ -248,12 +298,18 @@ export function LayoutAssetsTable({
           <Icon.search size={12} style={{ color: 'var(--muted)' }} />
           <input
             value={draft}
-            onChange={(e) => setDraftState({ source: q, value: e.target.value })}
+            onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') commitSearch();
+              // Backspace in an empty box removes the last search pill.
+              if (e.key === 'Backspace' && draft === '' && terms.length > 0) {
+                removeSearchTerm(terms.length - 1);
+              }
             }}
-            onBlur={commitSearch}
-            placeholder={`Search ${layout.name}…`}
+            placeholder={
+              terms.length > 0 ? 'Add a search term…' : `Search ${layout.name}…`
+            }
+            aria-label="Add a search term"
             style={{
               flex: 1,
               background: 'transparent',
@@ -312,25 +368,20 @@ export function LayoutAssetsTable({
           {includeArchived ? 'Hide archived' : 'Show archived'}
         </button>
 
-        {(q || includeArchived || tagFilter) && (
-          <button
-            type="button"
-            onClick={clearAll}
-            style={{
-              height: 28,
-              padding: '0 8px',
-              background: 'transparent',
-              border: 'none',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 11,
-              color: 'var(--muted)',
-              cursor: 'pointer',
-            }}
-          >
-            Clear filters
-          </button>
+        {exportCompanyId && (
+          <LayoutExportMenu
+            companyId={exportCompanyId}
+            layout={layout}
+            terms={terms}
+            includeArchived={includeArchived}
+            tagFilter={tagFilter}
+            disabled={visibleRows.length === 0}
+          />
         )}
+
       </div>
+
+      <FilterChipRow chips={chips} onClearAll={clearAll} />
 
       {/* Table / cards — `flex: 1; min-height: 0` so the DataTable's
           fillHeight scroll region claims the leftover viewport rather
@@ -357,7 +408,7 @@ export function LayoutAssetsTable({
         ) : (
           <div
             style={{
-              opacity: pending ? 0.6 : 1,
+              opacity: navigating ? 0.6 : 1,
               transition: 'opacity 120ms ease',
               flex: 1,
               minHeight: 0,
@@ -367,7 +418,7 @@ export function LayoutAssetsTable({
           >
             <DataTable
               fillHeight
-              columns={layoutColumns({ layout, extras: columns.extras, basePath })}
+              columns={layoutColumns({ layout, extras: columns.extras, basePath, timeZone })}
               rows={visibleRows}
               renderMobileCard={(r) => (
                 <LayoutAssetMobileBody
@@ -385,14 +436,126 @@ export function LayoutAssetsTable({
   );
 }
 
+/**
+ * "Export" next to "Show archived": a CSV of this table, built by the
+ * server from the same filters (search, archive toggle, and the tag
+ * filter after the row cap), so the file holds the rows shown here.
+ */
+function LayoutExportMenu({
+  companyId,
+  layout,
+  terms,
+  includeArchived,
+  tagFilter,
+  disabled,
+}: {
+  companyId: string;
+  layout: LayoutSummary;
+  terms: readonly string[];
+  includeArchived: boolean;
+  tagFilter: string | null;
+  disabled: boolean;
+}) {
+  const toast = useToast();
+  const [exporting, setExporting] = useState(false);
+
+  async function exportCsv(mode: AssetExportColumns) {
+    const params = new URLSearchParams({ layout: layout.id, columns: mode });
+    for (const term of terms) params.append('q', term);
+    if (includeArchived) params.set('includeArchived', 'true');
+    if (tagFilter) params.set('tag', tagFilter);
+    setExporting(true);
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      const res = await downloadApiFile(
+        `/companies/${companyId}/assets/export?${params.toString()}`,
+        `${layout.slug}-${date}.csv`,
+      );
+      if (!res.ok) {
+        toast.push(
+          res.status === 429
+            ? 'Too many exports. Wait a minute and try again.'
+            : problemMessage(res.problem) ?? 'Export failed.',
+          'danger',
+        );
+      } else if (res.truncated) {
+        toast.push(
+          'Exported the first 5,000 rows only. Narrow the search to export the rest.',
+          'warn',
+        );
+      } else {
+        toast.push('Export downloaded.', 'ok');
+      }
+    } catch {
+      // Network failure: fetch rejected before any response arrived.
+      toast.push('Export failed. Check your connection and try again.', 'danger');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const rowDisabled = exporting || disabled;
+  return (
+    <OverflowMenu
+      label="Export to CSV"
+      trigger={
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            height: 28,
+            padding: '0 10px',
+            border: '1px solid var(--line-2)',
+            borderRadius: 5,
+            fontSize: 12,
+            color: 'var(--text-2)',
+          }}
+        >
+          <Icon.download size={12} />
+          {exporting ? 'Exporting…' : 'Export'}
+        </span>
+      }
+    >
+      {(close) => (
+        <>
+          <MenuItem
+            icon={Icon.list}
+            disabled={rowDisabled}
+            onClick={() => {
+              close();
+              void exportCsv('table');
+            }}
+          >
+            Visible columns (CSV)
+          </MenuItem>
+          <MenuItem
+            icon={Icon.grid}
+            disabled={rowDisabled}
+            onClick={() => {
+              close();
+              void exportCsv('all');
+            }}
+          >
+            All fields (CSV)
+          </MenuItem>
+        </>
+      )}
+    </OverflowMenu>
+  );
+}
+
 function layoutColumns({
   layout,
   extras,
   basePath,
+  timeZone,
 }: {
   layout: LayoutSummary;
   extras: LayoutFieldSummary[];
   basePath: string;
+  /** The viewer's zone, so DATETIME columns sort in the order they display. */
+  timeZone: string;
 }): DataColumn<AssetSummary>[] {
   const cols: DataColumn<AssetSummary>[] = [
     {
@@ -431,7 +594,8 @@ function layoutColumns({
       id: `field:${f.slug}`,
       header: f.name,
       width: 240,
-      sortValue: (r) => fieldSortValue(f.fieldType, r.fieldValues[f.slug], r.references),
+      sortValue: (r) =>
+        fieldSortValue(f.fieldType, r.fieldValues[f.slug], r.references, timeZone),
       render: (r) => (
         <FieldCell
           fieldType={f.fieldType}
@@ -569,6 +733,7 @@ function fieldSortValue(
   type: FieldType,
   value: unknown,
   references: ReferenceMap,
+  timeZone: string,
 ): string | number | boolean | Date | null | undefined {
   if (value == null || value === '') return null;
   switch (type) {
@@ -576,11 +741,14 @@ function fieldSortValue(
       return value === true || value === 'true';
     case 'NUMBER':
       return Number(value);
-    case 'DATE':
-    case 'DATETIME': {
+    case 'DATE': {
       const d = new Date(String(value));
       return Number.isNaN(d.getTime()) ? String(value) : d;
     }
+    case 'DATETIME':
+      // Sort by the time the cell SHOWS (see `fieldDateTimeSortKey`), not the
+      // absolute instant: zone-less values are wall-clock times.
+      return fieldDateTimeSortKey(String(value), timeZone) ?? String(value);
     case 'TAGS':
     case 'MULTISELECT': {
       const arr = Array.isArray(value) ? (value as unknown[]) : [];
@@ -626,17 +794,23 @@ function FieldCell({
         <Dim>false</Dim>
       );
     }
-    case 'DATE':
-    case 'DATETIME': {
+    case 'DATE': {
       const d = new Date(String(value));
       if (Number.isNaN(d.getTime())) return <Dim>{String(value)}</Dim>;
       return (
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>
-          {fieldType === 'DATETIME' ? (
-            <FormattedDateTime value={d} />
-          ) : (
-            <FormattedCalendarDate value={d} />
-          )}
+          <FormattedCalendarDate value={d} />
+        </span>
+      );
+    }
+    case 'DATETIME': {
+      // Never `new Date(raw)` here: this renders on the server AND in the
+      // browser, and each reads a zone-less value in its own zone.
+      const s = String(value);
+      if (!parseFieldDateTime(s)) return <Dim>{s}</Dim>;
+      return (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>
+          <FormattedFieldDateTime value={s} />
         </span>
       );
     }

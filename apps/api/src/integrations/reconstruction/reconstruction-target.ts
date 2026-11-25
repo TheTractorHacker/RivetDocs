@@ -1,4 +1,6 @@
+import type { IntegrationFieldDiff, MatchFirstIndexCache } from '../../assets/assets.service.js';
 import { createHash } from 'node:crypto';
+import { Logger } from '@nestjs/common';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import {
@@ -41,7 +43,7 @@ const baseShape = {
 
 const assetFieldValueSchema = z
   .object({
-    targetFieldId: z.string().uuid(),
+    targetFieldId: z.guid(),
     value: z.unknown(),
     syncDirection: z.enum(['source_wins', 'preserve_manual', 'manual_only']),
   })
@@ -52,9 +54,9 @@ export const assetReconstructionInputSchema = z
     ...baseShape,
     targetKind: z.literal('asset'),
     name: z.string().trim().min(1).max(200),
-    assetLayoutId: z.string().uuid(),
+    assetLayoutId: z.guid(),
     externalSource: z.string().trim().min(1).max(80).optional(),
-    matchKeyFieldIds: z.array(z.string().uuid()).max(128),
+    matchKeyFieldIds: z.array(z.guid()).max(128),
     fieldValues: z.array(assetFieldValueSchema).max(1024),
     bindingResourceKey: z.string().min(1).max(256).optional(),
     bindingRef: dependencyRefSchema.optional(),
@@ -99,7 +101,7 @@ export const articleReconstructionInputSchema = z
       .min(1)
       .max(80)
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-    folderId: z.string().uuid().nullable(),
+    folderId: z.guid().nullable(),
     folderSlug: z.string().min(1).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
     folderName: z.string().trim().min(1).max(200).optional(),
     markdown: z.string().min(1),
@@ -197,6 +199,25 @@ export interface ReconstructionWriteContext {
   previousChecksum?: string | null;
   previousFieldChecksums?: Readonly<Record<string, string>>;
   previousProvenance?: SafeIntegrationProvenance | null;
+  /**
+   * Match-first: set by the runner (never by driver data) for resources
+   * whose descriptor declares `matchSuggestions`. Lets the asset writer
+   * adopt one unbound, identity-free asset whose match keys equal the
+   * record's instead of creating a duplicate.
+   */
+  claimUnboundMatches?: boolean;
+  /** The existing binding adopted an operator-created asset (keeps its name). */
+  previousAdopted?: boolean;
+  /** Per-run match-first index cache, created once by the runner per resource run. */
+  matchFirstIndexes?: MatchFirstIndexCache;
+  /** Runner-set for resources that declare `standardFields`: report person-changed fields. */
+  recordFieldDiffs?: boolean;
+  /** Runner-set with `recordFieldDiffs`: this binding's "Keep ours" choices (AssetField.id -> source fingerprint). */
+  keptLocal?: Readonly<Record<string, string>>;
+  /** Runner-set with match-first: asset sources this record may co-bind to (see AssetsService). */
+  coBindSources?: readonly string[];
+  /** Runner-set with `recordFieldDiffs`: the integration priority order and this driver. */
+  integrationPriority?: { driver: string; order: readonly string[] };
   resolveBinding(
     ref: ReconstructionDependencyRef,
   ): Promise<ResolvedReconstructionTarget | null>;
@@ -210,6 +231,10 @@ export interface ReconstructionWriteOutcome {
   provenance: SafeIntegrationProvenance;
   gaps: ReconstructionGapInput[];
   fieldChecksums?: Record<string, string>;
+  /** Person-changed standard fields (only when `recordFieldDiffs` was set). */
+  fieldDiffs?: Record<string, IntegrationFieldDiff>;
+  /** The write adopted an operator-created asset (match-first). */
+  adopted?: boolean;
 }
 
 export interface ReconstructionWriter<T extends ReconstructionInput> {
@@ -224,6 +249,8 @@ export interface NativeIntegrationWriteResult {
   change: 'created' | 'updated' | 'unchanged' | 'restored' | 'blocked';
   gap?: ReconstructionGapInput;
   fieldChecksums?: Record<string, string>;
+  fieldDiffs?: Record<string, IntegrationFieldDiff>;
+  adopted?: boolean;
 }
 
 export function validated<T extends ReconstructionInput>(input: T): ValidatedReconstructionInput<T> {
@@ -296,6 +323,59 @@ export function contextGap(
   return null;
 }
 
+const nativeWriteLogger = new Logger('ReconstructionTarget');
+
+/**
+ * Error name, Prisma code, and the constraint or field names from Prisma's
+ * `meta`, never message text: messages can carry field values, emails, or
+ * tokens (CWE-532). Every logged token is checked against an identifier shape.
+ */
+const SAFE_IDENTIFIER = /^[A-Za-z0-9_.]{1,120}$/;
+
+export function safeErrorSummary(error: unknown): string {
+  if (!(error instanceof Error)) return `non-error ${typeof error}`;
+  const name = SAFE_IDENTIFIER.test(error.name) ? error.name : 'Error';
+  const code = (error as { code?: unknown }).code;
+  const parts = [name];
+  if (typeof code === 'string' && /^P\d{4}$/.test(code)) parts.push(code);
+  if (error.name === 'PrismaClientKnownRequestError') {
+    const meta = (error as { meta?: Record<string, unknown> }).meta ?? {};
+    const target = meta.target;
+    const targets = (Array.isArray(target) ? target : [target]).filter(
+      (t): t is string => typeof t === 'string' && SAFE_IDENTIFIER.test(t),
+    );
+    if (targets.length) parts.push(`target=${targets.join(',')}`);
+    if (typeof meta.field_name === 'string' && SAFE_IDENTIFIER.test(meta.field_name)) {
+      parts.push(`field=${meta.field_name}`);
+    }
+  }
+  return parts.join(' ');
+}
+
+/**
+ * Field slugs a native validation failure names in `issues[].path` (the
+ * shape `AssetsService.validateValues` throws). Only the top-level path
+ * segment is kept, and only when identifier-shaped; issue messages are
+ * never read, because they can echo the rejected value.
+ */
+function validationFieldPaths(error: unknown): string[] {
+  const getResponse = (error as { getResponse?: unknown } | null)?.getResponse;
+  if (typeof getResponse !== 'function') return [];
+  const response: unknown = getResponse.call(error);
+  const issues = response && typeof response === 'object'
+    ? (response as { issues?: unknown }).issues
+    : undefined;
+  if (!Array.isArray(issues)) return [];
+  const slugs = new Set<string>();
+  for (const issue of issues) {
+    const path = issue && typeof issue === 'object' ? (issue as { path?: unknown }).path : undefined;
+    const slug = typeof path === 'string' ? path.split('.')[0] : undefined;
+    if (slug && SAFE_IDENTIFIER.test(slug)) slugs.add(slug);
+    if (slugs.size >= 64) break;
+  }
+  return [...slugs];
+}
+
 export function nativeWriteErrorOutcome(
   ctx: ReconstructionWriteContext,
   input: ReconstructionInput,
@@ -327,14 +407,29 @@ export function nativeWriteErrorOutcome(
     );
   }
   if (status === 400 || status === 422) {
+    const fieldPaths = validationFieldPaths(error);
     return blockedOutcome(
       ctx,
       input,
-      safeGap('validation', 'Native target validation blocked the write.', {
-        reasonCode: 'native_validation',
-      }),
+      safeGap(
+        'validation',
+        fieldPaths.length > 0
+          ? `Native target validation blocked the write (fields: ${fieldPaths.join(', ')}).`
+          : 'Native target validation blocked the write.',
+        {
+          reasonCode: 'native_validation',
+          ...(fieldPaths.length > 0 ? { fieldPaths } : {}),
+        },
+      ),
     );
   }
+  // The gap stays generic for the client; the cause goes to the server log
+  // (a raw Prisma failure here once hid a broken co-bind lock for days).
+  nativeWriteLogger.warn(
+    `Native target write failed: ${safeErrorSummary(error)} ` +
+      `(integration=${ctx.integrationId} company=${ctx.companyId} resource=${ctx.resourceId}/${ctx.resourceKey} ` +
+      `target=${ctx.existingTargetId ?? 'new'} record=sha256:${createHash('sha256').update(input.externalId).digest('hex').slice(0, 12)})`,
+  );
   return blockedOutcome(
     ctx,
     input,
@@ -485,6 +580,8 @@ export function completedOutcome(
     provenance: buildProvenance(ctx, input),
     gaps: [],
     ...(result.fieldChecksums ? { fieldChecksums: result.fieldChecksums } : {}),
+    ...(result.fieldDiffs ? { fieldDiffs: result.fieldDiffs } : {}),
+    ...(result.adopted ? { adopted: true } : {}),
   };
 }
 

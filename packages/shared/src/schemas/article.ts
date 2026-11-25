@@ -26,14 +26,14 @@ export const articleEditorModeSchema = z.enum(['tiptap', 'markdown']);
 export const tiptapNodeSchema: z.ZodType<unknown> = z.lazy(() =>
   z.object({
     type: z.string().min(1),
-    attrs: z.record(z.unknown()).optional(),
+    attrs: z.record(z.string(), z.unknown()).optional(),
     content: z.array(tiptapNodeSchema).optional(),
     text: z.string().optional(),
     marks: z
       .array(
         z.object({
           type: z.string().min(1),
-          attrs: z.record(z.unknown()).optional(),
+          attrs: z.record(z.string(), z.unknown()).optional(),
         }),
       )
       .optional(),
@@ -48,7 +48,7 @@ export const tiptapDocSchema = z.object({
 const articleMetadataShape = {
   title: articleTitleSchema,
   slug: articleSlugSchema.optional(),
-  folderId: z.string().uuid().nullable().optional(),
+  folderId: z.guid().nullable().optional(),
   excerpt: z.string().max(1000).optional(),
   visibleToClients: z.boolean().optional(),
 } as const;
@@ -93,7 +93,7 @@ export const updateArticleSchema = z
   .object({
     title: articleTitleSchema.optional(),
     slug: articleSlugSchema.optional(),
-    folderId: z.string().uuid().nullable().optional(),
+    folderId: z.guid().nullable().optional(),
     editorMode: articleEditorModeSchema.optional(),
     content: tiptapDocSchema.optional(),
     markdownSource: markdownSourceSchema.optional(),
@@ -130,7 +130,7 @@ export const updateArticleSchema = z
   );
 
 export const moveArticleSchema = z.object({
-  folderId: z.string().uuid().nullable(),
+  folderId: z.guid().nullable(),
 });
 
 export type CreateArticleInput = z.infer<typeof createArticleSchema>;
@@ -151,7 +151,7 @@ export const articleVersionSummarySchema = z.object({
   slug: z.string(),
   editorMode: articleEditorModeSchema,
   changedFields: z.array(z.string()),
-  changedBy: z.string().uuid(),
+  changedBy: z.guid(),
   changedByName: z.string().nullable(),
   changeReason: z.string().nullable(),
   createdAt: z.string(),
@@ -159,7 +159,7 @@ export const articleVersionSummarySchema = z.object({
 });
 
 export const articleVersionDetailSchema = articleVersionSummarySchema.extend({
-  folderId: z.string().uuid().nullable(),
+  folderId: z.guid().nullable(),
   visibleToClients: z.boolean(),
   content: z.unknown().nullable(),
   markdownSource: z.string().nullable(),
@@ -184,13 +184,14 @@ export const articleActorRefSchema = actorRefSchema;
  *
  * `excerpt` carries the serve-time coalesce `aiSummary ?? derivedExcerpt`
  * — same wire name as before; clients don't care which source filled
- * it. List rows hard-code `hasDraft: false` and `isStarred: false`
- * (unchanged — cheap listing).
+ * it. List rows hard-code `isStarred: false` (cheap listing); `hasDraft`
+ * is resolved for the whole page in one query (always `false` for
+ * client users).
  */
 export const articleSummarySchema = z.object({
-  id: z.string().uuid(),
-  companyId: z.string().uuid(),
-  folderId: z.string().uuid().nullable(),
+  id: z.guid(),
+  companyId: z.guid(),
+  folderId: z.guid().nullable(),
   title: z.string(),
   slug: z.string(),
   excerpt: z.string().nullable(),
@@ -203,8 +204,8 @@ export const articleSummarySchema = z.object({
    */
   revision: z.number().int(),
   archivedAt: z.string().nullable(),
-  createdBy: z.string().uuid().nullable(),
-  updatedBy: z.string().uuid().nullable(),
+  createdBy: z.guid().nullable(),
+  updatedBy: z.guid().nullable(),
   createdByUser: articleActorRefSchema.nullable(),
   updatedByUser: articleActorRefSchema.nullable(),
   createdAt: z.string(),
@@ -212,10 +213,11 @@ export const articleSummarySchema = z.object({
   /** True if the signed-in user has starred this article. */
   isStarred: z.boolean(),
   /**
-   * True if there is an in-progress autosave draft for this article.
-   * Drives the editor's Cancel-with-revert path and the "draft in
-   * progress" badge in the history panel. Only meaningful on detail
-   * loads.
+   * True if there is an in-progress draft (autosave or Save draft)
+   * for this article. Drives the editor's Cancel-with-revert path, the
+   * "draft in progress" badge in the history panel, and the "draft"
+   * pill in the article list. Always `false` on list rows for client
+   * users.
    */
   hasDraft: z.boolean(),
 });

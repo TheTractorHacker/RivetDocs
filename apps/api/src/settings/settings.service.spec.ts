@@ -1,6 +1,7 @@
 import { DEFAULT_PASSWORD_GENERATOR_DEFAULTS } from '@rivetdocs/shared';
 import { SettingsService } from './settings.service.js';
 import type { AuthedUser } from '../common/current-user.decorator.js';
+import { FULL_PASSWORD_ACCESS } from '../passwords/password-access-policy.js';
 
 /**
  * SettingsService covers the seed-on-read invariant, the in-process
@@ -18,6 +19,7 @@ const ACTOR: AuthedUser = {
   sessionId: 's-1',
   mfaEnforcementCompletedAt: new Date(),
   mfaPending: false,
+  passwordAccess: FULL_PASSWORD_ACCESS,
 };
 
 const META = { ip: '127.0.0.1', userAgent: 'jest' };
@@ -35,6 +37,10 @@ function baseRow(overrides: Partial<Record<string, unknown>> = {}) {
     articleAutosaveEnabled: false,
     articleDefaultEditorMode: 'tiptap',
     apiKeysEnabled: false,
+    mcpRemoteEnabled: false,
+    mcpClientPolicy: 'claude_chatgpt',
+    passwordAccessMode: 'all_users',
+    passwordAccessUserIds: [] as string[],
     updatedAt: NOW,
     updatedBy: null as string | null,
     ...overrides,
@@ -50,6 +56,7 @@ function makePrisma() {
       upsert: jest.fn(),
       update: jest.fn(),
     },
+    user: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(
       async (fn: (tx: unknown) => unknown): Promise<unknown> => fn(prisma),
     ),
@@ -82,6 +89,9 @@ describe('SettingsService.get', () => {
       articleAutosaveEnabled: false,
       articleDefaultEditorMode: 'tiptap',
       apiKeysEnabled: false,
+      mcpRemoteEnabled: false,
+      mcpClientPolicy: 'claude_chatgpt',
+      passwordAccessMode: 'all_users',
       updatedAt: NOW.toISOString(),
     });
     expect(prisma.systemSetting.findUnique).toHaveBeenCalledTimes(1);
@@ -314,5 +324,193 @@ describe('SettingsService API key switch', () => {
     const reads = prisma.systemSetting.findUnique.mock.calls.length;
     await svc.apiKeysEnabled();
     expect(prisma.systemSetting.findUnique.mock.calls.length).toBe(reads + 1);
+  });
+});
+
+describe('SettingsService MCP client policy', () => {
+  it('is claude_chatgpt by default', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow({ mcpClientPolicy: 'claude_chatgpt' }));
+    const svc = new SettingsService(prisma as never, makeAudit() as never);
+    await expect(svc.mcpClientPolicy()).resolves.toBe('claude_chatgpt');
+    await expect(svc.get()).resolves.toMatchObject({ mcpClientPolicy: 'claude_chatgpt' });
+  });
+
+  it('reads an unknown stored value as the narrow default, never as any', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow({ mcpClientPolicy: 'everyone' }));
+    const svc = new SettingsService(prisma as never, makeAudit() as never);
+    await expect(svc.mcpClientPolicy()).resolves.toBe('claude_chatgpt');
+  });
+
+  it('writes and audits in one transaction, then drops the cache', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow({ mcpClientPolicy: 'claude_chatgpt' }));
+    prisma.systemSetting.findUniqueOrThrow.mockResolvedValue({ mcpClientPolicy: 'claude_chatgpt' });
+    prisma.systemSetting.update.mockResolvedValue(baseRow({ mcpClientPolicy: 'any' }));
+    const audit = makeAudit();
+    const svc = new SettingsService(prisma as never, audit as never);
+
+    await expect(svc.mcpClientPolicy()).resolves.toBe('claude_chatgpt'); // warm the cache
+    const out = await svc.setMcpClientPolicy(ACTOR, 'any', META);
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow({ mcpClientPolicy: 'any' }));
+
+    expect(out.mcpClientPolicy).toBe('any');
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.systemSetting.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: { id: 'singleton' },
+      select: { mcpClientPolicy: true },
+    });
+    expect(prisma.systemSetting.update).toHaveBeenCalledWith({
+      where: { id: 'singleton' },
+      data: { mcpClientPolicy: 'any', updatedBy: 'actor-1' },
+    });
+    expect(audit.log).not.toHaveBeenCalled();
+    expect(audit.logWithClient.mock.calls[0][0]).toBe(prisma);
+    expect(audit.logWithClient.mock.calls[0][1]).toMatchObject({
+      action: 'settings.mcp_client_policy.change',
+      entityType: 'SystemSetting',
+      before: { mcpClientPolicy: 'claude_chatgpt' },
+      after: { mcpClientPolicy: 'any', sessionId: 's-1' },
+    });
+    await expect(svc.mcpClientPolicy()).resolves.toBe('any');
+  });
+
+  it('fails as a whole when the audit write fails, and drops the cache', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow({ mcpClientPolicy: 'any' }));
+    prisma.systemSetting.findUniqueOrThrow.mockResolvedValue({ mcpClientPolicy: 'any' });
+    prisma.systemSetting.update.mockResolvedValue(baseRow({ mcpClientPolicy: 'claude_chatgpt' }));
+    const audit = makeAudit();
+    audit.logWithClient.mockRejectedValueOnce(new Error('audit down'));
+    const svc = new SettingsService(prisma as never, audit as never);
+
+    await expect(svc.mcpClientPolicy()).resolves.toBe('any');
+    await expect(svc.setMcpClientPolicy(ACTOR, 'claude_chatgpt', META)).rejects.toThrow('audit down');
+    const reads = prisma.systemSetting.findUnique.mock.calls.length;
+    await svc.mcpClientPolicy();
+    expect(prisma.systemSetting.findUnique.mock.calls.length).toBe(reads + 1);
+  });
+});
+
+describe('SettingsService password access policy (issue #110)', () => {
+  const OP_A = '11111111-1111-4111-8111-111111111111';
+  const OP_B = '22222222-2222-4222-8222-222222222222';
+
+  it('is all_users by default, and the user list is never in the public DTO', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(
+      baseRow({ passwordAccessMode: 'selected_users', passwordAccessUserIds: [OP_A] }),
+    );
+    const svc = new SettingsService(prisma as never, makeAudit() as never);
+    const dto = await svc.get();
+    expect(dto.passwordAccessMode).toBe('selected_users');
+    expect(dto).not.toHaveProperty('passwordAccessUserIds');
+    expect(JSON.stringify(dto)).not.toContain(OP_A);
+    await expect(svc.passwordAccessPolicy()).resolves.toEqual({
+      mode: 'selected_users',
+      userIds: [OP_A],
+    });
+  });
+
+  it('reads an unknown stored mode as all_users', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow({ passwordAccessMode: 'bogus' }));
+    const svc = new SettingsService(prisma as never, makeAudit() as never);
+    await expect(svc.passwordAccessPolicy()).resolves.toEqual({ mode: 'all_users', userIds: [] });
+  });
+
+  it('rejects users that are not active operators or contractors', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow());
+    prisma.user.findMany.mockResolvedValue([{ id: OP_A }]);
+    const svc = new SettingsService(prisma as never, makeAudit() as never);
+    await expect(
+      svc.setPasswordAccessPolicy(ACTOR, { mode: 'selected_users', userIds: [OP_A, OP_B] }, META),
+    ).rejects.toMatchObject({
+      response: { error: 'InvalidPasswordAccessUsers', userIds: [OP_B] },
+    });
+    expect(prisma.user.findMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: [OP_A, OP_B] },
+        isActive: true,
+        role: { in: ['OPERATOR', 'CONTRACTOR'] },
+      },
+      select: { id: true },
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('writes de-duplicated, sorted ids and audits ids only, in one transaction', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow());
+    prisma.user.findMany.mockResolvedValue([{ id: OP_A }, { id: OP_B }]);
+    prisma.systemSetting.findUniqueOrThrow.mockResolvedValue({
+      passwordAccessMode: 'all_users',
+      passwordAccessUserIds: [],
+    });
+    prisma.systemSetting.update.mockResolvedValue({
+      passwordAccessMode: 'selected_users',
+      passwordAccessUserIds: [OP_A, OP_B],
+    });
+    const audit = makeAudit();
+    const svc = new SettingsService(prisma as never, audit as never);
+
+    await expect(svc.passwordAccessPolicy()).resolves.toMatchObject({ mode: 'all_users' });
+    await svc.setPasswordAccessPolicy(
+      ACTOR,
+      { mode: 'selected_users', userIds: [OP_B, OP_A, OP_B] },
+      META,
+    );
+
+    expect(prisma.systemSetting.update).toHaveBeenCalledWith({
+      where: { id: 'singleton' },
+      data: {
+        passwordAccessMode: 'selected_users',
+        passwordAccessUserIds: [OP_A, OP_B],
+        updatedBy: 'actor-1',
+      },
+      select: { passwordAccessMode: true, passwordAccessUserIds: true },
+    });
+    expect(audit.logWithClient.mock.calls[0][1]).toMatchObject({
+      action: 'settings.password_access_policy.change',
+      entityType: 'SystemSetting',
+      before: { mode: 'all_users', userIds: [] },
+      after: { mode: 'selected_users', userIds: [OP_A, OP_B], sessionId: 's-1' },
+    });
+    // The cache was dropped: the next read goes to the database again.
+    const reads = prisma.systemSetting.findUnique.mock.calls.length;
+    await svc.passwordAccessPolicy();
+    expect(prisma.systemSetting.findUnique.mock.calls.length).toBe(reads + 1);
+  });
+
+  it('accepts selected_users with an empty list (only super admins pass)', async () => {
+    const prisma = makePrisma();
+    prisma.systemSetting.findUnique.mockResolvedValue(baseRow());
+    prisma.systemSetting.findUniqueOrThrow.mockResolvedValue({
+      passwordAccessMode: 'all_users',
+      passwordAccessUserIds: [],
+    });
+    prisma.systemSetting.update.mockResolvedValue({
+      passwordAccessMode: 'selected_users',
+      passwordAccessUserIds: [],
+    });
+    const svc = new SettingsService(prisma as never, makeAudit() as never);
+    await svc.setPasswordAccessPolicy(ACTOR, { mode: 'selected_users', userIds: [] }, META);
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
+    expect(prisma.systemSetting.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists super admins as always included', async () => {
+    const prisma = makePrisma();
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'sa', name: 'Sam', email: 's@x', role: 'SUPER_ADMIN' },
+      { id: 'op', name: 'Olly', email: 'o@x', role: 'OPERATOR' },
+    ]);
+    const svc = new SettingsService(prisma as never, makeAudit() as never);
+    await expect(svc.listPasswordAccessUsers()).resolves.toEqual([
+      { id: 'sa', name: 'Sam', email: 's@x', role: 'SUPER_ADMIN', alwaysIncluded: true },
+      { id: 'op', name: 'Olly', email: 'o@x', role: 'OPERATOR', alwaysIncluded: false },
+    ]);
   });
 });
